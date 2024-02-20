@@ -16,3 +16,4 @@ client/out/**
 !client/node_modules/vscode-languageserver-types/**
 
 server/**
+!server/out

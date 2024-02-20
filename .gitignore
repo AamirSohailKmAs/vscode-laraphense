@@ -3,3 +3,6 @@ node_modules
 client
 server
 package-lock.json
+
+# client/server
+.vscode-test

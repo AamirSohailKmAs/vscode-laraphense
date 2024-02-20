@@ -1,17 +1,39 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
 {
-	"version": "0.2.0",
-	// List of configurations. Add new configurations or edit existing ones.
-	"configurations": [
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
-			"autoAttachChildProcesses": true,
-			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
-			"preLaunchTask": "npm: watch"
-		}
-	]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "extensionHost",
+            "request": "launch",
+            "name": "Launch Client",
+            "runtimeExecutable": "${execPath}",
+            "args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+            "outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+            "autoAttachChildProcesses": true,
+            "preLaunchTask": {
+                "type": "npm",
+                "script": "watch"
+            }
+        },
+        {
+            "name": "Attach",
+            "port": 6060,
+            "request": "attach",
+            "skipFiles": ["<node_internals>/**"],
+            "type": "node"
+        }
+        // {
+        //     "name": "Language Server E2E Test",
+        //     "type": "extensionHost",
+        //     "request": "launch",
+        //     "runtimeExecutable": "${execPath}",
+        //     "args": [
+        //         "--extensionDevelopmentPath=${workspaceRoot}",
+        //         "--extensionTestsPath=${workspaceRoot}/client/out/test",
+        //         "${workspaceRoot}/client/testFixture"
+        //     ],
+        //     "outFiles": ["${workspaceRoot}/client/out/test/**/*.js"]
+        // }
+    ]
 }
+

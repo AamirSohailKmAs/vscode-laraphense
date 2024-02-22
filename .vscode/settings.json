@@ -1,5 +1,15 @@
 {
-	"editor.insertSpaces": false,
-	"typescript.tsc.autoDetect": "off",
-	"typescript.preferences.quoteStyle": "single"
+    "editor.insertSpaces": false,
+    "typescript.tsc.autoDetect": "off",
+    "typescript.preferences.quoteStyle": "single",
+    "cSpell.words": [
+        "endphp",
+        "endverbatim",
+        "languageservice",
+        "laraphenserc",
+        "Skippable",
+        "skippables",
+        "whitespaces"
+    ]
 }
+

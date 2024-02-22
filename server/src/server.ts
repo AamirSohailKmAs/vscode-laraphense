@@ -17,6 +17,7 @@ import { Workspace } from './laraphense/indexing/workspace';
 import { WorkspaceFolder } from './laraphense/indexing/workspaceFolder';
 import { URI } from 'vscode-uri';
 import { DEFAULT_EXCLUDE, EMPTY_COMPLETION_LIST } from './support/defaults';
+
 const connection = createConnection(ProposedFeatures.all);
 // console.log = connection.console.log.bind(connection.console);
 // console.error = connection.console.error.bind(connection.console);
@@ -83,7 +84,7 @@ connection.onCompletion(async (textDocumentPosition, token) => {
     if (!document) {
         return EMPTY_COMPLETION_LIST;
     }
-    return EMPTY_COMPLETION_LIST;
+    // return laraphense.provideCompletion(document, textDocumentPosition.position, textDocumentPosition.context);
 });
 
 // Make the text document manager listen on the connection

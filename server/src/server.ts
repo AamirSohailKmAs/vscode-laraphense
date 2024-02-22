@@ -56,6 +56,25 @@ connection.onInitialize(async (params: InitializeParams) => {
         },
     };
 });
+
+connection.onInitialized(() => {
+    laraphense.indexWorkspace(documents.keys());
+});
+
+connection.onDidChangeConfiguration((_change) => {
+    laraphense.setConfig(_change.settings);
+});
+
+// The content of a text document has changed. This event is emitted
+// when the text document first opened or when its content has changed.
+documents.onDidChangeContent((change) => {
+    console.log('onDidChangeContent', change.document.uri);
+});
+
+documents.onDidOpen((params) => {
+    console.log('onDidOpen', params.document.uri);
+});
+
 connection.onCompletion(async (textDocumentPosition, token) => {
     if (token.isCancellationRequested) {
         return;

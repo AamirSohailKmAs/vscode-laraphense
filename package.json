@@ -39,6 +39,7 @@
         "Formatters"
     ],
     "activationEvents": [
+        "onStartupFinished",
         "onLanguage:php",
         "onLanguage:blade"
     ],

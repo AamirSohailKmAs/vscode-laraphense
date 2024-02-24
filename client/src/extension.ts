@@ -24,6 +24,9 @@ export function activate(context: ExtensionContext) {
 
     const clientOptions: LanguageClientOptions = {
         documentSelector: ['blade', 'php'],
+        initializationOptions: {
+            storage: context.storagePath,
+        },
     };
 
     client = new LanguageClient('Laraphense', 'Laraphense', serverOptions, clientOptions);

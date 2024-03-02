@@ -19,6 +19,10 @@ export function getUriScheme(uri: string) {
     }
 }
 
+export function folderContainsUri(folder: string, uri: string) {
+    return uri.indexOf(folder + '/') === 0;
+}
+
 export function guessLangFromUri(uri: string) {
     if (uri.endsWith('.blade.php')) {
         return DocLang.blade;
@@ -29,6 +33,6 @@ export function guessLangFromUri(uri: string) {
     if (uri.endsWith('.json')) {
         return DocLang.json;
     }
-    return undefined;
+    return DocLang.unknown;
 }
 

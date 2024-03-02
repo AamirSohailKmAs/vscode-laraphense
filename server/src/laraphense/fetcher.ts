@@ -1,7 +1,7 @@
 'use strict';
 
 import { existsSync, readFileSync } from 'fs';
-import { guessLangFromUri, uriToPath } from '../../helpers/uri';
+import { guessLangFromUri, uriToPath } from '../helpers/uri';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
 import { DocLang, FlatDocument } from './document';
 

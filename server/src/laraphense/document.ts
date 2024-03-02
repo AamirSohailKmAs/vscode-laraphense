@@ -1,7 +1,7 @@
 'use strict';
 
 import { DocumentUri } from 'vscode-languageserver';
-import { Debounce } from '../../support/debounce';
+import { Debounce } from '../support/debounce';
 
 export enum DocLang {
     html = 'html',

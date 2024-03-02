@@ -94,7 +94,7 @@
                     ],
                     "default": "off",
                     "description": "Traces the communication between VSCode and the laraphense language server.",
-                    "scope": "window"
+                    "scope": "application"
                 }
             }
         }

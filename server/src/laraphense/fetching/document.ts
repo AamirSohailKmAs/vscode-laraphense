@@ -7,9 +7,11 @@ export enum DocLang {
     html = 'html',
     css = 'css',
     js = 'js',
+    ts = 'ts',
     json = 'json',
     php = 'php',
     blade = 'blade',
+    unknown = 'unknown',
 }
 
 export class FlatDocument {

@@ -5,6 +5,9 @@ export const QUEUE_CHUNK_SIZE: number = 10000;
 export const INDEX_DELAY = 500;
 export const DEFAULT_PHP_VERSION = 803;
 export const DEFAULT_MAX_FILE_SIZE = 1024 * 1024;
+export const DEFAULT_MAX_OPEN_FILES = 10;
+
+export const DEFAULT_INCLUDE = ['**'];
 export const DEFAULT_EXCLUDE = [
     '**/.git/**',
     '**/.svn/**',
@@ -91,3 +94,4 @@ export const DEFAULT_STUBS = [
     'zip',
     'zlib',
 ];
+

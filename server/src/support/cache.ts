@@ -6,9 +6,25 @@ import { DEFAULT_MAX_OPEN_FILES } from './defaults';
 export type CacheItem<T> = { version: number; languageId: string; createdAt: number; data: T };
 
 export class MemoryCache<T> {
+    private _cleanupInterval: NodeJS.Timer | undefined = undefined;
     private _itemsMap: Map<DocumentUri, CacheItem<T>> = new Map();
 
-    constructor(private parse: (doc: TextDocument) => T, private maxEntries: number = DEFAULT_MAX_OPEN_FILES) {}
+    constructor(
+        private parse: (doc: TextDocument) => T,
+        private maxEntries: number = DEFAULT_MAX_OPEN_FILES,
+        ttl?: number
+    ) {
+        if (ttl) {
+            this._cleanupInterval = setInterval(() => {
+                const cutoffTime = Date.now() - ttl;
+                this._itemsMap.forEach((model, uri) => {
+                    if (model.createdAt < cutoffTime) {
+                        this._itemsMap.delete(uri);
+                    }
+                });
+            }, ttl);
+        }
+    }
 
     get(document: TextDocument): T {
         const itemInfo = this._itemsMap.get(document.uri);
@@ -45,7 +61,11 @@ export class MemoryCache<T> {
     }
 
     clear() {
-        this._itemsMap.clear();
+        if (typeof this._cleanupInterval !== 'undefined') {
+            clearInterval(this._cleanupInterval);
+            this._cleanupInterval = undefined;
+            this._itemsMap.clear();
+        }
     }
 
     private _validate() {

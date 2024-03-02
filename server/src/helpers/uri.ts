@@ -1,6 +1,6 @@
 'use strict';
 import { URI } from 'vscode-uri';
-import { DocLang } from '../laraphense/fetching/document';
+import { DocLang } from '../laraphense/document';
 
 export function pathToUri(path: string) {
     return URI.file(path).toString();

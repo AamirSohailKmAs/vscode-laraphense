@@ -36,3 +36,24 @@ export function guessLangFromUri(uri: string) {
     return DocLang.unknown;
 }
 
+export function toDocLang(languageId: string) {
+    switch (languageId.toLowerCase()) {
+        case 'blade':
+            return DocLang.blade;
+        case 'php':
+            return DocLang.php;
+        case 'json':
+            return DocLang.json;
+        case 'css':
+            return DocLang.css;
+        case 'js':
+            return DocLang.js;
+        case 'ts':
+            return DocLang.ts;
+        case 'html':
+            return DocLang.html;
+        default:
+            return DocLang.unknown;
+    }
+}
+

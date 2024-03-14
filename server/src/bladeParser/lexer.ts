@@ -31,12 +31,10 @@ export class BladeLexer {
     private lastTagName: string = '';
     private lastDirectiveName: string = '';
 
-    setInput(input: string) {
+    constructor(input: string) {
         this.input = input;
         this.index = 0;
         this.currentChar = this.input[0] || null;
-
-        return this;
     }
 
     private setState(state: State) {
@@ -295,6 +293,7 @@ export class BladeLexer {
             // todo: this value can have blade syntax
             // "foo bar {{ $kmas }} @if($buzz->isTrue()) bla bla @endif"
             // @ and {{ }} can exists in attributeValue
+            // attribute value can be a language, like onclick="alert('something')"
             this.addToken(TokenKind.ATTRIBUTE_VALUE, value, pos);
 
             this.addToken(TokenKind.QUOTE, quote);

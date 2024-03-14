@@ -6,6 +6,7 @@ import {
     Definition,
     Diagnostic,
     DocumentHighlight,
+    DocumentLink,
     Hover,
     Location,
     Position,
@@ -23,7 +24,7 @@ import {
 } from 'vscode-html-languageservice';
 import { URI, Utils } from 'vscode-uri';
 
-export class LaraphenseDocumentContext implements DocumentContext {
+export class DocContext implements DocumentContext {
     folderUri: string | undefined = undefined;
     constructor(uri?: string) {
         if (uri) {
@@ -51,23 +52,23 @@ export class LaraphenseDocumentContext implements DocumentContext {
 export type Language = {
     id: DocLang;
     emmetSyntax?: 'html' | 'css';
-    doResolve?: (document: TextDocument, item: CompletionItem) => CompletionItem;
-    doHover?: (document: TextDocument, position: Position) => Hover | null;
-    findDocumentHighlight?: (document: TextDocument, position: Position) => DocumentHighlight[];
-    findDefinition?: (document: TextDocument, position: Position) => Definition | null;
-    findReferences?: (document: TextDocument, position: Position) => Location[];
-    doSignatureHelp?: (document: TextDocument, position: Position) => SignatureHelp | null;
-    findDocumentSymbols?: (document: TextDocument) => SymbolInformation[];
-    doValidation?: (document: TextDocument) => Diagnostic[] | Promise<Diagnostic[]>;
+    dispose: () => void;
     doComplete?: (
         document: TextDocument,
         position: Position,
-        context: LaraphenseDocumentContext
+        context: DocContext
     ) => CompletionList | Promise<CompletionList>;
+    doHover?: (document: TextDocument, position: Position) => Hover | null;
+    doResolve?: (document: TextDocument, item: CompletionItem) => CompletionItem;
+    doSignatureHelp?: (document: TextDocument, position: Position) => SignatureHelp | null;
+    doValidation?: (document: TextDocument) => Diagnostic[] | Promise<Diagnostic[]>;
+    findReferences?: (document: TextDocument, position: Position) => Location[];
+    findDefinition?: (document: TextDocument, position: Position) => Definition | null;
+    findDocumentHighlight?: (document: TextDocument, position: Position) => DocumentHighlight[];
+    findDocumentLinks?: (document: TextDocument, documentContext: DocContext) => DocumentLink[];
+    findDocumentSymbols?: (document: TextDocument) => SymbolInformation[];
     onDocumentRemoved: (document: TextDocument) => void;
-    dispose: () => void;
 };
-
 
 type HtmlSetting = {
     hover?: HoverSettings;
@@ -76,10 +77,17 @@ type HtmlSetting = {
     autoClosingTags?: boolean;
     completion?: CompletionConfiguration;
 };
+
+export type laraphenseRc = {
+    phpVersion: number;
+    maxFileSize: number;
+};
+
 export type Settings = {
     html?: HtmlSetting;
     css?: CssSetting;
     javascript?: { format?: unknown };
+    laraphense?: laraphenseRc;
     'js/ts'?: {
         implicitProjectConfig?: { experimentalDecorators?: boolean; strictNullChecks: boolean };
     };

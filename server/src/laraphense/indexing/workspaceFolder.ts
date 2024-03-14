@@ -4,6 +4,8 @@ import { folderContainsUri, pathToUri, uriToPath } from '../../helpers/uri';
 import { FolderUri } from '../../types/general';
 import { SymbolTable } from './tables/symbolTable';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../../support/defaults';
+import { URI } from 'vscode-uri';
+import { isAbsolute, join } from 'path';
 
 export const enum FolderKind {
     User = 0,
@@ -86,59 +88,27 @@ export class WorkspaceFolder {
         }
     }
 
-    contains(uri: string) {
+    public contains(uri: string) {
         return folderContainsUri(this._uri, uri);
     }
 
-    // get includePaths() {
-    //     return (this._environment.includePaths || []).map(this.absolutePath);
-    // }
+    public absolutePath(path: string) {
+        if (isAbsolute(path)) {
+            return path;
+        }
+        let uri = URI.parse(this._uri).fsPath;
+        return join(uri, path);
+    }
 
-    // get documentRootPath() {
-    //     return URI.parse(this.documentRootUri).fsPath;
-    // }
-
-    // get documentRootUri() {
-    //     return this.pathToUri(this._environment.documentRoot || '');
-    // }
-
-    // get includePathUris() {
-    //     if (!this._environment.includePaths) {
-    //         return [];
-    //     }
-    //     let uris = new Set<string>();
-    //     for (let t of this._environment.includePaths) {
-    //         uris.add(this.pathToUri(t));
-    //     }
-    //     return Array.from(uris.values());
-    // }
-
-    // absolutePath = (path: string) => {
-    //     if (isAbsolute(path)) {
-    //         return path;
-    //     }
-    //     let uri = URI.parse(this._uri).fsPath;
-    //     return join(uri, path);
-    // };
-
-    // pathToUri(path: string) {
-    //     if (!path) {
-    //         return this._uri;
-    //     }
-    //     let uri = URI.file(this.absolutePath(path)).toString();
-    //     if (uri.slice(-1) === '/') {
-    //         uri = uri.slice(0, -1);
-    //     }
-    //     return uri;
-    // }
-
-    // includes(folder: string) {
-    //     for (let uri of this.includePathUris) {
-    //         if (this.folderContainsUri(uri, folder)) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
+    public pathToUri(path: string) {
+        if (!path) {
+            return this._uri;
+        }
+        let uri = URI.file(this.absolutePath(path)).toString();
+        if (uri.slice(-1) === '/') {
+            uri = uri.slice(0, -1);
+        }
+        return uri;
+    }
 }
 

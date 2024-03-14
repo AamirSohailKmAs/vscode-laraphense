@@ -89,6 +89,7 @@ export class Workspace {
         this._folders.delete(uri);
     }
 
+    // findFolderContainingUri
     public uriToPri(uri: string) {
         for (const folder in this._folders.keys()) {
             if (folderContainsUri(folder, uri)) {
@@ -97,17 +98,17 @@ export class Workspace {
         }
     }
 
-    getDocumentContext(documentUri: string) {
+    public getDocumentContext(documentUri: string) {
         return new DocContext(this.uriToPri(documentUri)?.folder);
     }
 
-    getLangAtPosition(document: TextDocument, position: Position): Language | undefined {
+    public getLangAtPosition(document: TextDocument, position: Position): Language | undefined {
         const docLang = this._openDocuments.get(document).docLangAtOffset(document.offsetAt(position));
 
         return this._languages.get(docLang);
     }
 
-    getAllLanguagesInDocument(document: TextDocument): Language[] {
+    public getAllLanguagesInDocument(document: TextDocument): Language[] {
         const result = [];
         for (const languageId of this._openDocuments.get(document).docLangsInDocument(this._languages.size)) {
             const mode = this._languages.get(languageId);
@@ -117,10 +118,10 @@ export class Workspace {
         }
         return result;
     }
-    getAllLanguages(): Language[] {
+    public getAllLanguages(): Language[] {
         return Array.from(this._languages.values());
     }
-    getLanguage(languageId: DocLang): Language | undefined {
+    public getLanguage(languageId: DocLang): Language | undefined {
         return this._languages.get(languageId);
     }
 }

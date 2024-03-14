@@ -1,6 +1,7 @@
 'use strict';
 
 import { Program } from 'php-parser';
+import { DocLang } from '../laraphense/document';
 
 export type Position = { line: number; character: number; offset: number };
 
@@ -63,6 +64,12 @@ export interface HtmlElement extends AstNode {
     content?: string;
     selfClosing: boolean;
 }
+export interface EmbeddedLanguage extends AstNode {
+    name: DocLang;
+    kind: 'language';
+    attributeValue: boolean;
+}
+
 export interface AstNode {
     name: string;
     kind: 'tree' | 'element' | 'language' | 'openTag' | 'closeTag' | 'errorNode' | 'htmlAttribute';

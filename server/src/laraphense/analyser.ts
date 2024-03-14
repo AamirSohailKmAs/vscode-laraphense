@@ -16,7 +16,7 @@ import {
 import { Symbol, SymbolKind, SymbolModifier } from './indexing/tables/symbolTable';
 import { Tree } from '../types/bladeAst';
 
-type TreeLike = {
+export type TreeLike = {
     kind: string;
     children?: Array<any>;
     body?: Array<any>;
@@ -33,8 +33,6 @@ class SymbolExtractor {
     symbols: Map<string, Symbol> = new Map();
     parent?: Symbol = undefined;
     member?: Symbol = undefined;
-
-    constructor() {}
 
     extract(tree: Tree) {
         this.traverseAST(tree, this.nodeKind.bind(this));

@@ -89,3 +89,39 @@ export function isNewlineCharacter(charCode: number) {
     return charCode === CR || charCode === NL;
 }
 
+export function substituteWithWhitespace(
+    result: string,
+    start: number,
+    end: number,
+    oldContent: string,
+    before: string,
+    after: string
+) {
+    let accumulatedWS = 0;
+    result += before;
+    for (let i = start + before.length; i < end; i++) {
+        const ch = oldContent[i];
+        if (ch === '\n' || ch === '\r') {
+            // only write new lines, skip the whitespace
+            accumulatedWS = 0;
+            result += ch;
+        } else {
+            accumulatedWS++;
+        }
+    }
+
+    result = append(result, ' ', accumulatedWS - after.length);
+    result += after;
+    return result;
+}
+
+function append(result: string, str: string, n: number): string {
+    while (n > 0) {
+        if (n & 1) {
+            result += str;
+        }
+        n >>= 1;
+        str += str;
+    }
+    return result;
+}

@@ -4,6 +4,11 @@ import { DocumentUri } from 'vscode-languageserver';
 import { Debounce } from '../support/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { toDocLang } from '../helpers/uri';
+import { EmbeddedLanguage, Tree } from '../types/bladeAst';
+import { Program } from 'php-parser';
+import { CSS_STYLE_RULE } from '../languages/cssLang';
+import { toLocation } from '../helpers/symbol';
+import { substituteWithWhitespace } from '../helpers/general';
 
 export enum DocLang {
     html = 'html',
@@ -37,6 +42,129 @@ export class FlatDocument {
         this.doc = TextDocument.create(uri, languageId, version, content);
         this.createdAt = createdAt ?? Date.now();
         this.lastCompile = process.hrtime();
+    }
+}
+
+export class Regions {
+    private regions: EmbeddedLanguage[] = [];
+
+    private dispatchMap: Record<string, (node: any) => void> = {
+        tree: (_node: Tree) => {
+            this.regions = [];
+        },
+        program: (node: Program) => {
+            this.regions.push({
+                name: DocLang.php,
+                kind: 'language',
+                loc: toLocation(
+                    node.loc ?? {
+                        source: null,
+                        start: { line: 1, column: 0, offset: 1 },
+                        end: { line: 1, column: 0, offset: 1 },
+                    }
+                ),
+                attributeValue: false,
+            });
+        },
+        language: (node: EmbeddedLanguage) => {
+            if (node.name === DocLang.unknown) {
+                return;
+            }
+            this.regions.push(node);
+        },
+    };
+
+    parse(tree: Tree) {
+        this.regions = [];
+        tree.children.forEach((child) => {
+            this.dispatchMap[child.kind]?.(child);
+        });
+
+        return this;
+    }
+
+    docLangAtOffset(offset: number): DocLang {
+        for (const region of this.regions) {
+            if (offset < region.loc.start.offset) {
+                continue;
+            }
+
+            if (offset <= region.loc.end.offset) {
+                return region.name;
+            }
+        }
+
+        return DocLang.html; // todo: DocLang.blade
+    }
+
+    docLangsInDocument(maxLanguages: number = 3): DocLang[] {
+        const result = [];
+        for (const region of this.regions) {
+            if (result.indexOf(region.name) !== -1) {
+                continue;
+            }
+            result.push(region.name);
+            if (result.length === maxLanguages) {
+                return result;
+            }
+        }
+
+        result.push(DocLang.html); // todo: use DocLang.blade
+        return result;
+    }
+
+    getEmbeddedDocument(
+        document: TextDocument,
+        languageId: DocLang,
+        ignoreAttributeValues: boolean = false
+    ): TextDocument {
+        let currentPos = 0;
+        const oldContent = document.getText();
+        let result = '';
+        let lastSuffix = '';
+        for (const c of this.regions) {
+            if (c.name === languageId && (!ignoreAttributeValues || !c.attributeValue)) {
+                result = substituteWithWhitespace(
+                    result,
+                    currentPos,
+                    c.loc.start.offset,
+                    oldContent,
+                    lastSuffix,
+                    this.getPrefix(c)
+                );
+                result += oldContent.substring(c.loc.start.offset, c.loc.end.offset);
+                currentPos = c.loc.end.offset;
+                lastSuffix = this.getSuffix(c);
+            }
+        }
+        result = substituteWithWhitespace(result, currentPos, oldContent.length, oldContent, lastSuffix, '');
+        return TextDocument.create(document.uri, languageId, document.version, result);
+    }
+
+    private getPrefix(c: EmbeddedLanguage) {
+        if (!c.attributeValue) {
+            return '';
+        }
+        switch (c.name) {
+            case DocLang.css:
+                return CSS_STYLE_RULE + '{';
+            default:
+                return '';
+        }
+    }
+
+    getSuffix(c: EmbeddedLanguage) {
+        if (!c.attributeValue) {
+            return '';
+        }
+        switch (c.name) {
+            case DocLang.css:
+                return '}';
+            case DocLang.js:
+                return ';';
+            default:
+                return '';
+        }
     }
 }
 

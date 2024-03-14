@@ -5,7 +5,6 @@
 'use strict';
 import * as ts from 'typescript';
 import { MemoryCache } from '../support/cache';
-import { Regions } from '../embedded/embeddedSupport';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Language, Settings } from './baseLang';
 import {
@@ -33,10 +32,10 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { getWordAtText, isWhitespaceOnly, repeat } from '../helpers/general';
-import { DocLang } from '../laraphense/document';
+import { DocLang, Regions } from '../laraphense/document';
 import { DocumentContext } from 'vscode-html-languageservice';
 import { join, basename, dirname } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 
 const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g;
 
@@ -54,7 +53,9 @@ export class Js implements Language {
         private settings: Settings
     ) {
         this.id = languageId;
-        this.jsDocuments = new MemoryCache((document) => regions.get(document).getEmbeddedDocument(languageId));
+        this.jsDocuments = new MemoryCache((document) =>
+            regions.get(document).getEmbeddedDocument(document, languageId)
+        );
         this.host = getLanguageServiceHost(languageId === DocLang.js ? ts.ScriptKind.JS : ts.ScriptKind.TS);
     }
 
@@ -310,7 +311,7 @@ export class Js implements Language {
         return convertSelectionRange(range);
     }
     format(document: TextDocument, range: Range, formatParams: FormattingOptions): TextEdit[] {
-        const jsDocument = this.regions.get(document).getEmbeddedDocument(DocLang.js, true);
+        const jsDocument = this.regions.get(document).getEmbeddedDocument(document, DocLang.js, true);
         const jsLanguageService = this.host.getLanguageService(jsDocument);
 
         const formatterSettings = this.settings && this.settings.javascript && this.settings.javascript.format;

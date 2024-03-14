@@ -86,8 +86,59 @@ export class WorkspaceFolder {
         }
     }
 
-    contains(folder: string) {
-        return folderContainsUri(folder, this._uri);
+    contains(uri: string) {
+        return folderContainsUri(this._uri, uri);
     }
+
+    // get includePaths() {
+    //     return (this._environment.includePaths || []).map(this.absolutePath);
+    // }
+
+    // get documentRootPath() {
+    //     return URI.parse(this.documentRootUri).fsPath;
+    // }
+
+    // get documentRootUri() {
+    //     return this.pathToUri(this._environment.documentRoot || '');
+    // }
+
+    // get includePathUris() {
+    //     if (!this._environment.includePaths) {
+    //         return [];
+    //     }
+    //     let uris = new Set<string>();
+    //     for (let t of this._environment.includePaths) {
+    //         uris.add(this.pathToUri(t));
+    //     }
+    //     return Array.from(uris.values());
+    // }
+
+    // absolutePath = (path: string) => {
+    //     if (isAbsolute(path)) {
+    //         return path;
+    //     }
+    //     let uri = URI.parse(this._uri).fsPath;
+    //     return join(uri, path);
+    // };
+
+    // pathToUri(path: string) {
+    //     if (!path) {
+    //         return this._uri;
+    //     }
+    //     let uri = URI.file(this.absolutePath(path)).toString();
+    //     if (uri.slice(-1) === '/') {
+    //         uri = uri.slice(0, -1);
+    //     }
+    //     return uri;
+    // }
+
+    // includes(folder: string) {
+    //     for (let uri of this.includePathUris) {
+    //         if (this.folderContainsUri(uri, folder)) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 }
 

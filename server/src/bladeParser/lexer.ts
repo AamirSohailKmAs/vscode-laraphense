@@ -278,6 +278,7 @@ export class BladeLexer {
         this.addToken(TokenKind.EQUAL, '=');
         this.advance(); // Skip '='
 
+        this.skipWhitespaces(); // maybe we have whitespace after equal sign
         if (this.isChar('"') || this.isChar("'")) {
             const quote = this.currentChar || '';
             this.addToken(TokenKind.QUOTE, quote);
@@ -472,6 +473,7 @@ export class BladeLexer {
 
         value += this.readUntil((char) => endCharacters.includes(char));
         this.addToken(TokenKind.TEXT, value, pos);
+        return;
     }
 
     private addToken(kind: TokenKind, value: string = '', pos?: Position, end?: Position) {
@@ -495,6 +497,9 @@ export class BladeLexer {
                 case State.Text:
                     this.lexText();
                     break;
+                case State.OpenTag:
+                    this.lexOpenTag();
+                    break;
                 case State.WithInOpenTag:
                     this.lexWithInOpenTag();
                     break;
@@ -504,9 +509,7 @@ export class BladeLexer {
                 case State.CloseTag:
                     this.lexCloseTag();
                     break;
-                case State.OpenTag:
-                    this.lexOpenTag();
-                    break;
+
                 case State.HtmlComment:
                     this.lexHtmlComment();
                     break;

@@ -43,7 +43,7 @@ export class Laraphense {
 
     public provideCompletionResolve(document: TextDocument, item: CompletionItem) {
         let data = item.data;
-        if (data && data.languageId && data.uri) {
+        if (data && data.languageId) {
             let lang = this._workspace.getLanguage(data.languageId);
             if (lang && lang.doResolve && document) {
                 return lang.doResolve(document, item);

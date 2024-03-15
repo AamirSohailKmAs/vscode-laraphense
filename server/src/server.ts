@@ -105,6 +105,11 @@ connection.onCompletion(async (textDocumentPosition) => {
 connection.onCompletionResolve((item) => {
     return runSafe(
         () => {
+            let data = item.data;
+            if (!data || !data.uri) {
+                return item;
+            }
+
             let document = documents.get(item.data.uri);
             if (!document) {
                 return item;

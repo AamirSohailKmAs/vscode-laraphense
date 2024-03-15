@@ -47,13 +47,13 @@ export class Compiler {
 
     private parseFlatDoc(flatDoc: FlatDocument): Tree {
         if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
-            return this._bladeParser.justAstTree();
+            return this._bladeParser.newAstTree();
         }
 
         try {
             return this._bladeParser.parse(flatDoc.doc, flatDoc.languageId);
         } catch (error) {
-            return this._bladeParser.justAstTree();
+            return this._bladeParser.newAstTree();
         }
     }
 }

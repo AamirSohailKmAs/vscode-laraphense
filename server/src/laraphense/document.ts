@@ -3,7 +3,7 @@
 import { DocumentUri } from 'vscode-languageserver';
 import { Debounce } from '../support/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { toDocLang } from '../helpers/uri';
+import { guessLangFromUri, toDocLang } from '../helpers/uri';
 import { EmbeddedLanguage, Tree } from '../types/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
@@ -47,6 +47,21 @@ export class FlatDocument {
 
 export class Regions {
     private regions: EmbeddedLanguage[] = [];
+    private defaultLang: DocLang;
+
+    constructor(uri: DocumentUri) {
+        switch (guessLangFromUri(uri)) {
+            case DocLang.blade:
+                this.defaultLang = DocLang.blade;
+                break;
+            case DocLang.php:
+                this.defaultLang = DocLang.html;
+                break;
+            default:
+                this.defaultLang = DocLang.unknown;
+                break;
+        }
+    }
 
     private dispatchMap: Record<string, (node: any) => void> = {
         tree: (_node: Tree) => {
@@ -94,11 +109,11 @@ export class Regions {
             }
         }
 
-        return DocLang.blade;
+        return this.defaultLang;
     }
 
     docLangsInDocument(maxLanguages: number = 3): DocLang[] {
-        const result = [];
+        const result = [this.defaultLang];
         for (const region of this.regions) {
             if (result.indexOf(region.name) !== -1) {
                 continue;
@@ -109,7 +124,6 @@ export class Regions {
             }
         }
 
-        result.push(DocLang.blade);
         return result;
     }
 

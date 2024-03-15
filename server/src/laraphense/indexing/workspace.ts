@@ -33,7 +33,7 @@ export class Workspace {
         this._indexer = new Indexer(this._compiler, this.config);
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
 
-        this._openDocuments = new MemoryCache((doc) => new Regions().parse(this._compiler.parseDoc(doc)));
+        this._openDocuments = new MemoryCache((doc) => new Regions(doc.uri).parse(this._compiler.parseDoc(doc)));
 
         this._languages.set(DocLang.html, htmlLang);
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));

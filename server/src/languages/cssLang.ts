@@ -23,7 +23,7 @@ export class Css implements Language {
         private settings: Settings
     ) {
         this.embeddedCSSDocuments = new MemoryCache((document) =>
-            this.documentRegions.get(document).getEmbeddedDocument(document, DocLang.css)
+            this.documentRegions.get(document).getEmbeddedDocument(document, this.id)
         );
         this.cssStylesheets = new MemoryCache((document) => service.parseStylesheet(document));
     }

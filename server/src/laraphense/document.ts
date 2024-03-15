@@ -94,7 +94,7 @@ export class Regions {
             }
         }
 
-        return DocLang.html; // todo: DocLang.blade
+        return DocLang.blade;
     }
 
     docLangsInDocument(maxLanguages: number = 3): DocLang[] {
@@ -109,7 +109,7 @@ export class Regions {
             }
         }
 
-        result.push(DocLang.html); // todo: use DocLang.blade
+        result.push(DocLang.blade);
         return result;
     }
 

@@ -15,6 +15,7 @@ import { folderContainsUri } from '../../helpers/uri';
 import { Js } from '../../languages/jsLang';
 import { Pri } from '../../types/general';
 import { Compiler } from '../compiler';
+import { Blade } from '../../languages/bladeLang';
 
 export class Workspace {
     private _indexer: Indexer;
@@ -30,11 +31,14 @@ export class Workspace {
         this._config = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
         this._compiler = new Compiler(this.config);
         this._indexer = new Indexer(this._compiler, this.config);
+        const htmlLang = new Html(getHTMLLanguageService(), this._settings);
 
         this._openDocuments = new MemoryCache((doc) => new Regions().parse(this._compiler.parseDoc(doc)));
-        this._languages.set(DocLang.html, new Html(getHTMLLanguageService(), this._settings));
+
+        this._languages.set(DocLang.html, htmlLang);
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
+        this._languages.set(DocLang.blade, new Blade(htmlLang));
     }
 
     public get config(): laraphenseRc {

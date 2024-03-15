@@ -12,13 +12,13 @@ export enum TokenKind {
     PHP = 'php',
     CSS = 'css',
     HTML = 'html',
-    TEXT = 'TEXT',
+    TEXT = 'some text',
 
     DIRECTIVE = 'directive',
 
     TAG_NAME = 'tag name',
     ATTRIBUTE = 'attribute',
-    ATTRIBUTE_VALUE = 'attribute Value',
+    ATTRIBUTE_VALUE = 'attribute value',
     HTML_COMMENT = 'html comment',
     // HTML_COMMENT_START = 'HTML_COMMENT_START', // <!--
     // HTML_COMMENT_END = 'HTML_COMMENT_END', // -->

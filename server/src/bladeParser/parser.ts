@@ -258,10 +258,31 @@ export class BladeParser {
                         this.eat();
                         hasQuote = true;
                     }
+                    // <foo attribute=@if($condition) test @else testing @endif>
+                    // <foo attribute=@if($condition) {{ $value }} @endif>
+                    if (!hasQuote && this.is(TokenKind.DIRECTIVE)) {
+                        this.parseDirective();
+                        // it not good to continue but fine for now
+                        continue;
+                    }
+                    // <foo action={{ 'https://' . $pfHost . '/eng/process' }}>
+                    if (
+                        !hasQuote &&
+                        this.in([TokenKind.BLADE_ECHO_START, TokenKind.BLADE_RAW_START, TokenKind.BLADE_COMMENT_START])
+                    ) {
+                        this.parseBlade();
+                        // it not good to continue but fine for now
+                        continue;
+                    }
+
                     const attributeValueToken = this.expect(TokenKind.ATTRIBUTE_VALUE);
                     this.expectIf(hasQuote, TokenKind.QUOTE);
                     if (attributeValueToken) {
                         // set attribute languages here
+
+                        if (getAttributeLanguage(attributeName)) {
+                            // todo: parse language
+                        }
                         attributeValue = attributeValueToken.value;
                         end = attributeValueToken.pos;
                     }
@@ -367,11 +388,9 @@ export class BladeParser {
 
         const token = this.token();
 
-        // this <{{ $foo }}> is possible case
-        // this <foo {{ $bar }}> is possible case
+        // this <{{ $tagName }} attribute="value"> is possible case but we'll not support this syntax
         // this <foo bar="something{{buzz}}" > is possible case
         // this <foo bar="@if(true) {{ $bar }} @endif"> is possible case
-        // this <foo @if(true) {{ $bar }} @endif> is possible case
 
         // tag name regex, /^[_:\w][_:\w-.\d]*/
         // attribute regex, /^[^\s"'></=\x00-\x0F\x7F\x80-\x9F]*/
@@ -400,5 +419,13 @@ export class BladeParser {
                 return null;
         }
     }
+}
+
+function getAttributeLanguage(attributeName: string): DocLang | null {
+    const match = attributeName.match(/^(style)$|^(on\w+)$/i);
+    if (!match) {
+        return null;
+    }
+    return match[1] ? DocLang.css : DocLang.js;
 }
 

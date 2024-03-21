@@ -288,6 +288,8 @@ export class BladeLexer {
 
             const pos = this.pos();
 
+            // if it has {{ quote }} then it stops but need to continue
+            // <img src="some text at the beginning{{(asset(Storage::url("uploads/avatar/".$client->avatar))}}">
             const value = this.readUntil(
                 (char) => char === quote
                 // (char) => ['"', "'", '<', '/', '>'].includes(char) // todo: improve it
@@ -297,12 +299,18 @@ export class BladeLexer {
             // "foo bar {{ $kmas }} @if($buzz->isTrue()) bla bla @endif"
             // @ and {{ }} can exists in attributeValue
             // attribute value can be a language, like onclick="alert('something')"
+
             this.addToken(TokenKind.ATTRIBUTE_VALUE, value, pos);
 
             this.addToken(TokenKind.QUOTE, quote);
             this.advance(); // Skip the closing quote (single or double)
 
             return this.setState(State.WithInOpenTag);
+        }
+
+        // <foo bar={{ $buzz }} or-other="attribute">
+        if (this.bladeStates()) {
+            return;
         }
 
         const pos = this.pos();

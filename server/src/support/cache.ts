@@ -2,6 +2,9 @@
 
 import { DocumentUri, TextDocument } from 'vscode-languageserver-textdocument';
 import { DEFAULT_MAX_OPEN_FILES } from './defaults';
+import { writeFile, readFile, unlink, emptyDir, ensureDir } from 'fs-extra';
+import { join } from 'path';
+import { runSafe } from '../helpers/general';
 
 export type CacheItem<T> = { version: number; languageId: string; createdAt: number; data: T };
 
@@ -83,6 +86,52 @@ export class MemoryCache<T> {
                 this._itemsMap.delete(oldestUri);
             }
         }
+    }
+}
+
+export class FileCache {
+    constructor(private _dir: string) {}
+
+    public get directory() {
+        return this._dir;
+    }
+
+    public fullPath(path: string) {
+        return join(this._dir, path);
+    }
+
+    public read(key: string) {
+        return readFile(this.fullPath(key));
+    }
+
+    public write(path: string, data: string) {
+        return writeFile(this.fullPath(path), data);
+    }
+
+    public delete(path: string) {
+        return unlink(this.fullPath(path));
+    }
+
+    public async clear() {
+        return runSafe(
+            async () => {
+                await emptyDir(this._dir);
+                return this;
+            },
+            undefined,
+            `Failed to clear workspace cache`
+        );
+    }
+
+    public static async create(path: string) {
+        return runSafe(
+            async () => {
+                await ensureDir(path);
+                return new FileCache(path);
+            },
+            undefined,
+            `Failed to get workspace cache at ${path}`
+        );
     }
 }
 

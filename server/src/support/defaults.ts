@@ -7,6 +7,8 @@ export const DEFAULT_PHP_VERSION = 803;
 export const DEFAULT_MAX_FILE_SIZE = 1024 * 1024; // 1MB
 export const DEFAULT_MAX_OPEN_FILES = 10;
 
+export const DEFAULT_LARAPHENSE_CONFIG = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
+
 export const DEFAULT_INCLUDE = ['**'];
 export const DEFAULT_EXCLUDE = [
     '**/.git/**',

@@ -1,11 +1,16 @@
 'use strict';
 import { glob } from 'fast-glob';
-import { folderContainsUri, pathToUri, uriToPath } from '../../helpers/uri';
-import { FolderUri } from '../../types/general';
+import { folderContainsUri, uriToPath } from '../../helpers/uri';
 import { SymbolTable } from './tables/symbolTable';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
+import { DocumentUri } from 'vscode-languageserver';
+
+/**
+ * A tagging type for string properties that are actually Folder URI.
+ */
+export type FolderUri = string;
 
 export const enum FolderKind {
     User = 0,
@@ -17,6 +22,8 @@ export type FileEntry = {
     modified: number;
     size: number;
 };
+
+export type RelativePath = string;
 
 export class WorkspaceFolder {
     public symbolTable: SymbolTable;
@@ -63,18 +70,25 @@ export class WorkspaceFolder {
         return uri.indexOf('/vendor/') !== -1;
     }
 
+    public relativePath(uri: DocumentUri): RelativePath {
+        return uri.replace(this._uri + '/', '');
+    }
+
+    public documentUri(uri: RelativePath): DocumentUri {
+        return `${this._uri}/${uri}`;
+    }
+
     public async findFiles() {
         const entries = await glob(this._includeGlobs, {
             stats: true,
             cwd: uriToPath(this._uri) + '/',
             ignore: this._excludeGlobs,
-            absolute: true,
             dot: true,
             suppressErrors: true,
         });
 
         return entries.map((entry) => ({
-            uri: pathToUri(entry.path),
+            uri: this.documentUri(entry.path),
             modified: entry.stats ? entry.stats.mtime.getTime() : 0,
             size: entry.stats ? entry.stats.size : 0,
         }));
@@ -82,7 +96,7 @@ export class WorkspaceFolder {
 
     public uriToGlobPattern(name: string) {
         if (name.indexOf('/') === -1) {
-            return '**/' + name + '/*.{php,blade.php}';
+            return '**/' + name + '/*.{php,blade}'; // .php and .blade file, I know .blade isn't something for now
         } else {
             return name;
         }

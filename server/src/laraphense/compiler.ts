@@ -38,7 +38,7 @@ export class Compiler {
         const astTree = this.parseFlatDoc(flatDoc);
 
         const { symbols } = this._analyser.analyse(astTree);
-        folder.symbolTable.addSymbolsFromMap(symbols, uri);
+        folder.symbolTable.addSymbolsFromMap(symbols, folder.relativePath(uri));
 
         flatDoc.lastCompile = process.hrtime();
 

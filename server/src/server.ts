@@ -3,7 +3,13 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { InitializeParams, TextDocuments, TextDocumentSyncKind } from 'vscode-languageserver';
+import {
+    InitializeParams,
+    LSPErrorCodes,
+    ResponseError,
+    TextDocuments,
+    TextDocumentSyncKind,
+} from 'vscode-languageserver';
 import { createConnection } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -11,10 +17,12 @@ import { Laraphense } from './laraphense/laraphense';
 import { Workspace } from './laraphense/indexing/workspace';
 import { FolderKind, WorkspaceFolder } from './laraphense/indexing/workspaceFolder';
 import { URI } from 'vscode-uri';
-import { DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
+import { DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { runSafe } from './helpers/general';
+import { tmpdir } from 'os';
+import { FileCache } from './support/cache';
 
 const connection = createConnection();
 
@@ -25,7 +33,7 @@ const emmetTriggerCharacters = ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2'
 
 connection.onInitialize(async (params: InitializeParams) => {
     console.log(`laraphense started at ${new Date().toLocaleTimeString()}`);
-    workspace = new Workspace();
+    workspace = new Workspace(DEFAULT_LARAPHENSE_CONFIG);
 
     let stubsPath = join(__dirname, '../stubs');
 
@@ -81,26 +89,26 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration((change) => {
-    workspace.settings = change.settings;
+    laraphense.settings = change.settings;
 });
 
 connection.onShutdown(() => {
-    workspace.shutdown();
+    laraphense.shutdown();
 });
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent((change) => {
-    workspace.documentChanged(change.document);
+    laraphense.documentChanged(change.document);
 });
 
 documents.onDidOpen((_param) => {
-    workspace.documentOpened(documents.all());
+    laraphense.documentOpened(documents.all());
 });
 
 documents.onDidClose((param) => {
     connection.sendDiagnostics({ uri: param.document.uri, diagnostics: [] });
-    workspace.documentClosed(param.document);
+    laraphense.documentClosed(param.document);
 });
 
 connection.onCompletion(async (textDocumentPosition, token) => {

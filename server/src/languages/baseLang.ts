@@ -23,12 +23,19 @@ import {
     HoverSettings,
 } from 'vscode-html-languageservice';
 import { URI, Utils } from 'vscode-uri';
+import { folderContainsUri } from '../helpers/uri';
 
 export class DocContext implements DocumentContext {
-    folderUri: string | undefined = undefined;
-    constructor(uri?: string) {
-        if (uri) {
-            this.folderUri = uri + '/';
+    private folderUri: string | undefined;
+    constructor(folders: string[], uri?: string) {
+        for (let i = 0; i < folders.length; i++) {
+            const folder = folders[i];
+            if (uri) {
+                if (folderContainsUri(folder, uri)) {
+                    this.folderUri = folder;
+                }
+                this.folderUri = uri + '/';
+            }
         }
     }
 

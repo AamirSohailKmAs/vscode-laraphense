@@ -23,6 +23,7 @@ import { Css } from '../languages/cssLang';
 import { Language, Settings, laraphenseRc } from '../languages/baseLang';
 import { Js } from '../languages/jsLang';
 import { Blade } from '../languages/bladeLang';
+import { Php } from '../languages/phpLang';
 
 export class Laraphense {
     private _openDocuments: MemoryCache<Regions>;
@@ -37,6 +38,7 @@ export class Laraphense {
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
 
         this._languages.set(DocLang.html, htmlLang);
+        this._languages.set(DocLang.php, new Php(_workspace));
         this._languages.set(DocLang.blade, new Blade(htmlLang));
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
@@ -64,6 +66,15 @@ export class Laraphense {
 
         if (!lang) {
             return result;
+        }
+
+        const folder = this._workspace.findFolderContainingUri(document.uri);
+        if (folder) {
+            folder.libraries.forEach((library) => {
+                if (library.doComplete && library.canComplete(lang.id)) {
+                    result = mergeCompletionItems(result, library.doComplete(document, position));
+                }
+            });
         }
 
         if (!lang.doComplete) {
@@ -166,6 +177,7 @@ export class Laraphense {
 
     public getLangAtPosition(document: TextDocument, position: Position) {
         const docLang = this._openDocuments.get(document).docLangAtOffset(document.offsetAt(position));
+        console.log('docLang', docLang);
         return this.getLanguage(docLang);
     }
 

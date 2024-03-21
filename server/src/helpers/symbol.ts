@@ -19,3 +19,43 @@ export function toLSPRange(location: ParserLocation): Range {
 export function toLSPPosition(position: ParserPosition) {
     return LSPPosition.create(position.line, position.column);
 }
+
+export function psr4Path(namespace: string, paths: string[], mapping?: { [vendor: string]: string }): string {
+    const namespaceParts = namespace.split('\\');
+
+    let maxScore = 0;
+    let maxScorePath = '';
+
+    for (const path of paths) {
+        const score = calculateScore(namespaceParts, path, mapping);
+        if (score > maxScore) {
+            maxScore = score;
+            maxScorePath = path;
+        }
+    }
+
+    return maxScorePath;
+}
+
+function calculateScore(namespaceParts: string[], paths: string, mapping?: { [vendor: string]: string }): number {
+    const pathParts = paths.split('/');
+
+    let score = 0;
+
+    while (namespaceParts.length > 0 && pathParts.length > 0) {
+        const namespace = namespaceParts.pop();
+        const path = pathParts.pop()?.replace('.php', '');
+
+        if (!namespace || !path) {
+            break;
+        }
+
+        if (namespace === path || (mapping && mapping[namespace] === path)) {
+            score++;
+        } else {
+            break;
+        }
+    }
+
+    return score;
+}

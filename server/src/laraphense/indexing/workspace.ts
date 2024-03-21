@@ -45,6 +45,7 @@ export class Workspace {
 
     public async indexFolder(folder: WorkspaceFolder) {
         await this._indexer.indexFolder(folder);
+        folder.initLibraries();
     }
 
     public addFolder(folder: WorkspaceFolder) {

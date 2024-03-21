@@ -5,6 +5,8 @@ import { SymbolTable } from './tables/symbolTable';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
+import { Package } from '../../packages/basePackage';
+import { Laravel } from '../../packages/laravel';
 import { DocumentUri } from 'vscode-languageserver';
 
 /**
@@ -27,6 +29,8 @@ export type RelativePath = string;
 
 export class WorkspaceFolder {
     public symbolTable: SymbolTable;
+    private _libraries: Array<Package> = [];
+
     constructor(
         private _uri: string,
         private _kind: FolderKind = FolderKind.User,
@@ -40,6 +44,17 @@ export class WorkspaceFolder {
             this._uri = this._uri.slice(0, -1);
         }
         this.symbolTable = new SymbolTable();
+    }
+
+    public initLibraries() {
+        if (this.kind === FolderKind.Stub) {
+            return;
+        }
+        this.enableLaravel();
+    }
+
+    public get libraries() {
+        return this._libraries;
     }
 
     public get uri(): FolderUri {
@@ -123,6 +138,14 @@ export class WorkspaceFolder {
             uri = uri.slice(0, -1);
         }
         return uri;
+    }
+
+    private enableLaravel() {
+        const version = this.symbolTable.getSymbol('Illuminate\\Foundation\\Application::VERSION')?.value;
+
+        if (version) {
+            this._libraries.push(new Laravel(version, this));
+        }
     }
 }
 

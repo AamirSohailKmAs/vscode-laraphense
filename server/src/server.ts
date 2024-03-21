@@ -41,11 +41,26 @@ connection.onInitialize(async (params: InitializeParams) => {
         workspace.addFolder(new WorkspaceFolder(URI.parse(params.rootUri).toString()));
     }
 
+    const storagePath: string = params.initializationOptions?.storagePath ?? join(tmpdir(), 'laraphense');
+    const clearCache: boolean = params.initializationOptions?.clearCache ?? false;
+
+    let cache: FileCache | undefined;
+    if (workspace.folders.size > 1) {
+        cache = await FileCache.create(join(storagePath, 'kmas'));
+
+        if (clearCache && cache) {
+            cache = await cache.clear();
+        }
+    }
+
     laraphense = new Laraphense(workspace);
 
     return {
         capabilities: {
-            textDocumentSync: TextDocumentSyncKind.Incremental,
+            textDocumentSync: {
+                openClose: true,
+                change: TextDocumentSyncKind.Incremental,
+            },
             completionProvider: {
                 resolveProvider: true,
                 triggerCharacters: [...emmetTriggerCharacters, '.', ':', '<', '"', '=', '/'],
@@ -88,7 +103,10 @@ documents.onDidClose((param) => {
     workspace.documentClosed(param.document);
 });
 
-connection.onCompletion(async (textDocumentPosition) => {
+connection.onCompletion(async (textDocumentPosition, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             const document = documents.get(textDocumentPosition.textDocument.uri);
@@ -102,7 +120,10 @@ connection.onCompletion(async (textDocumentPosition) => {
     );
 });
 
-connection.onCompletionResolve((item) => {
+connection.onCompletionResolve((item, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let data = item.data;
@@ -121,7 +142,10 @@ connection.onCompletionResolve((item) => {
     );
 });
 
-connection.onHover((textDocumentPosition) => {
+connection.onHover((textDocumentPosition, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(textDocumentPosition.textDocument.uri);
@@ -135,7 +159,10 @@ connection.onHover((textDocumentPosition) => {
     );
 });
 
-connection.onDocumentHighlight((documentHighlightParams) => {
+connection.onDocumentHighlight((documentHighlightParams, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(documentHighlightParams.textDocument.uri);
@@ -149,7 +176,10 @@ connection.onDocumentHighlight((documentHighlightParams) => {
     );
 });
 
-connection.onDefinition((definitionParams) => {
+connection.onDefinition((definitionParams, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(definitionParams.textDocument.uri);
@@ -163,7 +193,10 @@ connection.onDefinition((definitionParams) => {
     );
 });
 
-connection.onReferences((referenceParams) => {
+connection.onReferences((referenceParams, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(referenceParams.textDocument.uri);
@@ -177,7 +210,10 @@ connection.onReferences((referenceParams) => {
     );
 });
 
-connection.onSignatureHelp((signatureHelpParams) => {
+connection.onSignatureHelp((signatureHelpParams, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(signatureHelpParams.textDocument.uri);
@@ -191,7 +227,10 @@ connection.onSignatureHelp((signatureHelpParams) => {
     );
 });
 
-connection.onDocumentLinks((documentLinkParam) => {
+connection.onDocumentLinks((documentLinkParam, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(documentLinkParam.textDocument.uri);
@@ -205,7 +244,10 @@ connection.onDocumentLinks((documentLinkParam) => {
     );
 });
 
-connection.onDocumentSymbol((documentSymbolParams) => {
+connection.onDocumentSymbol((documentSymbolParams, token) => {
+    if (token.isCancellationRequested) {
+        return new ResponseError(LSPErrorCodes.RequestCancelled, 'Request cancelled.');
+    }
     return runSafe(
         () => {
             let document = documents.get(documentSymbolParams.textDocument.uri);

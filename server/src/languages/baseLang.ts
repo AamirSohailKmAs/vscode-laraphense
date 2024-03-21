@@ -53,6 +53,7 @@ export type Language = {
     id: DocLang;
     emmetSyntax?: 'html' | 'css';
     dispose: () => void;
+    onDocumentRemoved: (document: TextDocument) => void;
     doComplete?: (
         document: TextDocument,
         position: Position,
@@ -67,7 +68,6 @@ export type Language = {
     findDocumentHighlight?: (document: TextDocument, position: Position) => DocumentHighlight[];
     findDocumentLinks?: (document: TextDocument, documentContext: DocContext) => DocumentLink[];
     findDocumentSymbols?: (document: TextDocument) => SymbolInformation[];
-    onDocumentRemoved: (document: TextDocument) => void;
 };
 
 type HtmlSetting = {

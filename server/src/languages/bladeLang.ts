@@ -8,65 +8,65 @@ import { DocLang } from '../laraphense/document';
 import { Html } from './htmlLang';
 
 export class Blade implements Language {
-    id: DocLang = DocLang.blade;
-    emmetSyntax?: 'html' | 'css' = 'html';
+    public id: DocLang = DocLang.blade;
+    public emmetSyntax?: 'html' | 'css' = 'html';
 
     constructor(private html: Html) {}
 
-    getSelectionRange(document: TextDocument, position: Position): SelectionRange {
+    public getSelectionRange(document: TextDocument, position: Position): SelectionRange {
         return this.html.getSelectionRange(document, position);
     }
 
-    async doComplete(document: TextDocument, position: Position, documentContext: DocumentContext) {
+    public async doComplete(document: TextDocument, position: Position, documentContext: DocumentContext) {
         const completionList = this.html.doComplete(document, position, documentContext);
         return completionList;
     }
 
-    doHover(document: TextDocument, position: Position) {
+    public doHover(document: TextDocument, position: Position) {
         return this.html.doHover(document, position);
     }
 
-    findDocumentHighlight(document: TextDocument, position: Position) {
+    public findDocumentHighlight(document: TextDocument, position: Position) {
         return this.html.findDocumentHighlight(document, position);
     }
 
-    findDocumentLinks(document: TextDocument, documentContext: DocumentContext) {
+    public findDocumentLinks(document: TextDocument, documentContext: DocumentContext) {
         return this.html.findDocumentLinks(document, documentContext);
     }
 
-    findDocumentSymbols(document: TextDocument) {
+    public findDocumentSymbols(document: TextDocument) {
         return this.html.findDocumentSymbols(document);
     }
 
-    format(document: TextDocument, range: Range, formatParams: FormattingOptions) {
+    public format(document: TextDocument, range: Range, formatParams: FormattingOptions) {
         return this.html.format(document, range, formatParams);
     }
 
-    getFoldingRanges(document: TextDocument): FoldingRange[] {
+    public getFoldingRanges(document: TextDocument): FoldingRange[] {
         return this.html.getFoldingRanges(document);
     }
 
-    doAutoInsert(document: TextDocument, position: Position, kind: 'autoQuote' | 'autoClose') {
+    public doAutoInsert(document: TextDocument, position: Position, kind: 'autoQuote' | 'autoClose') {
         return this.html.doAutoInsert(document, position, kind);
     }
 
-    doRename(document: TextDocument, position: Position, newName: string) {
+    public doRename(document: TextDocument, position: Position, newName: string) {
         return this.html.doRename(document, position, newName);
     }
 
-    findMatchingTagPosition(document: TextDocument, position: Position) {
+    public findMatchingTagPosition(document: TextDocument, position: Position) {
         return this.html.findMatchingTagPosition(document, position);
     }
 
-    doLinkedEditing(document: TextDocument, position: Position) {
+    public doLinkedEditing(document: TextDocument, position: Position) {
         return this.html.doLinkedEditing(document, position);
     }
 
-    onDocumentRemoved(document: TextDocument) {
+    public onDocumentRemoved(document: TextDocument) {
         this.html.onDocumentRemoved(document);
     }
 
-    dispose() {
+    public dispose() {
         this.html.dispose();
     }
 }

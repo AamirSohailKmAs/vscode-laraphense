@@ -31,6 +31,8 @@ export class BladeLexer {
     private lastTagName: string = '';
     private lastDirectiveName: string = '';
 
+    // todo: we can rewrite lexer which extract blade language tokens first and then parse using html parser,
+    // but first we need to create a php parser
     constructor(input: string) {
         this.input = input;
         this.index = 0;

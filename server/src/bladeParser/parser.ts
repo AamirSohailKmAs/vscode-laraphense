@@ -128,7 +128,9 @@ export class BladeParser {
         end.offset += token.value.length;
         end.character += token.value.length;
 
-        this.addError(`Expected '${expectedKind}', but got '${token.kind}'`, { start: token.pos, end });
+        const found = token.value.length < 11 ? token.value : token.value.substring(0, 10) + '...';
+
+        this.addError(`Expected '${expectedKind}', but got '${found}'`, { start: token.pos, end });
         return undefined;
     }
 

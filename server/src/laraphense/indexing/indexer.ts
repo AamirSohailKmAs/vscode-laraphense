@@ -1,17 +1,23 @@
 'use strict';
 
+import { DocumentUri } from 'vscode-languageserver';
 import { laraphenseRc } from '../../languages/baseLang';
 import { Compiler } from '../compiler';
+import { DocLang } from '../document';
+import { Fetcher } from '../fetcher';
 import { WorkspaceFolder } from './workspaceFolder';
 export class Indexer {
+    private _fetcher: Fetcher;
     private _indexCount: number = 0;
 
-    constructor(private _compiler: Compiler, private config: laraphenseRc) {}
+    constructor(private _compiler: Compiler, private config: laraphenseRc) {
+        this._fetcher = new Fetcher();
+    }
 
     public async indexFolder(folder: WorkspaceFolder) {
         const files = await folder.findFiles();
 
-        console.log(`indexFolder [${folder.uri}] having files [${files.length}]`);
+        console.log(`indexing Folder [${folder.uri}] having files [${files.length}]`);
 
         if (files.length < 1) {
             return;
@@ -31,11 +37,14 @@ export class Indexer {
                 continue;
             }
 
-            const compiled = this._compiler.compileUri(entry.uri, folder);
+            const compiled = this.indexFile(entry.uri);
             if (!compiled) {
-                missingFiles.push({ uri: entry.uri, reason: 'can not compile' });
                 continue;
             }
+
+            folder.symbolTable.addSymbols(compiled.symbols, folder.relativePath(entry.uri));
+            folder.symbolTable.addChildrenSymbols(compiled.childrenSymbols);
+
             count++;
             this._indexCount++;
         }
@@ -44,6 +53,16 @@ export class Indexer {
         if (missingFiles.length > 0) {
             console.log('missingFiles', missingFiles);
         }
+    }
+
+    private indexFile(uri: DocumentUri) {
+        const flatDoc = this._fetcher.loadUriIfLang(uri, [DocLang.php, DocLang.blade]);
+
+        if (flatDoc === undefined) {
+            return undefined;
+        }
+
+        return this._compiler.compileUri(flatDoc);
     }
 }
 

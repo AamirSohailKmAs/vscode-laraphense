@@ -2,20 +2,16 @@
 
 import { BladeParser } from '../bladeParser/parser';
 import { DocLang, FlatDocument } from './document';
-import { Fetcher } from './fetcher';
 import { Analyser } from './analyser';
-import { WorkspaceFolder } from './indexing/workspaceFolder';
 import { laraphenseRc } from '../languages/baseLang';
 import { Tree } from '../types/bladeAst';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export class Compiler {
-    private _fetcher: Fetcher;
     private _analyser: Analyser;
     private _bladeParser: BladeParser;
 
     constructor(public config: laraphenseRc) {
-        this._fetcher = new Fetcher();
         this._analyser = new Analyser();
         this._bladeParser = new BladeParser({
             parser: { extractDoc: true, suppressErrors: true, version: config.phpVersion },
@@ -28,21 +24,14 @@ export class Compiler {
         return this.parseFlatDoc(FlatDocument.fromTextDocument(doc));
     }
 
-    public compileUri(uri: string, folder: WorkspaceFolder) {
-        const flatDoc = this._fetcher.loadUriIfLang(uri, [DocLang.php, DocLang.blade]);
-
-        if (flatDoc === undefined) {
-            return undefined;
-        }
-
+    public compileUri(flatDoc: FlatDocument) {
         const astTree = this.parseFlatDoc(flatDoc);
 
-        const { symbols } = this._analyser.analyse(astTree);
-        folder.symbolTable.addSymbolsFromMap(symbols, folder.relativePath(uri));
+        const { symbols, children } = this._analyser.analyse(astTree);
 
         flatDoc.lastCompile = process.hrtime();
 
-        return { astTree };
+        return { astTree, symbols, childrenSymbols: children };
     }
 
     private parseFlatDoc(flatDoc: FlatDocument): Tree {

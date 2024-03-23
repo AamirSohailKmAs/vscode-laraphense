@@ -26,7 +26,9 @@ export function activate(context: ExtensionContext) {
         documentSelector: ['blade', 'php'],
         synchronize: { fileEvents: workspace.createFileSystemWatcher('{composer,package}.json') },
         initializationOptions: {
-            storage: context.storagePath,
+            storagePath: context.storagePath,
+            globalPath: context.globalStoragePath,
+            workspaceName: workspace.name ?? 'workspace',
         },
     };
 

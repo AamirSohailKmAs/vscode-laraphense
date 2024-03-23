@@ -21,7 +21,7 @@ import { DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from 
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { runSafe } from './helpers/general';
-import { tmpdir } from 'os';
+import { homedir } from 'os';
 import { FileCache } from './support/cache';
 
 const connection = createConnection();
@@ -38,26 +38,28 @@ connection.onInitialize(async (params: InitializeParams) => {
     let stubsPath = join(__dirname, '../stubs');
 
     if (existsSync(stubsPath)) {
-        workspace.addFolder(new WorkspaceFolder(URI.parse(stubsPath).toString(), FolderKind.Stub, DEFAULT_STUBS));
+        workspace.addFolder(URI.parse(stubsPath).toString(), FolderKind.Stub, DEFAULT_STUBS);
     }
 
     if (params.workspaceFolders) {
         params.workspaceFolders.forEach((folder) => {
-            workspace.addFolder(new WorkspaceFolder(URI.parse(folder.uri).toString()));
+            workspace.addFolder(URI.parse(folder.uri).toString());
         });
     } else if (params.rootUri) {
-        workspace.addFolder(new WorkspaceFolder(URI.parse(params.rootUri).toString()));
+        workspace.addFolder(URI.parse(params.rootUri).toString());
     }
 
-    const storagePath: string = params.initializationOptions?.storagePath ?? join(tmpdir(), 'laraphense');
+    const storagePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'laraphense');
+    const globalPath: string = params.initializationOptions?.globalPath ?? join(homedir(), 'laraphense');
+    const workspaceName: string = params.initializationOptions?.workspaceName ?? 'workspace';
     const clearCache: boolean = params.initializationOptions?.clearCache ?? false;
 
-    let cache: FileCache | undefined;
+    let storageCache: FileCache | undefined;
     if (workspace.folders.size > 1) {
-        cache = await FileCache.create(join(storagePath, 'kmas'));
+        storageCache = await FileCache.create(join(storagePath, workspaceName));
 
-        if (clearCache && cache) {
-            cache = await cache.clear();
+        if (clearCache && storageCache) {
+            storageCache = await storageCache.clear();
         }
     }
 
@@ -71,7 +73,7 @@ connection.onInitialize(async (params: InitializeParams) => {
             },
             completionProvider: {
                 resolveProvider: true,
-                triggerCharacters: [...emmetTriggerCharacters, '.', ':', '<', '"', '=', '/'],
+                triggerCharacters: [...emmetTriggerCharacters, '@', '.', ':', '<', '"', '=', '/'],
             },
             hoverProvider: true,
             documentHighlightProvider: true,
@@ -123,7 +125,7 @@ connection.onCompletion(async (textDocumentPosition, token) => {
             }
             return laraphense.provideCompletion(document, textDocumentPosition.position, textDocumentPosition.context);
         },
-        null,
+        null, // todo: should we use ResponseError here or below ?
         `Error while computing completions for ${textDocumentPosition.textDocument.uri}`
     );
 });

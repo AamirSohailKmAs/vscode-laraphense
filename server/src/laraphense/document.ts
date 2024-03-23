@@ -7,7 +7,7 @@ import { guessLangFromUri, toDocLang } from '../helpers/uri';
 import { EmbeddedLanguage, Tree } from '../types/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
-import { toLocation } from '../helpers/symbol';
+import { toLocation } from './indexing/symbol';
 import { substituteWithWhitespace } from '../helpers/general';
 
 export enum DocLang {

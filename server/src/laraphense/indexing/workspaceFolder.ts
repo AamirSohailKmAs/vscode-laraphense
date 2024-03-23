@@ -1,18 +1,20 @@
 'use strict';
 import { glob } from 'fast-glob';
 import { folderContainsUri, uriToPath } from '../../helpers/uri';
-import { SymbolTable } from './tables/symbolTable';
+import { SymbolKind, SymbolTable } from './tables/symbolTable';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
 import { Package } from '../../packages/basePackage';
 import { Laravel } from '../../packages/laravel';
 import { DocumentUri } from 'vscode-languageserver';
+import { IdGenerator, WordStore } from '../../support/generator';
+import { toFqsen } from './symbol';
 
 /**
  * A tagging type for string properties that are actually Folder URI.
  */
-export type FolderUri = string;
+export type FolderUri = string & { readonly FolderUri: unique symbol };
 
 export const enum FolderKind {
     User = 0,
@@ -25,13 +27,16 @@ export type FileEntry = {
     size: number;
 };
 
-export type RelativePath = string;
+// Define a type for the unique ID
+export type RelativePathId = string & { readonly PathId: unique symbol };
 
 export class WorkspaceFolder {
     public symbolTable: SymbolTable;
     private _libraries: Array<Package> = [];
+    private _pathId: IdGenerator<RelativePathId>;
 
     constructor(
+        private _wordStore: WordStore,
         private _uri: string,
         private _kind: FolderKind = FolderKind.User,
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
@@ -44,6 +49,7 @@ export class WorkspaceFolder {
             this._uri = this._uri.slice(0, -1);
         }
         this.symbolTable = new SymbolTable();
+        this._pathId = new IdGenerator<RelativePathId>(this._wordStore, '/');
     }
 
     public initLibraries() {
@@ -58,7 +64,7 @@ export class WorkspaceFolder {
     }
 
     public get uri(): FolderUri {
-        return this._uri;
+        return this._uri as FolderUri;
     }
 
     public get kind(): FolderKind {
@@ -85,11 +91,11 @@ export class WorkspaceFolder {
         return uri.indexOf('/vendor/') !== -1;
     }
 
-    public relativePath(uri: DocumentUri): RelativePath {
-        return uri.replace(this._uri + '/', '');
+    public relativePath(uri: DocumentUri): RelativePathId {
+        return this._pathId.toId(uri.replace(this._uri + '/', ''));
     }
 
-    public documentUri(uri: RelativePath): DocumentUri {
+    public documentUri(uri: string): DocumentUri {
         return `${this._uri}/${uri}`;
     }
 
@@ -141,11 +147,12 @@ export class WorkspaceFolder {
     }
 
     private enableLaravel() {
-        const version = this.symbolTable.getSymbol('Illuminate\\Foundation\\Application::VERSION')?.value;
-
-        if (version) {
-            this._libraries.push(new Laravel(version, this));
-        }
+        // const version = this.symbolTable.getSymbolNested(
+        //     toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application')
+        // )?.value;
+        // if (version) {
+        //     this._libraries.push(new Laravel(version, this));
+        // }
     }
 }
 

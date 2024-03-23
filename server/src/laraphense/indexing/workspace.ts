@@ -2,21 +2,25 @@
 
 import { DocumentUri, TextDocument } from 'vscode-languageserver-textdocument';
 import { Indexer } from './indexer';
-import { WorkspaceFolder } from './workspaceFolder';
+import { FolderKind, WorkspaceFolder } from './workspaceFolder';
 import { DocContext, laraphenseRc } from '../../languages/baseLang';
 import { folderContainsUri } from '../../helpers/uri';
 import { Compiler } from '../compiler';
 import { Regions } from '../document';
 import { FileCache } from '../../support/cache';
+import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE } from '../../support/defaults';
+import { WordStore } from '../../support/generator';
 
 export class Workspace {
     private _cache?: FileCache = undefined;
     private _indexer: Indexer;
     private _compiler: Compiler;
+    private _wordStore: WordStore;
 
     private _folders: Map<DocumentUri, WorkspaceFolder> = new Map();
 
     constructor(private _config: laraphenseRc) {
+        this._wordStore = new WordStore();
         this._compiler = new Compiler(this.config);
         this._indexer = new Indexer(this._compiler, this.config);
     }
@@ -38,9 +42,11 @@ export class Workspace {
     }
 
     public indexWorkspace() {
+        // emit indexing started
         this._folders.forEach((folder) => {
             this.indexFolder(folder);
         });
+        // emit indexing ended
     }
 
     public async indexFolder(folder: WorkspaceFolder) {
@@ -48,8 +54,13 @@ export class Workspace {
         folder.initLibraries();
     }
 
-    public addFolder(folder: WorkspaceFolder) {
-        this._folders.set(folder.uri, folder);
+    public addFolder(
+        _uri: string,
+        _kind: FolderKind = FolderKind.User,
+        _includeGlobs: string[] = DEFAULT_INCLUDE,
+        _excludeGlobs: string[] = DEFAULT_EXCLUDE
+    ) {
+        this._folders.set(_uri, new WorkspaceFolder(this._wordStore, _uri, _kind, _includeGlobs, _excludeGlobs));
     }
 
     public removeFolder(uri: string) {

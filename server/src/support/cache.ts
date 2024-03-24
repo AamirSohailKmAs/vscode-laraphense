@@ -100,16 +100,16 @@ export class FileCache {
         return join(this._dir, path);
     }
 
-    public read(key: string) {
-        return readFile(this.fullPath(key));
+    public async read(key: string) {
+        return readFile(this.fullPath(key), 'utf-8');
     }
 
-    public write(path: string, data: string) {
-        return writeFile(this.fullPath(path), data);
+    public async write(key: string, data: string) {
+        return writeFile(this.fullPath(key), data, 'utf-8');
     }
 
-    public delete(path: string) {
-        return unlink(this.fullPath(path));
+    public async delete(key: string) {
+        return unlink(this.fullPath(key));
     }
 
     public async clear() {

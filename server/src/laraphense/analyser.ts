@@ -187,20 +187,21 @@ export class Analyser {
         );
         this.addChildrenSymbol(method);
 
-        // node.arguments.forEach((param) => {
-        //     //todo: Attribute, type, byref, flags: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE;
+        node.arguments.forEach((param) => {
+            //todo: Attribute, type, byref, flags: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE;
 
-        //     this.addChildrenSymbol(
-        //         this._newSymbol(
-        //             param.name,
-        //             SymbolKind.Variable,
-        //             param.loc,
-        //             modifier({ isReadonly: param.readonly, isNullable: param.nullable, isVariadic: param.variadic }),
-        //             param.value
-        //         ),
-        //         method
-        //     );
-        // });
+            // fixme: if node.name is __construct and parse flags then these are properties of member
+            this.addChildrenSymbol(
+                this._newSymbol(
+                    param.name,
+                    SymbolKind.Variable,
+                    param.loc,
+                    modifier({ isReadonly: param.readonly, isNullable: param.nullable, isVariadic: param.variadic }),
+                    param.value
+                ),
+                method
+            );
+        });
         return false; // should go inside and get the symbols and references
     }
     private _analyseClassConstant(node: ClassConstant): boolean {

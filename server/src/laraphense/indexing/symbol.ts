@@ -3,7 +3,7 @@
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
 import { Location, Position } from '../../types/bladeAst';
-import { Fqcn, Fqsen, SymbolKind } from './tables/symbolTable';
+import { Fqcn, Fqsen, Selector, SymbolKind } from './tables/symbolTable';
 
 export function toPosition(pos: ParserPosition): Position {
     return { offset: pos.offset, line: pos.line, character: pos.column + 1 };
@@ -26,9 +26,9 @@ export function toFqsen(kind: SymbolKind, name: string, containerName: string | 
 
     switch (kind) {
         case SymbolKind.Function || SymbolKind.Method:
-            return `${fqcn}::${name}(` as Fqsen;
+            return `${fqcn}:(${name}` as Fqsen;
         case SymbolKind.Property:
-            return `${fqcn}::$${name}` as Fqsen;
+            return `${fqcn}:$${name}` as Fqsen;
         case SymbolKind.Constant || SymbolKind.EnumMember:
             return `${fqcn}::${name}` as Fqsen;
         case SymbolKind.Class || SymbolKind.Interface || SymbolKind.Enum || SymbolKind.Trait:
@@ -36,7 +36,21 @@ export function toFqsen(kind: SymbolKind, name: string, containerName: string | 
         default:
             console.log('default fqsen', kind, name, containerName);
 
-            return `${fqcn}:::${name}` as Fqsen;
+            return `${fqcn}:${name}` as Fqsen;
+    }
+}
+
+export function toSelector(kind: SymbolKind, name: string): Selector {
+    switch (kind) {
+        case SymbolKind.Function || SymbolKind.Method:
+            return `:(${name}` as Selector;
+        case SymbolKind.Property:
+            return `:$${name}` as Selector;
+        case SymbolKind.Constant || SymbolKind.EnumMember:
+            return `::${name}` as Selector;
+        default:
+            console.log('default selector', kind, name);
+            return `:${name}` as Selector;
     }
 }
 

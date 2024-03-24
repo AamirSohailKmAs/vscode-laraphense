@@ -47,7 +47,7 @@ type Symbol = {
     name: string;
     kind: SymbolKind;
     loc: Location;
-    path: RelativePathId;
+    path: RelativePathId; // not in use
 };
 
 export type PhpSymbol = Symbol & {
@@ -62,7 +62,7 @@ export type PhpSymbol = Symbol & {
 export type Fqcn = string & { readonly Fqcn: unique symbol };
 
 /**
- * a tagging type which is fully Qualified Structural Element Name
+ * a tagging type which is Structural Element Selector
  */
 export type Selector = string & { readonly Selector: unique symbol };
 /**
@@ -74,8 +74,7 @@ export class SymbolTable {
     private _symbolMap: Map<Fqcn, PhpSymbol> = new Map();
     private _pathMap: Map<RelativePathId, Set<Fqcn>> = new Map();
     private _aliasMap: Map<Fqcn, Set<PhpSymbol>> = new Map();
-
-    // private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
+    private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
 
     public addSymbols(symbols: PhpSymbol[], path: RelativePathId) {
         for (let i = 0; i < symbols.length; i++) {
@@ -86,16 +85,18 @@ export class SymbolTable {
     }
 
     public addChildrenSymbols(allSymbols: Map<Fqcn, PhpSymbol[]>) {
-        // for (const [key, symbols] of allSymbols) {
-        //     if (!this._symbolsMap.has(key)) {
-        //         continue;
-        //     }
-        //     const children = this._childrenMap.get(key) ?? new Map<Selector, PhpSymbol>();
-        //     for (let i = 0, l = symbols.length; i < l; i++) {
-        //         const symbol = symbols[i];
-        //         if (!children.has(symbol.name as Selector)) this.addSymbol(symbol);
-        //     }
-        // }
+        for (const [key, symbols] of allSymbols) {
+            if (!this._symbolMap.has(key)) {
+                // fixme: check _aliasMap
+                console.log(`check _aliasMap ${key}`);
+                continue;
+            }
+            const children = this._childrenMap.get(key) ?? new Map<Selector, PhpSymbol>();
+            for (let i = 0, l = symbols.length; i < l; i++) {
+                const symbol = symbols[i];
+                if (!children.has(symbol.name as Selector)) children.set(symbol.name as Selector, symbol);
+            }
+        }
     }
 
     private setAlias(symbol: PhpSymbol) {
@@ -152,8 +153,8 @@ export class SymbolTable {
         return this._symbolMap.get(key);
     }
 
-    public findSymbolsByFilePath(uri: RelativePathId): PhpSymbol[] {
-        const symbols: PhpSymbol[] = [];
+    public findSymbolsByFilePath(uri: RelativePathId) {
+        const symbols: { symbol: PhpSymbol; children?: Map<Selector, PhpSymbol> }[] = [];
         let symbol: PhpSymbol | undefined;
 
         const keys = this._pathMap.get(uri);
@@ -163,8 +164,9 @@ export class SymbolTable {
         const keyArray = Array.from(keys);
 
         for (let i = 0; i < keyArray.length; i++) {
-            if ((symbol = this.getSymbolByKey(keyArray[i]))) {
-                symbols.push(symbol);
+            const key = keyArray[i];
+            if ((symbol = this.getSymbolByKey(key))) {
+                symbols.push({ symbol, children: this._childrenMap.get(key) });
             }
         }
 

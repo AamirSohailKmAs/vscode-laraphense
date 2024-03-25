@@ -1,7 +1,7 @@
 'use strict';
 
 import { Location } from 'php-parser';
-import { toFqsen, psr4Path, toFqcn } from '../symbol';
+import { toFqcn, splitFqsen } from '../symbol';
 import { RelativePathId } from '../workspaceFolder';
 
 export const enum SymbolModifier {
@@ -29,6 +29,7 @@ export const enum SymbolKind {
     Interface,
     Method,
     Property,
+    PromotedProperty,
     EnumMember,
     Constructor,
     ClassConstant,
@@ -84,18 +85,18 @@ export class SymbolTable {
         }
     }
 
-    public addChildrenSymbols(allSymbols: Map<Fqcn, PhpSymbol[]>) {
-        for (const [key, symbols] of allSymbols) {
-            if (!this._symbolMap.has(key)) {
-                // fixme: check _aliasMap
-                console.log(`check _aliasMap ${key}`);
+    public addChildrenSymbols(allSymbols: Map<Fqsen, PhpSymbol[]>) {
+        for (const [fqsen, symbols] of allSymbols) {
+            const { fqcn, selector } = splitFqsen(fqsen);
+            if (!this._symbolMap.has(fqcn) && !this._aliasMap.has(fqcn)) {
                 continue;
             }
-            const children = this._childrenMap.get(key) ?? new Map<Selector, PhpSymbol>();
+            const children = this._childrenMap.get(fqcn) ?? new Map<Selector, PhpSymbol>();
             for (let i = 0, l = symbols.length; i < l; i++) {
                 const symbol = symbols[i];
-                if (!children.has(symbol.name as Selector)) children.set(symbol.name as Selector, symbol);
+                if (!children.has(selector)) children.set(selector, symbol);
             }
+            this._childrenMap.set(fqcn, children);
         }
     }
 

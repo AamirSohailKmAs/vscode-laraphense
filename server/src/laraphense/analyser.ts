@@ -18,11 +18,12 @@ import {
     Program,
     PropertyStatement,
     Trait,
+    Block,
 } from 'php-parser';
-import { Fqcn, PhpSymbol, SymbolKind, SymbolModifier } from './indexing/tables/symbolTable';
+import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './indexing/tables/symbolTable';
 import { Tree } from '../types/bladeAst';
 import { RelativePathId } from './indexing/workspaceFolder';
-import { toFqcn } from './indexing/symbol';
+import { toFqcn, toFqsen } from './indexing/symbol';
 
 export type TreeLike = {
     kind: string;
@@ -32,7 +33,7 @@ export type TreeLike = {
 
 export class Analyser {
     memberSymbols: PhpSymbol[] = [];
-    children: Map<Fqcn, PhpSymbol[]> = new Map();
+    children: Map<Fqsen, PhpSymbol[]> = new Map();
     containerName: string | undefined = undefined;
     member?: PhpSymbol = undefined;
 
@@ -70,10 +71,14 @@ export class Analyser {
         kind: SymbolKind,
         loc: Location | null,
         modifiers: SymbolModifier[] = [],
-        value?: string | number | boolean | Node | null
+        value?: string | number | boolean | Node | null,
+        containerName?: string
     ): PhpSymbol {
         name = normalizeName(name);
         value = normalizeValue(value);
+        if (!containerName) {
+            containerName = this.containerName;
+        }
 
         if (loc === null) {
             loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
@@ -87,7 +92,7 @@ export class Analyser {
             path: '' as RelativePathId,
             modifiers: modifiers,
             value,
-            containerName: this.containerName,
+            containerName,
         } satisfies PhpSymbol;
     }
 
@@ -95,7 +100,7 @@ export class Analyser {
         parent = parent ?? this.member;
         if (!parent) return;
 
-        const key = toFqcn(parent.name, parent.containerName);
+        const key = toFqsen(parent.kind, parent.name, parent.containerName);
         const symbols = this.children.get(key) || [];
 
         symbols.push(symbol);
@@ -148,6 +153,22 @@ export class Analyser {
         return true;
     }
 
+    private _analyseClassConstant(node: ClassConstant): boolean {
+        //todo: Attribute
+        for (const constant of node.constants) {
+            this.addChildrenSymbol(
+                this._newSymbol(
+                    constant.name,
+                    SymbolKind.Constant,
+                    constant.loc,
+                    modifier({ isFinal: node.final, visibility: node.visibility }),
+                    constant.value
+                )
+            );
+        }
+        return false;
+    }
+
     private _analyseProperty(node: PropertyStatement): boolean {
         // todo: Attribute
 
@@ -183,41 +204,47 @@ export class Analyser {
                 isStatic: node.isStatic,
                 isNullable: node.nullable,
                 visibility: node.visibility,
-            })
+            }),
+            undefined,
+            toFqcn(this.member?.name || '', this.containerName)
         );
         this.addChildrenSymbol(method);
 
         node.arguments.forEach((param) => {
             //todo: Attribute, type, byref, flags: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE;
-
             // fixme: if node.name is __construct and parse flags then these are properties of member
-            this.addChildrenSymbol(
-                this._newSymbol(
-                    param.name,
-                    SymbolKind.Variable,
-                    param.loc,
-                    modifier({ isReadonly: param.readonly, isNullable: param.nullable, isVariadic: param.variadic }),
-                    param.value
-                ),
-                method
-            );
+            if (normalizeName(node.name) === '__construct' && param.flags > 0) {
+                // console.log(method);
+            } else {
+                this.addChildrenSymbol(
+                    this._newSymbol(
+                        param.name,
+                        SymbolKind.Parameter,
+                        param.loc,
+                        modifier({
+                            isReadonly: param.readonly,
+                            isNullable: param.nullable,
+                            isVariadic: param.variadic,
+                        }),
+                        param.value,
+                        toFqsen(method.kind, method.name, method.containerName)
+                    ),
+                    method
+                );
+            }
         });
-        return false; // should go inside and get the symbols and references
-    }
-    private _analyseClassConstant(node: ClassConstant): boolean {
-        //todo: Attribute
-        for (const constant of node.constants) {
-            this.addChildrenSymbol(
-                this._newSymbol(
-                    constant.name,
-                    SymbolKind.Constant,
-                    constant.loc,
-                    modifier({ isFinal: node.final, visibility: node.visibility }),
-                    constant.value
-                )
-            );
+
+        if (node.body) {
+            // should go inside and get the symbols and references
+            this._analyseInsideMethod(node.body, method);
         }
         return false;
+    }
+
+    private _analyseInsideMethod(body: Block, method: PhpSymbol) {
+        // body.children.forEach((param) => {
+        //     this.addChildrenSymbol(this._newSymbol(param.name, SymbolKind.Variable, param.loc), method);
+        // });
     }
 
     // references
@@ -329,30 +356,13 @@ function modifier(flags?: modifierFlag): SymbolModifier[] {
         modifiers.push(normalizeVisibility(flags.visibility));
     }
 
-    // todo: refactor
-    switch (true) {
-        case flags.isAbstract:
-            modifiers.push(SymbolModifier.Abstract);
-            break;
-        case flags.isFinal:
-            modifiers.push(SymbolModifier.Final);
-            break;
-        case flags.isReadonly:
-            modifiers.push(SymbolModifier.ReadOnly);
-            break;
-        case flags.isAnonymous:
-            modifiers.push(SymbolModifier.Anonymous);
-            break;
-        case flags.isStatic:
-            modifiers.push(SymbolModifier.Static);
-            break;
-        case flags.isNullable:
-            modifiers.push(SymbolModifier.Nullable);
-            break;
-        case flags.isVariadic:
-            modifiers.push(SymbolModifier.Variadic);
-            break;
-    }
+    if (flags.isFinal) modifiers.push(SymbolModifier.Final);
+    if (flags.isStatic) modifiers.push(SymbolModifier.Static);
+    if (flags.isAbstract) modifiers.push(SymbolModifier.Abstract);
+    if (flags.isReadonly) modifiers.push(SymbolModifier.ReadOnly);
+    if (flags.isNullable) modifiers.push(SymbolModifier.Nullable);
+    if (flags.isVariadic) modifiers.push(SymbolModifier.Variadic);
+    if (flags.isAnonymous) modifiers.push(SymbolModifier.Anonymous);
 
     return modifiers;
 }

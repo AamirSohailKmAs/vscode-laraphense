@@ -21,32 +21,34 @@ export function toLSPPosition(position: ParserPosition) {
     return LSPPosition.create(position.line, position.column);
 }
 
-export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined): Fqsen {
-    let fqcn = containerName || '';
-
+export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
     switch (kind) {
-        case SymbolKind.Function || SymbolKind.Method:
-            return `${fqcn}:(${name}` as Fqsen;
-        case SymbolKind.Property:
-            return `${fqcn}:$${name}` as Fqsen;
-        case SymbolKind.Constant || SymbolKind.EnumMember:
-            return `${fqcn}::${name}` as Fqsen;
-        case SymbolKind.Class || SymbolKind.Interface || SymbolKind.Enum || SymbolKind.Trait:
+        case SymbolKind.Class:
+        case SymbolKind.Interface:
+        case SymbolKind.Enum:
+        case SymbolKind.Trait:
+        case SymbolKind.Function:
             return toFqcn(name, containerName) as unknown as Fqsen;
         default:
-            console.log('default fqsen', kind, name, containerName);
-
-            return `${fqcn}:${name}` as Fqsen;
+            return `${containerName}${toSelector(kind, name)}` as Fqsen;
     }
+}
+
+export function splitFqsen(fqsen: Fqsen): { fqcn: Fqcn; selector: Selector } {
+    const keys = fqsen.split(':');
+    return { fqcn: keys[0] as Fqcn, selector: keys[1] as Selector };
 }
 
 export function toSelector(kind: SymbolKind, name: string): Selector {
     switch (kind) {
-        case SymbolKind.Function || SymbolKind.Method:
+        case SymbolKind.Function:
+        case SymbolKind.Method:
             return `:(${name}` as Selector;
         case SymbolKind.Property:
+        case SymbolKind.Parameter:
             return `:$${name}` as Selector;
-        case SymbolKind.Constant || SymbolKind.EnumMember:
+        case SymbolKind.Constant:
+        case SymbolKind.EnumMember:
             return `::${name}` as Selector;
         default:
             console.log('default selector', kind, name);

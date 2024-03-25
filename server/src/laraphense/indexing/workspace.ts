@@ -4,7 +4,6 @@ import { DocumentUri, TextDocument } from 'vscode-languageserver-textdocument';
 import { Indexer } from './indexer';
 import { FolderKind, WorkspaceFolder } from './workspaceFolder';
 import { DocContext, laraphenseRc } from '../../languages/baseLang';
-import { folderContainsUri } from '../../helpers/uri';
 import { Compiler } from '../compiler';
 import { Regions } from '../document';
 import { FileCache } from '../../support/cache';
@@ -68,9 +67,9 @@ export class Workspace {
     }
 
     public findFolderContainingUri(uri: string): WorkspaceFolder | undefined {
-        for (const folderUri in this._folders.keys()) {
-            if (folderContainsUri(folderUri, uri)) {
-                return this._folders.get(folderUri);
+        for (const [_folderUri, folder] of this._folders) {
+            if (folder.contains(uri)) {
+                return folder;
             }
         }
 

@@ -9,7 +9,7 @@ import { ExtensionContext, workspace } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
 
 let client: LanguageClient;
-
+const version = '0.1.0';
 export function activate(context: ExtensionContext) {
     const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
 
@@ -27,7 +27,7 @@ export function activate(context: ExtensionContext) {
         synchronize: { fileEvents: workspace.createFileSystemWatcher('{composer,package}.json') },
         initializationOptions: {
             storagePath: context.storagePath,
-            globalPath: context.globalStoragePath,
+            clearCache: context.globalState.get<string>('version') !== version,
             workspaceName: workspace.name ?? 'workspace',
         },
     };
@@ -35,6 +35,8 @@ export function activate(context: ExtensionContext) {
     client = new LanguageClient('Laraphense', 'Laraphense', serverOptions, clientOptions);
 
     client.start();
+
+    context.globalState.update('version', version);
 }
 
 export function deactivate(): Thenable<void> | undefined {

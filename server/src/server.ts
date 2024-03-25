@@ -49,10 +49,9 @@ connection.onInitialize(async (params: InitializeParams) => {
         workspace.addFolder(URI.parse(params.rootUri).toString());
     }
 
-    const storagePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'laraphense');
-    const globalPath: string = params.initializationOptions?.globalPath ?? join(homedir(), 'laraphense');
+    const storagePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'porifa_laraphense');
     const workspaceName: string = params.initializationOptions?.workspaceName ?? 'workspace';
-    const clearCache: boolean = params.initializationOptions?.clearCache ?? false;
+    const clearCache: boolean = params.initializationOptions?.clearCache ?? true;
 
     let storageCache: FileCache | undefined;
     if (workspace.folders.size > 1) {
@@ -125,7 +124,7 @@ connection.onCompletion(async (textDocumentPosition, token) => {
             }
             return laraphense.provideCompletion(document, textDocumentPosition.position, textDocumentPosition.context);
         },
-        null, // todo: should we use ResponseError here or below ?
+        null,
         `Error while computing completions for ${textDocumentPosition.textDocument.uri}`
     );
 });

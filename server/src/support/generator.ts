@@ -6,26 +6,28 @@ export class IdGenerator<UniqueID extends string> {
     constructor(private _wordStore: WordStore, private _stringSeparator: string, private idSeparator: string = '/') {}
 
     public toString(id: UniqueID): string {
-        const ids = id.split(this.idSeparator);
-        const words: string[] = [];
+        return id;
+        // const ids = id.split(this.idSeparator);
+        // const words: string[] = [];
 
-        for (let i = 0, l = ids.length; i < l; i++) {
-            const word = this._wordStore.getValue(ids[i]);
-            if (word) words.push(word);
-        }
+        // for (let i = 0, l = ids.length; i < l; i++) {
+        //     const word = this._wordStore.getValue(ids[i]);
+        //     if (word) words.push(word);
+        // }
 
-        return words.join(this._stringSeparator);
+        // return words.join(this._stringSeparator);
     }
 
     public toId(str: string): UniqueID {
-        const words = str.split(this._stringSeparator);
-        const item: number[] = [];
+        return str as UniqueID;
+        // const words = str.split(this._stringSeparator);
+        // const item: number[] = [];
 
-        for (let i = 0, l = words.length; i < l; i++) {
-            item.push(this._wordStore.add(words[i]));
-        }
+        // for (let i = 0, l = words.length; i < l; i++) {
+        //     item.push(this._wordStore.add(words[i]));
+        // }
 
-        return item.join(this.idSeparator) as UniqueID;
+        // return item.join(this.idSeparator) as UniqueID;
     }
 }
 

@@ -113,9 +113,15 @@ export class Laraphense {
 
         this.getAllLanguagesInDocument(document).forEach((m) => {
             if (m.findDocumentSymbols) {
-                pushAll(symbols, m.findDocumentSymbols(document));
+                let found = m.findDocumentSymbols(document);
+                if (m.id === DocLang.html && found.length === 1 && found[0].name === '?') {
+                    found = [];
+                }
+
+                pushAll(symbols, found);
             }
         });
+
         return symbols;
     }
 

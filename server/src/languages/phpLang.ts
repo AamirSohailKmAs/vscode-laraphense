@@ -16,16 +16,32 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { Workspace } from '../laraphense/indexing/workspace';
+import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 
 export class Php implements Language {
     id: DocLang = DocLang.php;
 
-    constructor(private _workspace: Workspace) {}
+    private providers: {
+        documentSymbol: DocumentSymbolProvider;
+    };
 
-    findDocumentSymbols(document: TextDocument): SymbolInformation[] {
-        return [];
+    constructor(private _workspace: Workspace) {
+        this.providers = {
+            documentSymbol: new DocumentSymbolProvider(),
+        };
     }
 
+    findDocumentSymbols(document: TextDocument): SymbolInformation[] {
+        const folder = this._workspace.findFolderContainingUri(document.uri);
+        if (!folder) {
+            return [];
+        }
+
+        return this.providers.documentSymbol.provide(
+            folder.symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
+            document.uri
+        );
+    }
     doComplete(
         document: TextDocument,
         position: Position,

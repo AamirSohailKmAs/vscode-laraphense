@@ -43,7 +43,6 @@ export class Indexer {
             }
 
             folder.symbolTable.addSymbols(compiled.symbols, folder.relativePath(entry.uri));
-            folder.symbolTable.addChildrenSymbols(compiled.childrenSymbols);
 
             count++;
             this._indexCount++;

@@ -27,11 +27,11 @@ export class Compiler {
     public compileUri(flatDoc: FlatDocument) {
         const astTree = this.parseFlatDoc(flatDoc);
 
-        const { symbols, children } = this._analyser.analyse(astTree);
+        const { symbols } = this._analyser.analyse(astTree);
 
         flatDoc.lastCompile = process.hrtime();
 
-        return { astTree, symbols, childrenSymbols: children };
+        return { astTree, symbols };
     }
 
     private parseFlatDoc(flatDoc: FlatDocument): Tree {

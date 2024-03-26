@@ -1,7 +1,7 @@
 'use strict';
 
 import { Location } from 'php-parser';
-import { toFqcn, splitFqsen } from '../symbol';
+import { toFqcn, splitFqsen, toFqsen, psr4Path } from '../symbol';
 import { RelativePathId } from '../workspaceFolder';
 
 export const enum SymbolModifier {
@@ -72,10 +72,10 @@ export type Selector = string & { readonly Selector: unique symbol };
 export type Fqsen = string & { readonly Fqsen: unique symbol };
 
 export class SymbolTable {
-    private _symbolMap: Map<Fqcn, PhpSymbol> = new Map();
-    private _pathMap: Map<RelativePathId, Set<Fqcn>> = new Map();
-    private _aliasMap: Map<Fqcn, Set<PhpSymbol>> = new Map();
-    private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
+    private _symbolMap: Map<Fqsen, PhpSymbol> = new Map();
+    private _pathMap: Map<RelativePathId, Set<Fqsen>> = new Map();
+    private _aliasMap: Map<Fqsen, Set<PhpSymbol>> = new Map();
+    // private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
 
     public addSymbols(symbols: PhpSymbol[], path: RelativePathId) {
         for (let i = 0; i < symbols.length; i++) {
@@ -85,36 +85,36 @@ export class SymbolTable {
         }
     }
 
-    public addChildrenSymbols(allSymbols: Map<Fqsen, PhpSymbol[]>) {
-        for (const [fqsen, symbols] of allSymbols) {
-            const { fqcn, selector } = splitFqsen(fqsen);
-            if (!this._symbolMap.has(fqcn) && !this._aliasMap.has(fqcn)) {
-                continue;
-            }
-            const children = this._childrenMap.get(fqcn) ?? new Map<Selector, PhpSymbol>();
-            for (let i = 0, l = symbols.length; i < l; i++) {
-                const symbol = symbols[i];
-                if (!children.has(selector)) children.set(selector, symbol);
-            }
-            this._childrenMap.set(fqcn, children);
-        }
-    }
+    // public addChildrenSymbols(allSymbols: Map<Fqsen, PhpSymbol[]>) {
+    //     for (const [fqsen, symbols] of allSymbols) {
+    //         const { fqcn, selector } = splitFqsen(fqsen);
+    //         if (!this._symbolMap.has(fqcn) && !this._aliasMap.has(fqcn)) {
+    //             continue;
+    //         }
+    //         const children = this._childrenMap.get(fqcn) ?? new Map<Selector, PhpSymbol>();
+    //         for (let i = 0, l = symbols.length; i < l; i++) {
+    //             const symbol = symbols[i];
+    //             if (!children.has(selector)) children.set(selector, symbol);
+    //         }
+    //         this._childrenMap.set(fqcn, children);
+    //     }
+    // }
 
     private setAlias(symbol: PhpSymbol) {
-        const key = toFqcn(symbol.name, symbol.containerName);
+        const key = toFqsen(symbol.kind, symbol.name, symbol.containerName);
 
         let symbols = this._aliasMap.get(key) || new Set();
 
         this._aliasMap.set(key, symbols.add(symbol));
     }
 
-    private addFileKeysMap(path: RelativePathId, key: Fqcn) {
+    private addFileKeysMap(path: RelativePathId, key: Fqsen) {
         let keys = this._pathMap.get(path) || new Set();
         this._pathMap.set(path, keys.add(key));
     }
 
     public addSymbol(symbol: PhpSymbol) {
-        let key = toFqcn(symbol.name, symbol.containerName);
+        let key = toFqsen(symbol.kind, symbol.name, symbol.containerName);
         const oldSymbol = this._symbolMap.get(key);
 
         if (!oldSymbol) {
@@ -123,39 +123,41 @@ export class SymbolTable {
             return;
         }
 
-        if (oldSymbol.kind === symbol.kind && oldSymbol.path === symbol.path) {
+        if (oldSymbol.path === symbol.path) {
             return;
         }
 
-        this.setAlias(symbol);
+        const paths = [oldSymbol.path, symbol.path];
 
-        // const paths = [oldSymbol.path, symbol.path];
+        const finalPath = psr4Path(key, paths);
 
-        // const finalPath = psr4Path(key, paths);
+        if (finalPath === oldSymbol.path) {
+            this.setAlias(symbol);
+            return;
+        }
 
-        // console.log(finalPath);
-
-        // if (finalPath === oldSymbol.path) {
-        //     this.setAlias(symbol);
-        //     return;
-        // }
-
-        // this._symbolsMap.delete(toFqcn(oldSymbol.name, oldSymbol.containerName));
-        // this.setAlias(symbol);
+        if (this._symbolMap.delete(toFqsen(oldSymbol.kind, oldSymbol.name, oldSymbol.containerName))) {
+            this.setAlias(symbol);
+        }
     }
 
     public getSymbolNested(fullyQualifiedStructuralElementName: Fqsen): PhpSymbol | undefined {
-        fullyQualifiedStructuralElementName.split(':');
-        return undefined;
-        // return this._symbolsMap.get(fullyQualifiedStructuralElementName);
+        return this._symbolMap.get(fullyQualifiedStructuralElementName);
     }
 
-    private getSymbolByKey(key: Fqcn): PhpSymbol | undefined {
-        return this._symbolMap.get(key);
+    private getSymbolByKey(key: Fqsen): PhpSymbol | undefined {
+        let symbol = this._symbolMap.get(key);
+        if (symbol) return symbol;
+
+        const symbols = this._aliasMap.get(key);
+        if (!symbols) return undefined;
+        for (const symbol of symbols) {
+            return symbol;
+        }
     }
 
     public findSymbolsByFilePath(uri: RelativePathId) {
-        const symbols: { symbol: PhpSymbol; children?: Map<Selector, PhpSymbol> }[] = [];
+        const symbols: PhpSymbol[] = [];
         let symbol: PhpSymbol | undefined;
 
         const keys = this._pathMap.get(uri);
@@ -167,7 +169,7 @@ export class SymbolTable {
         for (let i = 0; i < keyArray.length; i++) {
             const key = keyArray[i];
             if ((symbol = this.getSymbolByKey(key))) {
-                symbols.push({ symbol, children: this._childrenMap.get(key) });
+                symbols.push(symbol);
             }
         }
 

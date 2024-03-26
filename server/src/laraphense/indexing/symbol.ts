@@ -18,7 +18,7 @@ export function toLSPRange(location: ParserLocation): Range {
 }
 
 export function toLSPPosition(position: ParserPosition) {
-    return LSPPosition.create(position.line, position.column);
+    return LSPPosition.create(position.line - 1, position.column);
 }
 
 export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
@@ -27,7 +27,6 @@ export function toFqsen(kind: SymbolKind, name: string, containerName: string | 
         case SymbolKind.Interface:
         case SymbolKind.Enum:
         case SymbolKind.Trait:
-        case SymbolKind.Function:
             return toFqcn(name, containerName) as unknown as Fqsen;
         default:
             return `${containerName}${toSelector(kind, name)}` as Fqsen;
@@ -73,7 +72,10 @@ export function psr4Path(namespace: string, paths: string[], mapping?: { [vendor
     let maxScorePath = '';
 
     for (const path of paths) {
-        const score = calculateScore(namespaceParts, path, mapping);
+        let score = calculateScore(namespaceParts, path, mapping);
+        if (score === maxScore && maxScore !== 0 && paths.includes('vendor')) {
+            score--;
+        }
         if (score > maxScore) {
             maxScore = score;
             maxScorePath = path;

@@ -19,6 +19,9 @@ import {
     PropertyStatement,
     Trait,
     Block,
+    MODIFIER_PRIVATE,
+    MODIFIER_PUBLIC,
+    MODIFIER_PROTECTED,
 } from 'php-parser';
 import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './indexing/tables/symbolTable';
 import { Tree } from '../types/bladeAst';
@@ -32,8 +35,7 @@ export type TreeLike = {
 };
 
 export class Analyser {
-    memberSymbols: PhpSymbol[] = [];
-    children: Map<Fqsen, PhpSymbol[]> = new Map();
+    symbols: PhpSymbol[] = [];
     containerName: string | undefined = undefined;
     member?: PhpSymbol = undefined;
 
@@ -41,12 +43,11 @@ export class Analyser {
         this._reset();
         this._traverseAST(tree, this._visitor.bind(this));
 
-        return { symbols: this.memberSymbols, children: this.children };
+        return { symbols: this.symbols };
     }
 
     private _reset() {
-        this.memberSymbols = [];
-        this.children = new Map();
+        this.symbols = [];
         this.containerName = undefined;
         this.member = undefined;
     }
@@ -96,20 +97,8 @@ export class Analyser {
         } satisfies PhpSymbol;
     }
 
-    private addChildrenSymbol(symbol: PhpSymbol, parent?: PhpSymbol) {
-        parent = parent ?? this.member;
-        if (!parent) return;
-
-        const key = toFqsen(parent.kind, parent.name, parent.containerName);
-        const symbols = this.children.get(key) || [];
-
-        symbols.push(symbol);
-
-        this.children.set(key, symbols);
-    }
-
     private _analyseFunction(node: Function): boolean {
-        this.memberSymbols.push(this._newSymbol(node.name, SymbolKind.Function, node.loc));
+        this.symbols.push(this._newSymbol(node.name, SymbolKind.Function, node.loc));
         // todo: Attribute, type
         this.member = undefined;
         return true;
@@ -128,41 +117,42 @@ export class Analyser {
             })
         );
         // todo: Attribute
-        this.memberSymbols.push(this.member);
+        this.symbols.push(this.member);
         return true;
     }
 
     private _analyseInterface(node: Interface): boolean {
         this.member = this._newSymbol(node.name, SymbolKind.Interface, node.loc);
         // todo: Attribute
-        this.memberSymbols.push(this.member);
+        this.symbols.push(this.member);
         return true;
     }
 
     private _analyseTrait(node: Trait): boolean {
         this.member = this._newSymbol(node.name, SymbolKind.Trait, node.loc);
         // todo: Attribute
-        this.memberSymbols.push(this.member);
+        this.symbols.push(this.member);
         return true;
     }
 
     private _analyseEnum(node: Enum): boolean {
         this.member = this._newSymbol(node.name, SymbolKind.Enum, node.loc);
         // todo: Attribute, type
-        this.memberSymbols.push(this.member);
+        this.symbols.push(this.member);
         return true;
     }
 
     private _analyseClassConstant(node: ClassConstant): boolean {
         //todo: Attribute
         for (const constant of node.constants) {
-            this.addChildrenSymbol(
+            this.symbols.push(
                 this._newSymbol(
                     constant.name,
                     SymbolKind.Constant,
                     constant.loc,
                     modifier({ isFinal: node.final, visibility: node.visibility }),
-                    constant.value
+                    constant.value,
+                    toFqcn(this.member?.name || '', this.containerName)
                 )
             );
         }
@@ -174,7 +164,7 @@ export class Analyser {
 
         node.properties.forEach((prop) => {
             // todo: Attribute, type
-            this.addChildrenSymbol(
+            this.symbols.push(
                 this._newSymbol(
                     prop.name,
                     SymbolKind.Property,
@@ -185,7 +175,8 @@ export class Analyser {
                         isNullable: prop.nullable,
                         visibility: node.visibility,
                     }),
-                    prop.value
+                    prop.value,
+                    toFqcn(this.member?.name || '', this.containerName)
                 )
             );
         });
@@ -208,31 +199,41 @@ export class Analyser {
             undefined,
             toFqcn(this.member?.name || '', this.containerName)
         );
-        this.addChildrenSymbol(method);
+        this.symbols.push(method);
 
-        node.arguments.forEach((param) => {
-            //todo: Attribute, type, byref, flags: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE;
-            // fixme: if node.name is __construct and parse flags then these are properties of member
+        for (let i = 0; i < node.arguments.length; i++) {
+            const param = node.arguments[i];
+            //todo: Attribute, type, byref
             if (normalizeName(node.name) === '__construct' && param.flags > 0) {
-                // console.log(method);
-            } else {
-                this.addChildrenSymbol(
+                this.symbols.push(
                     this._newSymbol(
                         param.name,
-                        SymbolKind.Parameter,
-                        param.loc,
-                        modifier({
-                            isReadonly: param.readonly,
-                            isNullable: param.nullable,
-                            isVariadic: param.variadic,
-                        }),
+                        SymbolKind.Property,
+                        node.loc,
+                        modifier({ visibility: parseFlag(param.flags) }),
                         param.value,
-                        toFqsen(method.kind, method.name, method.containerName)
-                    ),
-                    method
+                        toFqcn(this.member?.name || '', this.containerName)
+                    )
                 );
+                continue;
             }
-        });
+
+            this.symbols.push(
+                this._newSymbol(
+                    param.name,
+                    SymbolKind.Parameter,
+                    param.loc,
+                    modifier({
+                        isReadonly: param.readonly,
+                        isNullable: param.nullable,
+                        isVariadic: param.variadic,
+                    }),
+                    param.value,
+                    toFqsen(method.kind, method.name, method.containerName)
+                ),
+                method
+            );
+        }
 
         if (node.body) {
             // should go inside and get the symbols and references
@@ -375,6 +376,17 @@ function normalizeVisibility(visibility: string | null): SymbolModifier {
             return SymbolModifier.Protected;
         default:
             return SymbolModifier.Protected;
+    }
+}
+
+function parseFlag(flag: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE): string {
+    switch (flag) {
+        case 2:
+            return 'protected';
+        case 4:
+            return 'private';
+        default:
+            return 'public';
     }
 }
 

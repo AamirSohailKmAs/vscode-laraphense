@@ -12,7 +12,8 @@ import {
     Token,
     TokenKind,
     Tree,
-} from '../types/bladeAst';
+    newAstTree,
+} from './bladeAst';
 import { DocLang } from '../laraphense/document';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { BladeLexer } from './lexer';
@@ -49,18 +50,14 @@ export class BladeParser {
     public parse(doc: TextDocument, languageId: DocLang.blade | DocLang.php): Tree {
         this._doc = doc;
         if (languageId === DocLang.php) {
-            return this.newAstTree([this.phpParser.parseCode(doc.getText(), languageId)]);
+            return newAstTree([this.phpParser.parseCode(doc.getText(), languageId)]);
         }
         return this._parseTree();
     }
 
-    public newAstTree(children: Array<AstNode | Program> = [], errors: Array<ErrorNode> = []): Tree {
-        return { kind: 'tree', children, errors };
-    }
-
     private _parseTree() {
         this.index = 0;
-        this.tree = this.newAstTree();
+        this.tree = newAstTree();
 
         this.tokens = new BladeLexer(this._doc.getText()).lex();
 
@@ -74,11 +71,11 @@ export class BladeParser {
         return this.tree;
     }
 
-    // private parseProgram(token: Token): Program {
-    //     const program = this.phpParser.parseEval(token.value);
-    //     // todo: fix location
-    //     return program;
-    // }
+    private parseProgram(): Program {
+        const program = this.phpParser.parseEval(this.token().value);
+        // todo: fix location
+        return program;
+    }
 
     private token(index?: number) {
         if (index && index > this.tokens.length - 1) {
@@ -168,6 +165,12 @@ export class BladeParser {
 
     private parseLang(): null {
         if (this.inVerbatim && this.is(TokenKind.PHP)) {
+            this.index++;
+            return null;
+        }
+
+        if (this.is(TokenKind.PHP)) {
+            this.tree.children.push(this.parseProgram());
             this.index++;
             return null;
         }
@@ -355,7 +358,7 @@ export class BladeParser {
         const children: AstNode[] = [];
         while (!this.is(TokenKind.EOF)) {
             const node = this.parseNextNode();
-            if (node) {
+            if (node && 'name' in node) {
                 if (node.kind === 'closeTag' && node.name.toLowerCase() === openTag.name.toLowerCase()) {
                     // todo: <slot:foo></slot>
                     break;
@@ -381,7 +384,7 @@ export class BladeParser {
         return htmlElementNode;
     }
 
-    private parseNextNode(): AstNode | null {
+    private parseNextNode(): AstNode | Program | null {
         if (this.index >= this.tokens.length) {
             return null;
         }

@@ -2,7 +2,7 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { Location, Position } from '../../../types/bladeAst';
+import { Location, Position } from '../../../bladeParser/bladeAst';
 import { Fqcn, Fqsen, Selector, SymbolKind } from './tables/symbolTable';
 
 export function toPosition(pos: ParserPosition): Position {
@@ -47,10 +47,11 @@ export function toSelector(kind: SymbolKind, name: string): Selector {
         case SymbolKind.Parameter:
             return `:$${name}` as Selector;
         case SymbolKind.Constant:
+        case SymbolKind.ClassConstant:
         case SymbolKind.EnumMember:
             return `::${name}` as Selector;
         default:
-            console.log('default selector', kind, name);
+            console.log(`default selector kind:${kind}, name:${name}`);
             return `:${name}` as Selector;
     }
 }

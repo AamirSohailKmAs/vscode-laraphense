@@ -65,14 +65,14 @@ export class Laraphense {
             return result;
         }
 
-        const folder = this._workspace.findFolderContainingUri(document.uri);
-        if (folder) {
-            folder.libraries.forEach((library) => {
-                if (library.doComplete && library.canComplete(lang.id)) {
-                    result = mergeCompletionItems(result, library.doComplete(document, position));
-                }
-            });
-        }
+        // const folder = this._workspace.findFolderContainingUri(document.uri);
+        // if (folder) {
+        //     folder.libraries.forEach((library) => {
+        //         if (library.doComplete && library.canComplete(lang.id)) {
+        //             result = mergeCompletionItems(result, library.doComplete(document, position));
+        //         }
+        //     });
+        // }
 
         if (!lang.doComplete) {
             return result;
@@ -159,7 +159,10 @@ export class Laraphense {
         if (!lang || !lang.findDefinition) {
             return [];
         }
-        return lang.findDefinition(document, position);
+        const definitions = lang.findDefinition(document, position);
+
+        console.log('definitions', definitions);
+        return definitions;
     }
 
     public provideDocumentHighlight(document: TextDocument, position: Position) {

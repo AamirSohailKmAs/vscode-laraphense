@@ -24,7 +24,7 @@ import {
     MODIFIER_PROTECTED,
 } from 'php-parser';
 import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
-import { Tree } from '../../../types/bladeAst';
+import { Tree } from '../../../bladeParser/bladeAst';
 import { RelativePathId } from '../../../laraphense/workspaceFolder';
 import { toFqcn, toFqsen } from './symbol';
 

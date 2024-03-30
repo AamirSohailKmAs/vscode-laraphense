@@ -1,15 +1,11 @@
 'use strict';
 import { glob } from 'fast-glob';
 import { folderContainsUri, uriToPath } from '../helpers/uri';
-import { SymbolKind, SymbolTable } from '../languages/php/indexing/tables/symbolTable';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
-import { Package } from '../packages/basePackage';
-import { Laravel } from '../packages/laravel';
 import { DocumentUri } from 'vscode-languageserver';
 import { IdGenerator, WordStore } from '../support/generator';
-import { toFqsen } from '../languages/php/indexing/symbol';
 
 /**
  * A tagging type for string properties that are actually Folder URI.
@@ -27,12 +23,9 @@ export type FileEntry = {
     size: number;
 };
 
-// Define a type for the unique ID
 export type RelativePathId = string & { readonly PathId: unique symbol };
 
 export class WorkspaceFolder {
-    public symbolTable: SymbolTable;
-    private _libraries: Array<Package> = [];
     private _pathId: IdGenerator<RelativePathId>;
 
     constructor(
@@ -48,19 +41,7 @@ export class WorkspaceFolder {
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
-        this.symbolTable = new SymbolTable();
         this._pathId = new IdGenerator<RelativePathId>(this._wordStore, '/');
-    }
-
-    public initLibraries() {
-        if (this.kind === FolderKind.Stub) {
-            return;
-        }
-        this.enableLaravel();
-    }
-
-    public get libraries() {
-        return this._libraries;
     }
 
     public get uri(): FolderUri {
@@ -144,16 +125,6 @@ export class WorkspaceFolder {
             uri = uri.slice(0, -1);
         }
         return uri;
-    }
-
-    private enableLaravel() {
-        const version = this.symbolTable.getSymbolNested(
-            toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application')
-        )?.value;
-
-        if (version) {
-            this._libraries.push(new Laravel(version, this));
-        }
     }
 }
 

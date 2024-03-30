@@ -4,7 +4,7 @@ import { DocumentUri } from 'vscode-languageserver';
 import { Debounce } from '../support/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { guessLangFromUri, toDocLang } from '../helpers/uri';
-import { EmbeddedLanguage, Tree } from '../types/bladeAst';
+import { EmbeddedLanguage, Tree, newAstTree } from '../bladeParser/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
 import { toLocation } from '../languages/php/indexing/symbol';
@@ -50,29 +50,32 @@ export class FlatDocument {
 }
 
 export class Regions {
-    private regions: EmbeddedLanguage[] = [];
-    private defaultLang: DocLang;
+    private _regions: EmbeddedLanguage[] = [];
+    private _defaultLang: DocLang;
+    private _tree: Tree;
 
     constructor(uri: DocumentUri) {
         switch (guessLangFromUri(uri)) {
             case DocLang.blade:
-                this.defaultLang = DocLang.blade;
+                this._defaultLang = DocLang.blade;
                 break;
             case DocLang.php:
-                this.defaultLang = DocLang.html;
+                this._defaultLang = DocLang.html;
                 break;
             default:
-                this.defaultLang = DocLang.unknown;
+                this._defaultLang = DocLang.unknown;
                 break;
         }
+
+        this._tree = newAstTree();
     }
 
     private dispatchMap: Record<string, (node: any) => void> = {
         tree: (_node: Tree) => {
-            this.regions = [];
+            this._regions = [];
         },
         program: (node: Program) => {
-            this.regions.push({
+            this._regions.push({
                 name: DocLang.php,
                 kind: 'language',
                 loc: toLocation(
@@ -89,12 +92,13 @@ export class Regions {
             if (node.name === DocLang.unknown) {
                 return;
             }
-            this.regions.push(node);
+            this._regions.push(node);
         },
     };
 
-    parse(tree: Tree) {
-        this.regions = [];
+    public parse(tree: Tree) {
+        this._tree = tree;
+        this._regions = [];
         tree.children.forEach((child) => {
             this.dispatchMap[child.kind]?.(child);
         });
@@ -102,8 +106,8 @@ export class Regions {
         return this;
     }
 
-    docLangAtOffset(offset: number): DocLang {
-        for (const region of this.regions) {
+    public docLangAtOffset(offset: number): DocLang {
+        for (const region of this._regions) {
             if (offset < region.loc.start.offset) {
                 continue;
             }
@@ -113,12 +117,12 @@ export class Regions {
             }
         }
 
-        return this.defaultLang;
+        return this._defaultLang;
     }
 
-    docLangsInDocument(maxLanguages: number = 3): DocLang[] {
-        const result = [this.defaultLang];
-        for (const region of this.regions) {
+    public docLangsInDocument(maxLanguages: number = 3): DocLang[] {
+        const result = [this._defaultLang];
+        for (const region of this._regions) {
             if (result.indexOf(region.name) !== -1) {
                 continue;
             }
@@ -131,7 +135,7 @@ export class Regions {
         return result;
     }
 
-    getEmbeddedDocument(
+    public getEmbeddedDocument(
         document: TextDocument,
         languageId: DocLang,
         ignoreAttributeValues: boolean = false
@@ -140,7 +144,7 @@ export class Regions {
         const oldContent = document.getText();
         let result = '';
         let lastSuffix = '';
-        for (const c of this.regions) {
+        for (const c of this._regions) {
             if (c.name === languageId && (!ignoreAttributeValues || !c.attributeValue)) {
                 result = substituteWithWhitespace(
                     result,
@@ -171,7 +175,7 @@ export class Regions {
         }
     }
 
-    getSuffix(c: EmbeddedLanguage) {
+    private getSuffix(c: EmbeddedLanguage) {
         if (!c.attributeValue) {
             return '';
         }

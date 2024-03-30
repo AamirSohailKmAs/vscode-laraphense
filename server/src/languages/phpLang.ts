@@ -42,11 +42,21 @@ export class Php implements Language {
     findDocumentSymbols(document: TextDocument): SymbolInformation[] {
         const folder = this._workspace.findFolderContainingUri(document.uri);
         if (!folder) {
+            console.log('folder not found');
+
+            return [];
+        }
+
+        const symbolTable = this._indexer.symbolDb.get(folder.uri);
+
+        if (!symbolTable) {
+            console.log('symbolTable not found');
+
             return [];
         }
 
         return this.providers.documentSymbol.provide(
-            folder.symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
+            symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
             document.uri
         );
     }

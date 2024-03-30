@@ -88,3 +88,6 @@ export type Tree = {
     errors: Array<ErrorNode>;
 };
 
+export function newAstTree(children: Array<AstNode | Program> = [], errors: Array<ErrorNode> = []): Tree {
+    return { kind: 'tree', children, errors };
+}

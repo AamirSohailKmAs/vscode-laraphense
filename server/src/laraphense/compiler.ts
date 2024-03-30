@@ -4,7 +4,7 @@ import { BladeParser } from '../bladeParser/parser';
 import { DocLang, FlatDocument } from './document';
 import { Analyser } from '../languages/php/indexing/analyser';
 import { laraphenseRc } from '../languages/baseLang';
-import { Tree } from '../types/bladeAst';
+import { Tree, newAstTree } from '../bladeParser/bladeAst';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 export class Compiler {
@@ -36,13 +36,13 @@ export class Compiler {
 
     private parseFlatDoc(flatDoc: FlatDocument): Tree {
         if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
-            return this._bladeParser.newAstTree();
+            return newAstTree();
         }
 
         try {
             return this._bladeParser.parse(flatDoc.doc, flatDoc.languageId);
         } catch (error) {
-            return this._bladeParser.newAstTree();
+            return newAstTree();
         }
     }
 }

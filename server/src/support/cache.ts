@@ -5,6 +5,7 @@ import { DEFAULT_MAX_OPEN_FILES } from './defaults';
 import { writeFile, readFile, unlink, emptyDir, ensureDir } from 'fs-extra';
 import { join } from 'path';
 import { runSafe } from '../helpers/general';
+import { FlatDocument } from '../laraphense/document';
 
 export type CacheItem<T> = { version: number; languageId: string; createdAt: number; data: T };
 
@@ -13,7 +14,7 @@ export class MemoryCache<T> {
     private _itemsMap: Map<DocumentUri, CacheItem<T>> = new Map();
 
     constructor(
-        private parse: (doc: TextDocument) => T,
+        private parse: (doc: FlatDocument) => T,
         private maxEntries: number = DEFAULT_MAX_OPEN_FILES,
         ttl?: number
     ) {
@@ -29,9 +30,9 @@ export class MemoryCache<T> {
         }
     }
 
-    get(document: TextDocument): T {
-        const itemInfo = this._itemsMap.get(document.uri);
-        if (itemInfo && itemInfo.version === document.version && itemInfo.languageId === document.languageId) {
+    get(document: FlatDocument): T {
+        const itemInfo = this._itemsMap.get(document.doc.uri);
+        if (itemInfo && itemInfo.version === document.doc.version && itemInfo.languageId === document.languageId) {
             itemInfo.createdAt = Date.now();
             return itemInfo.data;
         }
@@ -41,16 +42,16 @@ export class MemoryCache<T> {
     setOpenUris(openDoc: TextDocument[]) {
         openDoc.forEach((doc) => {
             if (!this._itemsMap.has(doc.uri)) {
-                this.set(doc);
+                this.set(FlatDocument.fromTextDocument(doc));
             }
         });
     }
 
-    set(document: TextDocument) {
+    set(document: FlatDocument) {
         const data = this.parse(document);
-        this._itemsMap.set(document.uri, {
+        this._itemsMap.set(document.doc.uri, {
             data: data,
-            version: document.version,
+            version: document.doc.version,
             languageId: document.languageId,
             createdAt: Date.now(),
         });

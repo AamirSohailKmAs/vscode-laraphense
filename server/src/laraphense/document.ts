@@ -136,12 +136,12 @@ export class Regions {
     }
 
     public getEmbeddedDocument(
-        document: TextDocument,
+        document: FlatDocument,
         languageId: DocLang,
         ignoreAttributeValues: boolean = false
-    ): TextDocument {
+    ): FlatDocument {
         let currentPos = 0;
-        const oldContent = document.getText();
+        const oldContent = document.doc.getText();
         let result = '';
         let lastSuffix = '';
         for (const c of this._regions) {
@@ -160,7 +160,7 @@ export class Regions {
             }
         }
         result = substituteWithWhitespace(result, currentPos, oldContent.length, oldContent, lastSuffix, '');
-        return TextDocument.create(document.uri, languageId, document.version, result);
+        return new FlatDocument(document.doc.uri, languageId, document.doc.version, result);
     }
 
     private getPrefix(c: EmbeddedLanguage) {

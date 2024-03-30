@@ -23,6 +23,7 @@ import { existsSync } from 'fs';
 import { runSafe } from './helpers/general';
 import { homedir } from 'os';
 import { FileCache } from './support/cache';
+import { FlatDocument } from './laraphense/document';
 
 const connection = createConnection();
 
@@ -101,7 +102,7 @@ connection.onShutdown(() => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent((change) => {
-    laraphense.documentChanged(change.document);
+    laraphense.documentChanged(FlatDocument.fromTextDocument(change.document));
 });
 
 documents.onDidOpen((_param) => {
@@ -110,7 +111,7 @@ documents.onDidOpen((_param) => {
 
 documents.onDidClose((param) => {
     connection.sendDiagnostics({ uri: param.document.uri, diagnostics: [] });
-    laraphense.documentClosed(param.document);
+    laraphense.documentClosed(FlatDocument.fromTextDocument(param.document));
 });
 
 connection.onCompletion(async (textDocumentPosition, token) => {
@@ -123,7 +124,11 @@ connection.onCompletion(async (textDocumentPosition, token) => {
             if (!document) {
                 return EMPTY_COMPLETION_LIST;
             }
-            return laraphense.provideCompletion(document, textDocumentPosition.position, textDocumentPosition.context);
+            return laraphense.provideCompletion(
+                FlatDocument.fromTextDocument(document),
+                textDocumentPosition.position,
+                textDocumentPosition.context
+            );
         },
         null,
         `Error while computing completions for ${textDocumentPosition.textDocument.uri}`
@@ -145,7 +150,7 @@ connection.onCompletionResolve((item, token) => {
             if (!document) {
                 return item;
             }
-            return laraphense.provideCompletionResolve(document, item);
+            return laraphense.provideCompletionResolve(FlatDocument.fromTextDocument(document), item);
         },
         item,
         `Error while resolving completion proposal`
@@ -162,7 +167,7 @@ connection.onHover((textDocumentPosition, token) => {
             if (!document) {
                 return null;
             }
-            return laraphense.provideHover(document, textDocumentPosition.position);
+            return laraphense.provideHover(FlatDocument.fromTextDocument(document), textDocumentPosition.position);
         },
         null,
         `Error while computing hover for ${textDocumentPosition.textDocument.uri}`
@@ -179,7 +184,10 @@ connection.onDocumentHighlight((documentHighlightParams, token) => {
             if (!document) {
                 return [];
             }
-            return laraphense.provideDocumentHighlight(document, documentHighlightParams.position);
+            return laraphense.provideDocumentHighlight(
+                FlatDocument.fromTextDocument(document),
+                documentHighlightParams.position
+            );
         },
         [],
         `Error while computing document highlights for ${documentHighlightParams.textDocument.uri}`
@@ -196,7 +204,7 @@ connection.onDefinition((definitionParams, token) => {
             if (!document) {
                 return [];
             }
-            return laraphense.provideDefinition(document, definitionParams.position);
+            return laraphense.provideDefinition(FlatDocument.fromTextDocument(document), definitionParams.position);
         },
         [],
         `Error while computing definitions for ${definitionParams.textDocument.uri}`
@@ -213,7 +221,7 @@ connection.onReferences((referenceParams, token) => {
             if (!document) {
                 return [];
             }
-            return laraphense.provideReferences(document, referenceParams.position);
+            return laraphense.provideReferences(FlatDocument.fromTextDocument(document), referenceParams.position);
         },
         [],
         `Error while computing references for ${referenceParams.textDocument.uri}`
@@ -230,7 +238,10 @@ connection.onSignatureHelp((signatureHelpParams, token) => {
             if (!document) {
                 return null;
             }
-            return laraphense.provideSignatureHelp(document, signatureHelpParams.position);
+            return laraphense.provideSignatureHelp(
+                FlatDocument.fromTextDocument(document),
+                signatureHelpParams.position
+            );
         },
         null,
         `Error while computing signature help for ${signatureHelpParams.textDocument.uri}`
@@ -247,7 +258,7 @@ connection.onDocumentLinks((documentLinkParam, token) => {
             if (!document) {
                 return [];
             }
-            return laraphense.provideDocumentLinks(document);
+            return laraphense.provideDocumentLinks(FlatDocument.fromTextDocument(document));
         },
         [],
         `Error while document links for ${documentLinkParam.textDocument.uri}`
@@ -264,7 +275,7 @@ connection.onDocumentSymbol((documentSymbolParams, token) => {
             if (!document) {
                 return [];
             }
-            return laraphense.provideDocumentSymbol(document);
+            return laraphense.provideDocumentSymbol(FlatDocument.fromTextDocument(document));
         },
         [],
         `Error while computing document symbols for ${documentSymbolParams.textDocument.uri}`

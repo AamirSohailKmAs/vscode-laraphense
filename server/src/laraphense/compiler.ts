@@ -20,8 +20,16 @@ export class Compiler {
         });
     }
 
-    public parseDoc(doc: TextDocument): Tree {
-        return this.parseFlatDoc(FlatDocument.fromTextDocument(doc));
+    public parseFlatDoc(flatDoc: FlatDocument): Tree {
+        if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
+            return newAstTree();
+        }
+
+        try {
+            return this._bladeParser.parse(flatDoc.doc, flatDoc.languageId);
+        } catch (error) {
+            return newAstTree();
+        }
     }
 
     public compileUri(flatDoc: FlatDocument) {
@@ -32,18 +40,6 @@ export class Compiler {
         flatDoc.lastCompile = process.hrtime();
 
         return { astTree, symbols };
-    }
-
-    private parseFlatDoc(flatDoc: FlatDocument): Tree {
-        if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
-            return newAstTree();
-        }
-
-        try {
-            return this._bladeParser.parse(flatDoc.doc, flatDoc.languageId);
-        } catch (error) {
-            return newAstTree();
-        }
     }
 }
 

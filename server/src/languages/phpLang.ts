@@ -1,7 +1,6 @@
 'use strict';
-import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocContext, Language } from './baseLang';
-import { DocLang } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../laraphense/document';
 import {
     CompletionItem,
     CompletionList,
@@ -39,8 +38,8 @@ export class Php implements Language {
         });
     }
 
-    findDocumentSymbols(document: TextDocument): SymbolInformation[] {
-        const folder = this._workspace.findFolderContainingUri(document.uri);
+    findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
+        const folder = this._workspace.findFolderContainingUri(document.doc.uri);
         if (!folder) {
             console.log('folder not found');
 
@@ -56,43 +55,43 @@ export class Php implements Language {
         }
 
         return this.providers.documentSymbol.provide(
-            symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
-            document.uri
+            symbolTable.findSymbolsByFilePath(folder.relativePath(document.doc.uri)),
+            document.doc.uri
         );
     }
     doComplete(
-        document: TextDocument,
+        document: FlatDocument,
         position: Position,
         context: DocContext
     ): CompletionList | Promise<CompletionList> {
         return CompletionList.create();
     }
-    doHover(document: TextDocument, position: Position): Hover | null {
+    doHover(document: FlatDocument, position: Position): Hover | null {
         return null;
     }
-    doResolve(document: TextDocument, item: CompletionItem): CompletionItem {
+    doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {
         return item;
     }
-    doSignatureHelp(document: TextDocument, position: Position): SignatureHelp | null {
+    doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {
         return null;
     }
-    doValidation(document: TextDocument): Diagnostic[] | Promise<Diagnostic[]> {
+    doValidation(document: FlatDocument): Diagnostic[] | Promise<Diagnostic[]> {
         return [];
     }
-    findReferences(document: TextDocument, position: Position): Location[] {
+    findReferences(document: FlatDocument, position: Position): Location[] {
         return [];
     }
-    findDefinition(document: TextDocument, position: Position): Definition | null {
+    findDefinition(document: FlatDocument, position: Position): Definition | null {
         return null;
     }
-    findDocumentHighlight(document: TextDocument, position: Position): DocumentHighlight[] {
+    findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {
         return [];
     }
-    findDocumentLinks(document: TextDocument, documentContext: DocContext): DocumentLink[] {
+    findDocumentLinks(document: FlatDocument, documentContext: DocContext): DocumentLink[] {
         return [];
     }
 
-    onDocumentRemoved(document: TextDocument) {}
+    onDocumentRemoved(document: FlatDocument) {}
 
     dispose() {}
 }

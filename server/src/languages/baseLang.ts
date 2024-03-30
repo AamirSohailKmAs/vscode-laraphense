@@ -13,8 +13,7 @@ import {
     SignatureHelp,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DocLang } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../laraphense/document';
 import { LanguageSettings as CssSetting } from 'vscode-css-languageservice';
 import {
     CompletionConfiguration,
@@ -60,21 +59,21 @@ export type Language = {
     id: DocLang;
     emmetSyntax?: 'html' | 'css';
     dispose: () => void;
-    onDocumentRemoved: (document: TextDocument) => void;
+    onDocumentRemoved: (document: FlatDocument) => void;
     doComplete?: (
-        document: TextDocument,
+        document: FlatDocument,
         position: Position,
         context: DocContext
     ) => CompletionList | Promise<CompletionList>;
-    doHover?: (document: TextDocument, position: Position) => Hover | null;
-    doResolve?: (document: TextDocument, item: CompletionItem) => CompletionItem;
-    doSignatureHelp?: (document: TextDocument, position: Position) => SignatureHelp | null;
-    doValidation?: (document: TextDocument) => Diagnostic[] | Promise<Diagnostic[]>;
-    findReferences?: (document: TextDocument, position: Position) => Location[];
-    findDefinition?: (document: TextDocument, position: Position) => Definition | null;
-    findDocumentHighlight?: (document: TextDocument, position: Position) => DocumentHighlight[];
-    findDocumentLinks?: (document: TextDocument, documentContext: DocContext) => DocumentLink[];
-    findDocumentSymbols?: (document: TextDocument) => SymbolInformation[];
+    doHover?: (document: FlatDocument, position: Position) => Hover | null;
+    doResolve?: (document: FlatDocument, item: CompletionItem) => CompletionItem;
+    doSignatureHelp?: (document: FlatDocument, position: Position) => SignatureHelp | null;
+    doValidation?: (document: FlatDocument) => Diagnostic[] | Promise<Diagnostic[]>;
+    findReferences?: (document: FlatDocument, position: Position) => Location[];
+    findDefinition?: (document: FlatDocument, position: Position) => Definition | null;
+    findDocumentHighlight?: (document: FlatDocument, position: Position) => DocumentHighlight[];
+    findDocumentLinks?: (document: FlatDocument, documentContext: DocContext) => DocumentLink[];
+    findDocumentSymbols?: (document: FlatDocument) => SymbolInformation[];
 };
 
 type HtmlSetting = {

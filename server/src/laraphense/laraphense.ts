@@ -14,7 +14,7 @@ import {
 } from 'vscode-languageserver';
 import { pushAll } from '../helpers/general';
 import { MemoryCache } from '../support/cache';
-import { DocLang, Regions } from './document';
+import { DocLang, FlatDocument, Regions } from './document';
 
 import { getCSSLanguageService } from 'vscode-css-languageservice';
 import { getLanguageService as getHTMLLanguageService } from 'vscode-html-languageservice';
@@ -53,7 +53,7 @@ export class Laraphense {
     }
 
     public async provideCompletion(
-        document: TextDocument,
+        document: FlatDocument,
         position: Position,
         _context: CompletionContext | undefined
     ) {
@@ -78,14 +78,14 @@ export class Laraphense {
             return result;
         }
 
-        const items = await lang.doComplete(document, position, this._workspace.getDocumentContext(document.uri));
+        const items = await lang.doComplete(document, position, this._workspace.getDocumentContext(document.doc.uri));
         result = mergeCompletionItems(result, items);
         if (result.items.length > 0) {
             return result;
         }
 
         if (lang.emmetSyntax) {
-            const emmetResult = doComplete(document, position, lang.emmetSyntax, {});
+            const emmetResult = doComplete(document.doc, position, lang.emmetSyntax, {});
             if (emmetResult) {
                 result = mergeCompletionItems(result, emmetResult);
             }
@@ -94,7 +94,7 @@ export class Laraphense {
         return result;
     }
 
-    public provideCompletionResolve(document: TextDocument, item: CompletionItem) {
+    public provideCompletionResolve(document: FlatDocument, item: CompletionItem) {
         let data = item.data;
         if (data && data.languageId) {
             let lang = this.getLanguage(data.languageId);
@@ -105,7 +105,7 @@ export class Laraphense {
         return item;
     }
 
-    public provideDocumentSymbol(document: TextDocument) {
+    public provideDocumentSymbol(document: FlatDocument) {
         let symbols: SymbolInformation[] = [];
 
         this.getAllLanguagesInDocument(document).forEach((m) => {
@@ -122,8 +122,8 @@ export class Laraphense {
         return symbols;
     }
 
-    public provideDocumentLinks(document: TextDocument) {
-        let documentContext = this._workspace.getDocumentContext(document.uri);
+    public provideDocumentLinks(document: FlatDocument) {
+        let documentContext = this._workspace.getDocumentContext(document.doc.uri);
         const links: DocumentLink[] = [];
         this.getAllLanguagesInDocument(document).forEach((m) => {
             if (m.findDocumentLinks) {
@@ -133,7 +133,7 @@ export class Laraphense {
         return links;
     }
 
-    public provideSignatureHelp(document: TextDocument, position: Position) {
+    public provideSignatureHelp(document: FlatDocument, position: Position) {
         const lang = this.getLangAtPosition(document, position);
         if (!lang || !lang.doSignatureHelp) {
             return null;
@@ -141,7 +141,7 @@ export class Laraphense {
         return lang.doSignatureHelp(document, position);
     }
 
-    public provideReferences(document: TextDocument, position: Position) {
+    public provideReferences(document: FlatDocument, position: Position) {
         const lang = this.getLangAtPosition(document, position);
         if (!lang || !lang.findReferences) {
             return [];
@@ -154,7 +154,7 @@ export class Laraphense {
         return references;
     }
 
-    public provideDefinition(document: TextDocument, position: Position) {
+    public provideDefinition(document: FlatDocument, position: Position) {
         const lang = this.getLangAtPosition(document, position);
         if (!lang || !lang.findDefinition) {
             return [];
@@ -165,7 +165,7 @@ export class Laraphense {
         return definitions;
     }
 
-    public provideDocumentHighlight(document: TextDocument, position: Position) {
+    public provideDocumentHighlight(document: FlatDocument, position: Position) {
         const lang = this.getLangAtPosition(document, position);
         if (!lang || !lang.findDocumentHighlight) {
             return [];
@@ -173,7 +173,7 @@ export class Laraphense {
         return lang.findDocumentHighlight(document, position);
     }
 
-    public provideHover(document: TextDocument, position: Position) {
+    public provideHover(document: FlatDocument, position: Position) {
         const lang = this.getLangAtPosition(document, position);
         if (!lang || !lang.doHover) {
             return null;
@@ -181,13 +181,13 @@ export class Laraphense {
         return lang.doHover(document, position);
     }
 
-    public getLangAtPosition(document: TextDocument, position: Position) {
-        const docLang = this._openDocuments.get(document).docLangAtOffset(document.offsetAt(position));
+    public getLangAtPosition(document: FlatDocument, position: Position) {
+        const docLang = this._openDocuments.get(document).docLangAtOffset(document.doc.offsetAt(position));
         console.log('docLang', docLang);
         return this.getLanguage(docLang);
     }
 
-    public getAllLanguagesInDocument(document: TextDocument): Language[] {
+    public getAllLanguagesInDocument(document: FlatDocument): Language[] {
         const result = [];
         for (const languageId of this._openDocuments.get(document).docLangsInDocument(this._languages.size)) {
             const mode = this._languages.get(languageId);
@@ -206,12 +206,12 @@ export class Laraphense {
         this._openDocuments.setOpenUris(openUri);
     }
 
-    public documentChanged(document: TextDocument) {
+    public documentChanged(document: FlatDocument) {
         this._openDocuments.set(document);
     }
 
-    public documentClosed(document: TextDocument) {
-        this._openDocuments.delete(document.uri);
+    public documentClosed(document: FlatDocument) {
+        this._openDocuments.delete(document.doc.uri);
         this._languages.forEach((language) => {
             language.onDocumentRemoved(document);
         });
@@ -225,8 +225,8 @@ export class Laraphense {
         this._languages.clear();
     }
 
-    public getRegions(doc: TextDocument) {
-        return new Regions(doc.uri).parse(this._compiler.parseDoc(doc));
+    public getRegions(doc: FlatDocument) {
+        return new Regions(doc.doc.uri).parse(this._compiler.parseFlatDoc(doc));
     }
 }
 

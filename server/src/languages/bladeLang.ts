@@ -1,10 +1,9 @@
 'use strict';
 
 import { FoldingRange, FormattingOptions, Position, Range, SelectionRange } from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocumentContext } from 'vscode-html-languageservice';
 import { Language } from './baseLang';
-import { DocLang } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../laraphense/document';
 import { Html } from './htmlLang';
 
 export class Blade implements Language {
@@ -13,56 +12,56 @@ export class Blade implements Language {
 
     constructor(private html: Html) {}
 
-    public getSelectionRange(document: TextDocument, position: Position): SelectionRange {
+    public getSelectionRange(document: FlatDocument, position: Position): SelectionRange {
         return this.html.getSelectionRange(document, position);
     }
 
-    public async doComplete(document: TextDocument, position: Position, documentContext: DocumentContext) {
+    public async doComplete(document: FlatDocument, position: Position, documentContext: DocumentContext) {
         const completionList = this.html.doComplete(document, position, documentContext);
         return completionList;
     }
 
-    public doHover(document: TextDocument, position: Position) {
+    public doHover(document: FlatDocument, position: Position) {
         return this.html.doHover(document, position);
     }
 
-    public findDocumentHighlight(document: TextDocument, position: Position) {
+    public findDocumentHighlight(document: FlatDocument, position: Position) {
         return this.html.findDocumentHighlight(document, position);
     }
 
-    public findDocumentLinks(document: TextDocument, documentContext: DocumentContext) {
+    public findDocumentLinks(document: FlatDocument, documentContext: DocumentContext) {
         return this.html.findDocumentLinks(document, documentContext);
     }
 
-    public findDocumentSymbols(document: TextDocument) {
+    public findDocumentSymbols(document: FlatDocument) {
         return this.html.findDocumentSymbols(document);
     }
 
-    public format(document: TextDocument, range: Range, formatParams: FormattingOptions) {
+    public format(document: FlatDocument, range: Range, formatParams: FormattingOptions) {
         return this.html.format(document, range, formatParams);
     }
 
-    public getFoldingRanges(document: TextDocument): FoldingRange[] {
+    public getFoldingRanges(document: FlatDocument): FoldingRange[] {
         return this.html.getFoldingRanges(document);
     }
 
-    public doAutoInsert(document: TextDocument, position: Position, kind: 'autoQuote' | 'autoClose') {
+    public doAutoInsert(document: FlatDocument, position: Position, kind: 'autoQuote' | 'autoClose') {
         return this.html.doAutoInsert(document, position, kind);
     }
 
-    public doRename(document: TextDocument, position: Position, newName: string) {
+    public doRename(document: FlatDocument, position: Position, newName: string) {
         return this.html.doRename(document, position, newName);
     }
 
-    public findMatchingTagPosition(document: TextDocument, position: Position) {
+    public findMatchingTagPosition(document: FlatDocument, position: Position) {
         return this.html.findMatchingTagPosition(document, position);
     }
 
-    public doLinkedEditing(document: TextDocument, position: Position) {
+    public doLinkedEditing(document: FlatDocument, position: Position) {
         return this.html.doLinkedEditing(document, position);
     }
 
-    public onDocumentRemoved(document: TextDocument) {
+    public onDocumentRemoved(document: FlatDocument) {
         this.html.onDocumentRemoved(document);
     }
 

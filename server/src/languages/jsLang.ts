@@ -32,7 +32,7 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { getWordAtText, isWhitespaceOnly, repeat } from '../helpers/general';
-import { DocLang, Regions } from '../laraphense/document';
+import { DocLang, FlatDocument, Regions } from '../laraphense/document';
 import { DocumentContext } from 'vscode-html-languageservice';
 import { join, basename, dirname } from 'path';
 import { readFileSync } from 'fs';
@@ -41,7 +41,7 @@ const JS_WORD_REGEX = /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\
 
 export class Js implements Language {
     id: DocLang;
-    jsDocuments: MemoryCache<TextDocument>;
+    jsDocuments: MemoryCache<FlatDocument>;
     host: {
         getLanguageService(jsDocument: TextDocument): ts.LanguageService;
         getCompilationSettings(): ts.CompilerOptions;
@@ -65,46 +65,49 @@ export class Js implements Language {
         hostSettings.strictNullChecks = settings?.['js/ts']?.implicitProjectConfig?.strictNullChecks;
     }
 
-    async doValidation(document: TextDocument): Promise<Diagnostic[]> {
+    async doValidation(document: FlatDocument): Promise<Diagnostic[]> {
         const jsDocument = this.jsDocuments.get(document);
-        const languageService = this.host.getLanguageService(jsDocument);
-        const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(jsDocument.uri);
-        const semanticDiagnostics = languageService.getSemanticDiagnostics(jsDocument.uri);
+        const languageService = this.host.getLanguageService(jsDocument.doc);
+        const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(jsDocument.doc.uri);
+        const semanticDiagnostics = languageService.getSemanticDiagnostics(jsDocument.doc.uri);
         return syntaxDiagnostics
             .concat(semanticDiagnostics)
             .filter((d) => !ignoredErrors.includes(d.code))
             .map((diag: ts.Diagnostic): Diagnostic => {
                 return {
-                    range: convertRange(jsDocument, diag),
+                    range: convertRange(jsDocument.doc, diag),
                     severity: DiagnosticSeverity.Error,
                     source: this.languageId,
                     message: ts.flattenDiagnosticMessageText(diag.messageText, '\n'),
                 };
             });
     }
-    doComplete(document: TextDocument, position: Position, _documentContext: DocumentContext): CompletionList {
+    doComplete(document: FlatDocument, position: Position, _documentContext: DocumentContext): CompletionList {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const offset = jsDocument.offsetAt(position);
-        const completions = jsLanguageService.getCompletionsAtPosition(jsDocument.uri, offset, {
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const offset = jsDocument.doc.offsetAt(position);
+        const completions = jsLanguageService.getCompletionsAtPosition(jsDocument.doc.uri, offset, {
             includeExternalModuleExports: false,
             includeInsertTextCompletions: false,
         });
         if (!completions) {
             return { isIncomplete: false, items: [] };
         }
-        const replaceRange = convertRange(jsDocument, getWordAtText(jsDocument.getText(), offset, JS_WORD_REGEX));
+        const replaceRange = convertRange(
+            jsDocument.doc,
+            getWordAtText(jsDocument.doc.getText(), offset, JS_WORD_REGEX)
+        );
         return {
             isIncomplete: false,
             items: completions.entries.map((entry) => {
                 const data: CompletionItemData = {
                     // data used for resolving item details (see 'doResolve')
                     languageId: this.languageId,
-                    uri: document.uri,
+                    uri: document.doc.uri,
                     offset: offset,
                 };
                 return {
-                    uri: document.uri,
+                    uri: document.doc.uri,
                     position: position,
                     label: entry.name,
                     sortText: entry.sortText,
@@ -115,12 +118,12 @@ export class Js implements Language {
             }),
         };
     }
-    doResolve(document: TextDocument, item: CompletionItem): CompletionItem {
+    doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {
         if (isCompletionItemData(item.data)) {
             const jsDocument = this.jsDocuments.get(document);
-            const jsLanguageService = this.host.getLanguageService(jsDocument);
+            const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
             const details = jsLanguageService.getCompletionEntryDetails(
-                jsDocument.uri,
+                jsDocument.doc.uri,
                 item.data.offset,
                 item.label,
                 undefined,
@@ -136,25 +139,25 @@ export class Js implements Language {
         }
         return item;
     }
-    doHover(document: TextDocument, position: Position): Hover | null {
+    doHover(document: FlatDocument, position: Position): Hover | null {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const info = jsLanguageService.getQuickInfoAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const info = jsLanguageService.getQuickInfoAtPosition(jsDocument.doc.uri, jsDocument.doc.offsetAt(position));
         if (info) {
             const contents = ts.displayPartsToString(info.displayParts);
             return {
-                range: convertRange(jsDocument, info.textSpan),
+                range: convertRange(jsDocument.doc, info.textSpan),
                 contents: ['```typescript', contents, '```'].join('\n'),
             };
         }
         return null;
     }
-    doSignatureHelp(document: TextDocument, position: Position): SignatureHelp | null {
+    doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
         const signHelp = jsLanguageService.getSignatureHelpItems(
-            jsDocument.uri,
-            jsDocument.offsetAt(position),
+            jsDocument.doc.uri,
+            jsDocument.doc.offsetAt(position),
             undefined
         );
         if (signHelp) {
@@ -190,39 +193,41 @@ export class Js implements Language {
         }
         return null;
     }
-    doRename(document: TextDocument, position: Position, newName: string) {
+    doRename(document: FlatDocument, position: Position, newName: string) {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const jsDocumentPosition = jsDocument.offsetAt(position);
-        const { canRename } = jsLanguageService.getRenameInfo(jsDocument.uri, jsDocumentPosition);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const jsDocumentPosition = jsDocument.doc.offsetAt(position);
+        const { canRename } = jsLanguageService.getRenameInfo(jsDocument.doc.uri, jsDocumentPosition);
         if (!canRename) {
             return null;
         }
-        const renameInfos = jsLanguageService.findRenameLocations(jsDocument.uri, jsDocumentPosition, false, false);
+        const renameInfos = jsLanguageService.findRenameLocations(jsDocument.doc.uri, jsDocumentPosition, false, false);
 
         const edits: TextEdit[] = [];
         renameInfos?.map((renameInfo) => {
             edits.push({
-                range: convertRange(jsDocument, renameInfo.textSpan),
+                range: convertRange(jsDocument.doc, renameInfo.textSpan),
                 newText: newName,
             });
         });
 
         return {
-            changes: { [document.uri]: edits },
+            changes: { [document.doc.uri]: edits },
         };
     }
-    findDocumentHighlight(document: TextDocument, position: Position): DocumentHighlight[] {
+    findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const highlights = jsLanguageService.getDocumentHighlights(jsDocument.uri, jsDocument.offsetAt(position), [
-            jsDocument.uri,
-        ]);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const highlights = jsLanguageService.getDocumentHighlights(
+            jsDocument.doc.uri,
+            jsDocument.doc.offsetAt(position),
+            [jsDocument.doc.uri]
+        );
         const out: DocumentHighlight[] = [];
         for (const entry of highlights || []) {
             for (const highlight of entry.highlightSpans) {
                 out.push({
-                    range: convertRange(jsDocument, highlight.textSpan),
+                    range: convertRange(jsDocument.doc, highlight.textSpan),
                     kind:
                         highlight.kind === 'writtenReference'
                             ? DocumentHighlightKind.Write
@@ -232,10 +237,10 @@ export class Js implements Language {
         }
         return out;
     }
-    findDocumentSymbols(document: TextDocument): SymbolInformation[] {
+    findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const items = jsLanguageService.getNavigationBarItems(jsDocument.uri);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const items = jsLanguageService.getNavigationBarItems(jsDocument.doc.uri);
         if (items) {
             const result: SymbolInformation[] = [];
             const existing = Object.create(null);
@@ -246,8 +251,8 @@ export class Js implements Language {
                         name: item.text,
                         kind: convertSymbolKind(item.kind),
                         location: {
-                            uri: document.uri,
-                            range: convertRange(jsDocument, item.spans[0]),
+                            uri: document.doc.uri,
+                            range: convertRange(jsDocument.doc, item.spans[0]),
                         },
                         containerName: containerLabel,
                     };
@@ -268,74 +273,80 @@ export class Js implements Language {
         }
         return [];
     }
-    findDefinition(document: TextDocument, position: Position): Definition | null {
+    findDefinition(document: FlatDocument, position: Position): Definition | null {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const definition = jsLanguageService.getDefinitionAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const definition = jsLanguageService.getDefinitionAtPosition(
+            jsDocument.doc.uri,
+            jsDocument.doc.offsetAt(position)
+        );
         if (definition) {
             return definition
-                .filter((d) => d.fileName === jsDocument.uri)
+                .filter((d) => d.fileName === jsDocument.doc.uri)
                 .map((d) => {
                     return {
-                        uri: document.uri,
-                        range: convertRange(jsDocument, d.textSpan),
+                        uri: document.doc.uri,
+                        range: convertRange(jsDocument.doc, d.textSpan),
                     };
                 });
         }
         return null;
     }
-    findReferences(document: TextDocument, position: Position): Location[] {
+    findReferences(document: FlatDocument, position: Position): Location[] {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const references = jsLanguageService.getReferencesAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const references = jsLanguageService.getReferencesAtPosition(
+            jsDocument.doc.uri,
+            jsDocument.doc.offsetAt(position)
+        );
         if (references) {
             return references
-                .filter((d) => d.fileName === jsDocument.uri)
+                .filter((d) => d.fileName === jsDocument.doc.uri)
                 .map((d) => {
                     return {
-                        uri: document.uri,
-                        range: convertRange(jsDocument, d.textSpan),
+                        uri: document.doc.uri,
+                        range: convertRange(jsDocument.doc, d.textSpan),
                     };
                 });
         }
         return [];
     }
-    getSelectionRange(document: TextDocument, position: Position): SelectionRange {
+    getSelectionRange(document: FlatDocument, position: Position): SelectionRange {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
         function convertSelectionRange(selectionRange: ts.SelectionRange): SelectionRange {
             const parent = selectionRange.parent ? convertSelectionRange(selectionRange.parent) : undefined;
-            return SelectionRange.create(convertRange(jsDocument, selectionRange.textSpan), parent);
+            return SelectionRange.create(convertRange(jsDocument.doc, selectionRange.textSpan), parent);
         }
-        const range = jsLanguageService.getSmartSelectionRange(jsDocument.uri, jsDocument.offsetAt(position));
+        const range = jsLanguageService.getSmartSelectionRange(jsDocument.doc.uri, jsDocument.doc.offsetAt(position));
         return convertSelectionRange(range);
     }
-    format(document: TextDocument, range: Range, formatParams: FormattingOptions): TextEdit[] {
+    format(document: FlatDocument, range: Range, formatParams: FormattingOptions): TextEdit[] {
         const jsDocument = this.regions.get(document).getEmbeddedDocument(document, DocLang.js, true);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
 
         const formatterSettings = this.settings && this.settings.javascript && this.settings.javascript.format;
 
-        const initialIndentLevel = computeInitialIndent(document, range, formatParams);
+        const initialIndentLevel = computeInitialIndent(document.doc, range, formatParams);
         const formatSettings = convertOptions(formatParams, formatterSettings, initialIndentLevel + 1);
-        const start = jsDocument.offsetAt(range.start);
-        let end = jsDocument.offsetAt(range.end);
+        const start = jsDocument.doc.offsetAt(range.start);
+        let end = jsDocument.doc.offsetAt(range.end);
         let lastLineRange = null;
         if (
             range.end.line > range.start.line &&
             (range.end.character === 0 ||
-                isWhitespaceOnly(jsDocument.getText().substr(end - range.end.character, range.end.character)))
+                isWhitespaceOnly(jsDocument.doc.getText().substr(end - range.end.character, range.end.character)))
         ) {
             end -= range.end.character;
             lastLineRange = Range.create(Position.create(range.end.line, 0), range.end);
         }
-        const edits = jsLanguageService.getFormattingEditsForRange(jsDocument.uri, start, end, formatSettings);
+        const edits = jsLanguageService.getFormattingEditsForRange(jsDocument.doc.uri, start, end, formatSettings);
         if (edits) {
             const result = [];
             for (const edit of edits) {
                 if (edit.span.start >= start && edit.span.start + edit.span.length <= end) {
                     result.push({
-                        range: convertRange(jsDocument, edit.span),
+                        range: convertRange(jsDocument.doc, edit.span),
                         newText: edit.newText,
                     });
                 }
@@ -350,18 +361,18 @@ export class Js implements Language {
         }
         return [];
     }
-    async getFoldingRanges(document: TextDocument): Promise<FoldingRange[]> {
+    async getFoldingRanges(document: FlatDocument): Promise<FoldingRange[]> {
         const jsDocument = this.jsDocuments.get(document);
-        const jsLanguageService = this.host.getLanguageService(jsDocument);
-        const spans = jsLanguageService.getOutliningSpans(jsDocument.uri);
+        const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
+        const spans = jsLanguageService.getOutliningSpans(jsDocument.doc.uri);
         const ranges: FoldingRange[] = [];
         for (const span of spans) {
-            const curr = convertRange(jsDocument, span.textSpan);
+            const curr = convertRange(jsDocument.doc, span.textSpan);
             const startLine = curr.start.line;
             const endLine = curr.end.line;
             if (startLine < endLine) {
                 const foldingRange: FoldingRange = { startLine, endLine };
-                const match = document.getText(curr).match(/^\s*\/(?:(\/\s*#(?:end)?region\b)|(\*|\/))/);
+                const match = document.doc.getText(curr).match(/^\s*\/(?:(\/\s*#(?:end)?region\b)|(\*|\/))/);
                 if (match) {
                     foldingRange.kind = match[1] ? FoldingRangeKind.Region : FoldingRangeKind.Comment;
                 }
@@ -370,8 +381,8 @@ export class Js implements Language {
         }
         return ranges;
     }
-    onDocumentRemoved(document: TextDocument) {
-        this.jsDocuments.delete(document.uri);
+    onDocumentRemoved(document: FlatDocument) {
+        this.jsDocuments.delete(document.doc.uri);
     }
     dispose() {
         this.host.dispose();

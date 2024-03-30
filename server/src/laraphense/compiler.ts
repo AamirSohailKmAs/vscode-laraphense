@@ -2,7 +2,7 @@
 
 import { BladeParser } from '../bladeParser/parser';
 import { DocLang, FlatDocument } from './document';
-import { Analyser } from './analyser';
+import { Analyser } from '../languages/php/indexing/analyser';
 import { laraphenseRc } from '../languages/baseLang';
 import { Tree } from '../types/bladeAst';
 import { TextDocument } from 'vscode-languageserver-textdocument';

@@ -1,10 +1,21 @@
 'use strict';
 
-export class EventEmitter {
-    private _listeners: Function[] = [];
+export class EventEmitter<T> {
+    private _listeners: Array<(eventData: T) => void> = [];
+    private eventsQueue: T[] = [];
 
-    addListener(listener: Function) {
+    constructor(private queueEvents: boolean = false) {}
+
+    addListener(listener: (eventData: T) => void) {
         this._listeners.push(listener);
+
+        if (this.queueEvents) {
+            this.eventsQueue.forEach((eventData) => {
+                this.emit(eventData);
+            });
+            this.eventsQueue = [];
+        }
+
         return {
             dispose: () => {
                 let listen = this._listeners.indexOf(listener);
@@ -15,10 +26,14 @@ export class EventEmitter {
         };
     }
 
-    emit(eventData?: any) {
-        this._listeners.forEach((listener) => {
-            listener(eventData);
-        });
+    emit(eventData: T) {
+        if (this._listeners.length > 0) {
+            this._listeners.forEach((listener) => {
+                listener(eventData);
+            });
+        } else if (this.queueEvents) {
+            this.eventsQueue.push(eventData);
+        }
     }
 }
 

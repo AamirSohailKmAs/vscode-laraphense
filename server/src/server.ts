@@ -14,8 +14,8 @@ import { createConnection } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Laraphense } from './laraphense/laraphense';
-import { Workspace } from './laraphense/indexing/workspace';
-import { FolderKind, WorkspaceFolder } from './laraphense/indexing/workspaceFolder';
+import { Workspace } from './laraphense/workspace';
+import { FolderKind } from './laraphense/workspaceFolder';
 import { URI } from 'vscode-uri';
 import { DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
 import { join } from 'path';
@@ -85,11 +85,12 @@ connection.onInitialize(async (params: InitializeParams) => {
     };
 });
 
-connection.onInitialized(() => {
-    workspace.indexWorkspace();
-});
+// connection.onInitialized(() => {
+//     workspace.indexWorkspace();
+// });
 
 connection.onDidChangeConfiguration((change) => {
+    // fixme:
     laraphense.settings = change.settings;
 });
 

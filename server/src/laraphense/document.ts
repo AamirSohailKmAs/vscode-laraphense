@@ -7,7 +7,7 @@ import { guessLangFromUri, toDocLang } from '../helpers/uri';
 import { EmbeddedLanguage, Tree } from '../types/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
-import { toLocation } from './indexing/symbol';
+import { toLocation } from '../languages/php/indexing/symbol';
 import { substituteWithWhitespace } from '../helpers/general';
 
 export enum DocLang {
@@ -33,7 +33,7 @@ export class FlatDocument {
     diagnoseDebounce?: Debounce<unknown, unknown>;
     constructor(
         uri: DocumentUri,
-        public languageId: DocLang,
+        languageId: DocLang,
         version: number,
         content: string,
         public isOpened: boolean = false,
@@ -42,6 +42,10 @@ export class FlatDocument {
         this.doc = TextDocument.create(uri, languageId, version, content);
         this.createdAt = createdAt ?? Date.now();
         this.lastCompile = process.hrtime();
+    }
+
+    public get languageId() {
+        return this.doc.languageId as DocLang;
     }
 }
 

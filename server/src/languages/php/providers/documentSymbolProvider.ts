@@ -1,8 +1,8 @@
 'use strict';
 
 import { DocumentUri, SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
-import { PhpSymbol, SymbolKind } from '../../../laraphense/indexing/tables/symbolTable';
-import { toLSPRange } from '../../../laraphense/indexing/symbol';
+import { PhpSymbol, SymbolKind } from '../indexing/tables/symbolTable';
+import { toLSPRange } from '../indexing/symbol';
 
 export class DocumentSymbolProvider {
     provide(symbols: PhpSymbol[], uri: DocumentUri): SymbolInformation[] {

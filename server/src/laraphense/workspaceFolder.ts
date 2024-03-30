@@ -1,15 +1,15 @@
 'use strict';
 import { glob } from 'fast-glob';
-import { folderContainsUri, uriToPath } from '../../helpers/uri';
-import { SymbolKind, SymbolTable } from './tables/symbolTable';
-import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../../support/defaults';
+import { folderContainsUri, uriToPath } from '../helpers/uri';
+import { SymbolKind, SymbolTable } from '../languages/php/indexing/tables/symbolTable';
+import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
-import { Package } from '../../packages/basePackage';
-import { Laravel } from '../../packages/laravel';
+import { Package } from '../packages/basePackage';
+import { Laravel } from '../packages/laravel';
 import { DocumentUri } from 'vscode-languageserver';
-import { IdGenerator, WordStore } from '../../support/generator';
-import { toFqsen } from './symbol';
+import { IdGenerator, WordStore } from '../support/generator';
+import { toFqsen } from '../languages/php/indexing/symbol';
 
 /**
  * A tagging type for string properties that are actually Folder URI.
@@ -147,12 +147,13 @@ export class WorkspaceFolder {
     }
 
     private enableLaravel() {
-        // const version = this.symbolTable.getSymbolNested(
-        //     toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application')
-        // )?.value;
-        // if (version) {
-        //     this._libraries.push(new Laravel(version, this));
-        // }
+        const version = this.symbolTable.getSymbolNested(
+            toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application')
+        )?.value;
+
+        if (version) {
+            this._libraries.push(new Laravel(version, this));
+        }
     }
 }
 

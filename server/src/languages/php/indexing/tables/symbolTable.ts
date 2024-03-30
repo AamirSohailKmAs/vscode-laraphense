@@ -2,7 +2,7 @@
 
 import { Location } from 'php-parser';
 import { toFqcn, splitFqsen, toFqsen, psr4Path } from '../symbol';
-import { RelativePathId } from '../workspaceFolder';
+import { RelativePathId } from '../../../../laraphense/workspaceFolder';
 
 export const enum SymbolModifier {
     Public,

@@ -15,20 +15,28 @@ import {
     SignatureHelp,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { Workspace } from '../laraphense/indexing/workspace';
+import { Workspace } from '../laraphense/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
+import { Indexer } from './php/indexer';
+import { Compiler } from '../laraphense/compiler';
 
 export class Php implements Language {
-    id: DocLang = DocLang.php;
+    public id: DocLang = DocLang.php;
 
+    private _indexer: Indexer;
     private providers: {
         documentSymbol: DocumentSymbolProvider;
     };
 
-    constructor(private _workspace: Workspace) {
+    constructor(private _workspace: Workspace, private _compiler: Compiler) {
+        this._indexer = new Indexer(this._compiler, this._workspace.config);
         this.providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
+
+        this._workspace.folderAdded.addListener((data) => {
+            this._indexer.indexFolder(data.folder);
+        });
     }
 
     findDocumentSymbols(document: TextDocument): SymbolInformation[] {

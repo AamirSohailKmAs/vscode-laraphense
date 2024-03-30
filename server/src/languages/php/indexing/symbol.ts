@@ -2,7 +2,7 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { Location, Position } from '../../types/bladeAst';
+import { Location, Position } from '../../../types/bladeAst';
 import { Fqcn, Fqsen, Selector, SymbolKind } from './tables/symbolTable';
 
 export function toPosition(pos: ParserPosition): Position {

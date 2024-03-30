@@ -1,11 +1,11 @@
 'use strict';
 
 import { DocumentUri } from 'vscode-languageserver';
-import { laraphenseRc } from '../../languages/baseLang';
-import { Compiler } from '../compiler';
-import { DocLang } from '../document';
-import { Fetcher } from '../fetcher';
-import { WorkspaceFolder } from './workspaceFolder';
+import { laraphenseRc } from '../baseLang';
+import { Compiler } from '../../laraphense/compiler';
+import { DocLang } from '../../laraphense/document';
+import { Fetcher } from '../../laraphense/fetcher';
+import { WorkspaceFolder } from '../../laraphense/workspaceFolder';
 export class Indexer {
     private _fetcher: Fetcher;
     private _indexCount: number = 0;

@@ -23,10 +23,10 @@ import {
     MODIFIER_PUBLIC,
     MODIFIER_PROTECTED,
 } from 'php-parser';
-import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './indexing/tables/symbolTable';
-import { Tree } from '../types/bladeAst';
-import { RelativePathId } from './indexing/workspaceFolder';
-import { toFqcn, toFqsen } from './indexing/symbol';
+import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
+import { Tree } from '../../../types/bladeAst';
+import { RelativePathId } from '../../../laraphense/workspaceFolder';
+import { toFqcn, toFqsen } from './symbol';
 
 export type TreeLike = {
     kind: string;

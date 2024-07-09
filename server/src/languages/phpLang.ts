@@ -23,13 +23,13 @@ export class Php implements Language {
     public id: DocLang = DocLang.php;
 
     private _indexer: Indexer;
-    private providers: {
+    private _providers: {
         documentSymbol: DocumentSymbolProvider;
     };
 
     constructor(private _workspace: Workspace, private _compiler: Compiler) {
         this._indexer = new Indexer(this._compiler, this._workspace.config);
-        this.providers = {
+        this._providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
 
@@ -39,14 +39,14 @@ export class Php implements Language {
     }
 
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
-        const folder = this._workspace.findFolderContainingUri(document.doc.uri);
+        const folder = this._workspace.findFolderContainingUri(document.uri);
         if (!folder) {
             console.log('folder not found');
 
             return [];
         }
 
-        const symbolTable = this._indexer.symbolDb.get(folder.uri);
+        const symbolTable = this._indexer.symbolMap.get(folder.uri);
 
         if (!symbolTable) {
             console.log('symbolTable not found');
@@ -54,9 +54,9 @@ export class Php implements Language {
             return [];
         }
 
-        return this.providers.documentSymbol.provide(
-            symbolTable.findSymbolsByFilePath(folder.relativePath(document.doc.uri)),
-            document.doc.uri
+        return this._providers.documentSymbol.provide(
+            symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
+            document.uri
         );
     }
     doComplete(
@@ -67,6 +67,22 @@ export class Php implements Language {
         return CompletionList.create();
     }
     doHover(document: FlatDocument, position: Position): Hover | null {
+        const folder = this._workspace.findFolderContainingUri(document.uri);
+        if (!folder) {
+            console.log('folder not found');
+
+            return null;
+        }
+
+        const referenceTable = this._indexer.referenceMap.get(folder.uri);
+
+        if (!referenceTable) {
+            console.log('referenceTable not found');
+
+            return null;
+        }
+
+        console.log(document.getWordAtPosition(position), referenceTable);
         return null;
     }
     doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {

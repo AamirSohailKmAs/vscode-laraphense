@@ -14,7 +14,7 @@ import {
     Tree,
     newAstTree,
 } from './bladeAst';
-import { DocLang } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../laraphense/document';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { BladeLexer } from './lexer';
 import { toDocLang } from '../helpers/uri';
@@ -35,7 +35,7 @@ export type parserConfig = {
 
 export class BladeParser {
     public phpParser: Engine;
-    private _doc: TextDocument;
+    private _doc: FlatDocument;
 
     private tokens: Token[] = [];
     private index: number = 0;
@@ -44,10 +44,10 @@ export class BladeParser {
 
     constructor(private _config: parserConfig) {
         this.phpParser = new Engine(this._config);
-        this._doc = TextDocument.create('init', DocLang.unknown, 1, '');
+        this._doc = new FlatDocument('init', DocLang.unknown, 1, '');
     }
 
-    public parse(doc: TextDocument, languageId: DocLang.blade | DocLang.php): Tree {
+    public parse(doc: FlatDocument, languageId: DocLang.blade | DocLang.php): Tree {
         this._doc = doc;
         if (languageId === DocLang.php) {
             return newAstTree([this.phpParser.parseCode(doc.getText(), languageId)]);

@@ -10,10 +10,12 @@ import { SymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { Package } from '../../packages/basePackage';
 import { toFqsen } from './indexing/symbol';
 import { Laravel } from '../../packages/laravel';
+import { ReferenceTable } from './indexing/tables/referenceTable';
 export class Indexer {
     private _fetcher: Fetcher;
-    public symbolDb: Map<FolderUri, SymbolTable> = new Map();
-    public libraryDb: Map<FolderUri, Array<Package>> = new Map();
+    public symbolMap: Map<FolderUri, SymbolTable> = new Map();
+    public referenceMap: Map<FolderUri, ReferenceTable> = new Map();
+    public libraryMap: Map<FolderUri, Array<Package>> = new Map();
     private _indexCount: number = 0;
 
     constructor(private _compiler: Compiler, private config: laraphenseRc) {
@@ -30,7 +32,9 @@ export class Indexer {
         }
 
         const symbolTable = new SymbolTable();
-        this.symbolDb.set(folder.uri, symbolTable);
+        const referenceTable = new ReferenceTable();
+        this.referenceMap.set(folder.uri, referenceTable);
+        this.symbolMap.set(folder.uri, symbolTable);
 
         const missingFiles: Array<{ uri: string; reason: string }> = [];
 
@@ -50,6 +54,8 @@ export class Indexer {
             if (!compiled) {
                 continue;
             }
+
+            referenceTable.addReferences(compiled.references, folder.relativePath(entry.uri));
 
             symbolTable.addSymbols(compiled.symbols, folder.relativePath(entry.uri));
 
@@ -83,14 +89,16 @@ export class Indexer {
     }
 
     private enableLaravel(folder: WorkspaceFolder) {
-        const symbolTable = this.symbolDb.get(folder.uri);
+        const symbolTable = this.symbolMap.get(folder.uri);
         if (!symbolTable) {
             return;
         }
         const classConst = toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application');
         const version = symbolTable.getSymbolNested(classConst)?.value;
         if (version) {
-            this.libraryDb.set(folder.uri, [new Laravel(version, folder)]);
+            console.log(`Laravel found v${version}`);
+
+            // this.libraryDb.set(folder.uri, [new Laravel(version, folder)]);
         }
     }
 }

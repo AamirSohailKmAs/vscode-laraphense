@@ -5,7 +5,8 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocLang } from '../laraphense/document';
 import { Package } from './basePackage';
 import { lte } from 'semver';
-import { WorkspaceFolder } from '../laraphense/indexing/workspaceFolder';
+import { WorkspaceFolder } from '../laraphense/workspaceFolder';
+import { directives } from './laravel/directives';
 
 export type Snippet = {
     label: string;
@@ -15,7 +16,9 @@ export type Snippet = {
     snippet: string;
 };
 export class Laravel implements Package {
-    constructor(private version: string, private folder: WorkspaceFolder) {}
+    constructor(private version: string, private folder: WorkspaceFolder) {
+        this.index();
+    }
 
     public canComplete(languageId: DocLang): boolean {
         return [DocLang.php, DocLang.blade].includes(languageId);
@@ -24,8 +27,25 @@ export class Laravel implements Package {
     public doComplete(document: TextDocument, position: Position): CompletionList {
         const items: CompletionItem[] = [];
         let isIncomplete = false;
+        const snippets = this.getSnippetsUpToVersion(directives);
+
+        for (let snippet of snippets) {
+            const doc = `**Laraphense** \n\n ${snippet.detail} \n\n \`\`\`blade \n ${snippet.doc} \n \`\`\` `;
+            const item: CompletionItem = {
+                label: snippet.label,
+                insertText: snippet.snippet,
+                documentation: { kind: 'markdown', value: doc },
+            };
+
+            items.push(item);
+        }
 
         return CompletionList.create(items, isIncomplete);
+    }
+
+    private async index() {
+        // const entries = await this.folder.findFiles();
+        // console.log(entries);
     }
 
     private getSnippetsUpToVersion(allObjects: Snippet[]): Snippet[] {

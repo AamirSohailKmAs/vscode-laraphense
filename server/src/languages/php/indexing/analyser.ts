@@ -22,11 +22,18 @@ import {
     MODIFIER_PRIVATE,
     MODIFIER_PUBLIC,
     MODIFIER_PROTECTED,
+    UseGroup,
+    TraitUse,
+    StaticLookup,
+    TraitPrecedence,
+    TraitAlias,
+    NullKeyword,
 } from 'php-parser';
-import { Fqsen, PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
+import { PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
 import { Tree } from '../../../bladeParser/bladeAst';
 import { RelativePathId } from '../../../laraphense/workspaceFolder';
 import { toFqcn, toFqsen } from './symbol';
+import { PhpReference } from './tables/referenceTable';
 
 export type TreeLike = {
     kind: string;
@@ -36,6 +43,7 @@ export type TreeLike = {
 
 export class Analyser {
     symbols: PhpSymbol[] = [];
+    references: PhpReference[] = [];
     containerName: string | undefined = undefined;
     member?: PhpSymbol = undefined;
 
@@ -43,7 +51,7 @@ export class Analyser {
         this._reset();
         this._traverseAST(tree, this._visitor.bind(this));
 
-        return { symbols: this.symbols };
+        return { symbols: this.symbols, references: this.references };
     }
 
     private _reset() {
@@ -97,6 +105,69 @@ export class Analyser {
         } satisfies PhpSymbol;
     }
 
+    private _newReference(name: string | Identifier, kind: SymbolKind, loc: Location | null): PhpReference {
+        name = normalizeName(name);
+
+        if (loc === null) {
+            loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
+            console.log(`symbol ${name} of kind ${kind} does not have a location`);
+        }
+
+        return {
+            name,
+            kind,
+            loc,
+            path: '' as RelativePathId,
+            // modifiers: modifiers,
+            // value,
+            // containerName,
+        } satisfies PhpReference;
+    }
+
+    private _analyseUseGroup(node: UseGroup): boolean {
+        if (node.item) {
+            node.item.forEach((use) => {
+                // todo: type, alias
+                this.references.push(this._newReference(use.name, SymbolKind.Class, use.loc));
+            });
+        }
+
+        return false;
+    }
+
+    /**
+     * @link https://www.php.net/manual/en/language.oop5.traits.php
+     */
+    private _analyseTraitUse(node: TraitUse): boolean {
+        node.traits.forEach((trait) => {
+            // todo: alias, resolution
+            this.references.push(this._newReference(trait.name, SymbolKind.Trait, trait.loc));
+        });
+        const adaptationsMap: Record<string, (node: any) => void> = {
+            traitprecedence: (node: TraitPrecedence): void => {
+                if (node.trait) {
+                    this.references.push(this._newReference(node.trait, SymbolKind.Trait, node.trait.loc));
+                }
+                this.references.push(this._newReference(node.method, SymbolKind.Method, node.method.loc));
+                node.instead.forEach((instead) => {
+                    this.references.push(this._newReference(instead, SymbolKind.Trait, instead.loc));
+                });
+            },
+            traitalias: (node: TraitAlias): void => {
+                if (node.trait) {
+                    this.references.push(this._newReference(node.trait, SymbolKind.Trait, node.trait.loc));
+                }
+                this.references.push(this._newReference(node.method, SymbolKind.Method, node.method.loc));
+            },
+        };
+        if (node.adaptations) {
+            node.adaptations.forEach((adopt) => {
+                adaptationsMap[adopt.kind]?.(adopt);
+            });
+        }
+        return false;
+    }
+
     private _analyseFunction(node: Function): boolean {
         this.symbols.push(this._newSymbol(node.name, SymbolKind.Function, node.loc));
         // todo: Attribute, type
@@ -104,32 +175,47 @@ export class Analyser {
         return true;
     }
 
-    private _analyseClass(node: Class): boolean {
+    private _analyseClass(classNode: Class): boolean {
         this.member = this._newSymbol(
-            node.name,
+            classNode.name,
             SymbolKind.Class,
-            node.loc,
+            classNode.loc,
             modifier({
-                isAbstract: node.isAbstract,
-                isFinal: node.isFinal,
-                isReadonly: node.isReadonly,
-                isAnonymous: node.isAnonymous,
+                isAbstract: classNode.isAbstract,
+                isFinal: classNode.isFinal,
+                isReadonly: classNode.isReadonly,
+                isAnonymous: classNode.isAnonymous,
             })
         );
         // todo: Attribute
         this.symbols.push(this.member);
+        if (classNode.extends) {
+            this.references.push(this._newReference(classNode.extends, SymbolKind.Class, classNode.extends.loc));
+        }
+        if (classNode.implements) {
+            classNode.implements.forEach((interfaceNode) => {
+                // fixme: resolution, uqn,qf, rn
+                this._newReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc);
+            });
+        }
         return true;
     }
 
-    private _analyseInterface(node: Interface): boolean {
-        this.member = this._newSymbol(node.name, SymbolKind.Interface, node.loc);
+    private _analyseInterface(interfaceNode: Interface): boolean {
+        this.member = this._newSymbol(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc);
         // todo: Attribute
         this.symbols.push(this.member);
+        if (interfaceNode.extends) {
+            interfaceNode.extends.forEach((interfaceNode) => {
+                // fixme: resolution, uqn,qf, rn
+                this._newReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc);
+            });
+        }
         return true;
     }
 
-    private _analyseTrait(node: Trait): boolean {
-        this.member = this._newSymbol(node.name, SymbolKind.Trait, node.loc);
+    private _analyseTrait(traitNode: Trait): boolean {
+        this.member = this._newSymbol(traitNode.name, SymbolKind.Trait, traitNode.loc);
         // todo: Attribute
         this.symbols.push(this.member);
         return true;
@@ -139,6 +225,12 @@ export class Analyser {
         this.member = this._newSymbol(node.name, SymbolKind.Enum, node.loc);
         // todo: Attribute, type
         this.symbols.push(this.member);
+        if (node.implements) {
+            node.implements.forEach((interfaceNode) => {
+                // fixme: resolution, uqn,qf, rn
+                this._newReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc);
+            });
+        }
         return true;
     }
 
@@ -209,7 +301,7 @@ export class Analyser {
                     this._newSymbol(
                         param.name,
                         SymbolKind.Property,
-                        node.loc,
+                        param.loc,
                         modifier({ visibility: parseFlag(param.flags) }),
                         param.value,
                         toFqcn(this.member?.name || '', this.containerName)
@@ -263,12 +355,15 @@ export class Analyser {
             this.member = undefined;
             return true;
         },
+        usegroup: this._analyseUseGroup.bind(this),
         function: this._analyseFunction.bind(this),
 
         class: this._analyseClass.bind(this),
         interface: this._analyseInterface.bind(this),
         trait: this._analyseTrait.bind(this),
         enum: this._analyseEnum.bind(this),
+
+        traituse: this._analyseTraitUse.bind(this),
 
         propertystatement: this._analyseProperty.bind(this),
         classconstant: this._analyseClassConstant.bind(this),
@@ -309,6 +404,9 @@ function normalizeValue(value: string | number | boolean | Node | null | undefin
         boolean: (node: ParserBoolean): string | undefined => {
             return node.raw;
         },
+        nullkeyword: (_node: NullKeyword): string | undefined => {
+            return 'null';
+        },
         // array: (node: ParserArray): string | undefined => {
         //     node.raw
         //     return undefined;
@@ -322,7 +420,8 @@ function normalizeValue(value: string | number | boolean | Node | null | undefin
         //     return undefined;
         // },
         // staticlookup: (node: StaticLookup): string | undefined => {
-        //     node.raw
+        //     node.raw;
+        //     // reference can be here
         //     return undefined;
         // },
         // bin: (node: Bin): string | undefined => {
@@ -389,4 +488,18 @@ function parseFlag(flag: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_PRIVATE
             return 'public';
     }
 }
+/**
+ * a tagging type which is fully Qualified Class Name
+ */
+
+export type Fqcn = string & { readonly Fqcn: unique symbol };
+/**
+ * a tagging type which is Structural Element Selector
+ */
+
+export type Selector = string & { readonly Selector: unique symbol };
+/**
+ * a tagging type which is fully Qualified Structural Element Name
+ */
+export type Fqsen = string & { readonly Fqsen: unique symbol };
 

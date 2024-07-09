@@ -58,8 +58,8 @@ export class Html implements Language {
         return this.service.getFoldingRanges(document.doc);
     }
     doAutoInsert(document: FlatDocument, position: Position, kind: 'autoQuote' | 'autoClose') {
-        const offset = document.doc.offsetAt(position);
-        const text = document.doc.getText();
+        const offset = document.offsetAt(position);
+        const text = document.getText();
         if (kind === 'autoQuote') {
             if (offset > 0 && text.charAt(offset - 1) === '=') {
                 const htmlSettings = this.settings?.html;
@@ -89,7 +89,7 @@ export class Html implements Language {
         return this.service.findLinkedEditingRanges(document.doc, position, htmlDocument);
     }
     onDocumentRemoved(document: FlatDocument) {
-        this.htmlDocuments.delete(document.doc.uri);
+        this.htmlDocuments.delete(document.uri);
     }
     dispose() {
         this.htmlDocuments.clear();

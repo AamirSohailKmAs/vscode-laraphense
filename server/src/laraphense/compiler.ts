@@ -5,9 +5,10 @@ import { DocLang, FlatDocument } from './document';
 import { Analyser } from '../languages/php/indexing/analyser';
 import { laraphenseRc } from '../languages/baseLang';
 import { Tree, newAstTree } from '../bladeParser/bladeAst';
-import { TextDocument } from 'vscode-languageserver-textdocument';
+import { DocumentUri, TextDocumentContentChangeEvent } from 'vscode-languageserver';
 
 export class Compiler {
+    _loadedDocuments: Map<DocumentUri, FlatDocument> = new Map();
     private _analyser: Analyser;
     private _bladeParser: BladeParser;
 
@@ -26,7 +27,7 @@ export class Compiler {
         }
 
         try {
-            return this._bladeParser.parse(flatDoc.doc, flatDoc.languageId);
+            return this._bladeParser.parse(flatDoc, flatDoc.languageId);
         } catch (error) {
             return newAstTree();
         }
@@ -35,11 +36,11 @@ export class Compiler {
     public compileUri(flatDoc: FlatDocument) {
         const astTree = this.parseFlatDoc(flatDoc);
 
-        const { symbols } = this._analyser.analyse(astTree);
+        const { symbols, references } = this._analyser.analyse(astTree);
 
         flatDoc.lastCompile = process.hrtime();
 
-        return { astTree, symbols };
+        return { astTree, symbols, references };
     }
 }
 

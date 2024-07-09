@@ -2,18 +2,18 @@
 
 export class EventEmitter<T> {
     private _listeners: Array<(eventData: T) => void> = [];
-    private eventsQueue: T[] = [];
+    private _eventsQueue: T[] = [];
 
-    constructor(private queueEvents: boolean = false) {}
+    constructor(private _shouldQueueEvents: boolean = false) {}
 
     addListener(listener: (eventData: T) => void) {
         this._listeners.push(listener);
 
-        if (this.queueEvents) {
-            this.eventsQueue.forEach((eventData) => {
+        if (this._shouldQueueEvents) {
+            this._eventsQueue.forEach((eventData) => {
                 this.emit(eventData);
             });
-            this.eventsQueue = [];
+            this._eventsQueue = [];
         }
 
         return {
@@ -31,8 +31,8 @@ export class EventEmitter<T> {
             this._listeners.forEach((listener) => {
                 listener(eventData);
             });
-        } else if (this.queueEvents) {
-            this.eventsQueue.push(eventData);
+        } else if (this._shouldQueueEvents) {
+            this._eventsQueue.push(eventData);
         }
     }
 }

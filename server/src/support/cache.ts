@@ -31,8 +31,8 @@ export class MemoryCache<T> {
     }
 
     get(document: FlatDocument): T {
-        const itemInfo = this._itemsMap.get(document.doc.uri);
-        if (itemInfo && itemInfo.version === document.doc.version && itemInfo.languageId === document.languageId) {
+        const itemInfo = this._itemsMap.get(document.uri);
+        if (itemInfo && itemInfo.version === document.version && itemInfo.languageId === document.languageId) {
             itemInfo.createdAt = Date.now();
             return itemInfo.data;
         }
@@ -49,9 +49,9 @@ export class MemoryCache<T> {
 
     set(document: FlatDocument) {
         const data = this.parse(document);
-        this._itemsMap.set(document.doc.uri, {
+        this._itemsMap.set(document.uri, {
             data: data,
-            version: document.doc.version,
+            version: document.version,
             languageId: document.languageId,
             createdAt: Date.now(),
         });

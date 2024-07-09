@@ -93,8 +93,8 @@ export class Css implements Language {
         return this.service.getSelectionRanges(embedded.doc, [position], this.cssStylesheets.get(embedded))[0];
     }
     onDocumentRemoved(document: FlatDocument) {
-        this.embeddedCSSDocuments.delete(document.doc.uri);
-        this.cssStylesheets.delete(document.doc.uri);
+        this.embeddedCSSDocuments.delete(document.uri);
+        this.cssStylesheets.delete(document.uri);
     }
     dispose() {
         this.embeddedCSSDocuments.clear();

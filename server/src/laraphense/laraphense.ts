@@ -78,7 +78,7 @@ export class Laraphense {
             return result;
         }
 
-        const items = await lang.doComplete(document, position, this._workspace.getDocumentContext(document.doc.uri));
+        const items = await lang.doComplete(document, position, this._workspace.getDocumentContext(document.uri));
         result = mergeCompletionItems(result, items);
         if (result.items.length > 0) {
             return result;
@@ -123,13 +123,15 @@ export class Laraphense {
     }
 
     public provideDocumentLinks(document: FlatDocument) {
-        let documentContext = this._workspace.getDocumentContext(document.doc.uri);
+        let documentContext = this._workspace.getDocumentContext(document.uri);
         const links: DocumentLink[] = [];
         this.getAllLanguagesInDocument(document).forEach((m) => {
             if (m.findDocumentLinks) {
                 pushAll(links, m.findDocumentLinks(document, documentContext));
             }
         });
+
+        console.log('DocumentLinks', links);
         return links;
     }
 
@@ -138,7 +140,10 @@ export class Laraphense {
         if (!lang || !lang.doSignatureHelp) {
             return null;
         }
-        return lang.doSignatureHelp(document, position);
+        const signature = lang.doSignatureHelp(document, position);
+
+        console.log('signature', signature);
+        return signature;
     }
 
     public provideReferences(document: FlatDocument, position: Position) {
@@ -178,11 +183,15 @@ export class Laraphense {
         if (!lang || !lang.doHover) {
             return null;
         }
-        return lang.doHover(document, position);
+
+        const hover = lang.doHover(document, position);
+
+        console.log('hover', hover);
+        return hover;
     }
 
     public getLangAtPosition(document: FlatDocument, position: Position) {
-        const docLang = this._openDocuments.get(document).docLangAtOffset(document.doc.offsetAt(position));
+        const docLang = this._openDocuments.get(document).docLangAtOffset(document.offsetAt(position));
         console.log('docLang', docLang);
         return this.getLanguage(docLang);
     }
@@ -211,7 +220,7 @@ export class Laraphense {
     }
 
     public documentClosed(document: FlatDocument) {
-        this._openDocuments.delete(document.doc.uri);
+        this._openDocuments.delete(document.uri);
         this._languages.forEach((language) => {
             language.onDocumentRemoved(document);
         });
@@ -226,7 +235,7 @@ export class Laraphense {
     }
 
     public getRegions(doc: FlatDocument) {
-        return new Regions(doc.doc.uri).parse(this._compiler.parseFlatDoc(doc));
+        return new Regions(doc.uri).parse(this._compiler.parseFlatDoc(doc));
     }
 }
 

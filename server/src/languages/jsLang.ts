@@ -68,8 +68,8 @@ export class Js implements Language {
     async doValidation(document: FlatDocument): Promise<Diagnostic[]> {
         const jsDocument = this.jsDocuments.get(document);
         const languageService = this.host.getLanguageService(jsDocument.doc);
-        const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(jsDocument.doc.uri);
-        const semanticDiagnostics = languageService.getSemanticDiagnostics(jsDocument.doc.uri);
+        const syntaxDiagnostics: ts.Diagnostic[] = languageService.getSyntacticDiagnostics(jsDocument.uri);
+        const semanticDiagnostics = languageService.getSemanticDiagnostics(jsDocument.uri);
         return syntaxDiagnostics
             .concat(semanticDiagnostics)
             .filter((d) => !ignoredErrors.includes(d.code))
@@ -85,29 +85,26 @@ export class Js implements Language {
     doComplete(document: FlatDocument, position: Position, _documentContext: DocumentContext): CompletionList {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const offset = jsDocument.doc.offsetAt(position);
-        const completions = jsLanguageService.getCompletionsAtPosition(jsDocument.doc.uri, offset, {
+        const offset = jsDocument.offsetAt(position);
+        const completions = jsLanguageService.getCompletionsAtPosition(jsDocument.uri, offset, {
             includeExternalModuleExports: false,
             includeInsertTextCompletions: false,
         });
         if (!completions) {
             return { isIncomplete: false, items: [] };
         }
-        const replaceRange = convertRange(
-            jsDocument.doc,
-            getWordAtText(jsDocument.doc.getText(), offset, JS_WORD_REGEX)
-        );
+        const replaceRange = convertRange(jsDocument.doc, getWordAtText(jsDocument.getText(), offset, JS_WORD_REGEX));
         return {
             isIncomplete: false,
             items: completions.entries.map((entry) => {
                 const data: CompletionItemData = {
                     // data used for resolving item details (see 'doResolve')
                     languageId: this.languageId,
-                    uri: document.doc.uri,
+                    uri: document.uri,
                     offset: offset,
                 };
                 return {
-                    uri: document.doc.uri,
+                    uri: document.uri,
                     position: position,
                     label: entry.name,
                     sortText: entry.sortText,
@@ -123,7 +120,7 @@ export class Js implements Language {
             const jsDocument = this.jsDocuments.get(document);
             const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
             const details = jsLanguageService.getCompletionEntryDetails(
-                jsDocument.doc.uri,
+                jsDocument.uri,
                 item.data.offset,
                 item.label,
                 undefined,
@@ -142,7 +139,7 @@ export class Js implements Language {
     doHover(document: FlatDocument, position: Position): Hover | null {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const info = jsLanguageService.getQuickInfoAtPosition(jsDocument.doc.uri, jsDocument.doc.offsetAt(position));
+        const info = jsLanguageService.getQuickInfoAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
         if (info) {
             const contents = ts.displayPartsToString(info.displayParts);
             return {
@@ -156,8 +153,8 @@ export class Js implements Language {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
         const signHelp = jsLanguageService.getSignatureHelpItems(
-            jsDocument.doc.uri,
-            jsDocument.doc.offsetAt(position),
+            jsDocument.uri,
+            jsDocument.offsetAt(position),
             undefined
         );
         if (signHelp) {
@@ -196,12 +193,12 @@ export class Js implements Language {
     doRename(document: FlatDocument, position: Position, newName: string) {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const jsDocumentPosition = jsDocument.doc.offsetAt(position);
-        const { canRename } = jsLanguageService.getRenameInfo(jsDocument.doc.uri, jsDocumentPosition);
+        const jsDocumentPosition = jsDocument.offsetAt(position);
+        const { canRename } = jsLanguageService.getRenameInfo(jsDocument.uri, jsDocumentPosition);
         if (!canRename) {
             return null;
         }
-        const renameInfos = jsLanguageService.findRenameLocations(jsDocument.doc.uri, jsDocumentPosition, false, false);
+        const renameInfos = jsLanguageService.findRenameLocations(jsDocument.uri, jsDocumentPosition, false, false);
 
         const edits: TextEdit[] = [];
         renameInfos?.map((renameInfo) => {
@@ -212,17 +209,15 @@ export class Js implements Language {
         });
 
         return {
-            changes: { [document.doc.uri]: edits },
+            changes: { [document.uri]: edits },
         };
     }
     findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const highlights = jsLanguageService.getDocumentHighlights(
-            jsDocument.doc.uri,
-            jsDocument.doc.offsetAt(position),
-            [jsDocument.doc.uri]
-        );
+        const highlights = jsLanguageService.getDocumentHighlights(jsDocument.uri, jsDocument.offsetAt(position), [
+            jsDocument.uri,
+        ]);
         const out: DocumentHighlight[] = [];
         for (const entry of highlights || []) {
             for (const highlight of entry.highlightSpans) {
@@ -240,7 +235,7 @@ export class Js implements Language {
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const items = jsLanguageService.getNavigationBarItems(jsDocument.doc.uri);
+        const items = jsLanguageService.getNavigationBarItems(jsDocument.uri);
         if (items) {
             const result: SymbolInformation[] = [];
             const existing = Object.create(null);
@@ -251,7 +246,7 @@ export class Js implements Language {
                         name: item.text,
                         kind: convertSymbolKind(item.kind),
                         location: {
-                            uri: document.doc.uri,
+                            uri: document.uri,
                             range: convertRange(jsDocument.doc, item.spans[0]),
                         },
                         containerName: containerLabel,
@@ -276,16 +271,13 @@ export class Js implements Language {
     findDefinition(document: FlatDocument, position: Position): Definition | null {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const definition = jsLanguageService.getDefinitionAtPosition(
-            jsDocument.doc.uri,
-            jsDocument.doc.offsetAt(position)
-        );
+        const definition = jsLanguageService.getDefinitionAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
         if (definition) {
             return definition
-                .filter((d) => d.fileName === jsDocument.doc.uri)
+                .filter((d) => d.fileName === jsDocument.uri)
                 .map((d) => {
                     return {
-                        uri: document.doc.uri,
+                        uri: document.uri,
                         range: convertRange(jsDocument.doc, d.textSpan),
                     };
                 });
@@ -295,16 +287,13 @@ export class Js implements Language {
     findReferences(document: FlatDocument, position: Position): Location[] {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const references = jsLanguageService.getReferencesAtPosition(
-            jsDocument.doc.uri,
-            jsDocument.doc.offsetAt(position)
-        );
+        const references = jsLanguageService.getReferencesAtPosition(jsDocument.uri, jsDocument.offsetAt(position));
         if (references) {
             return references
-                .filter((d) => d.fileName === jsDocument.doc.uri)
+                .filter((d) => d.fileName === jsDocument.uri)
                 .map((d) => {
                     return {
-                        uri: document.doc.uri,
+                        uri: document.uri,
                         range: convertRange(jsDocument.doc, d.textSpan),
                     };
                 });
@@ -318,7 +307,7 @@ export class Js implements Language {
             const parent = selectionRange.parent ? convertSelectionRange(selectionRange.parent) : undefined;
             return SelectionRange.create(convertRange(jsDocument.doc, selectionRange.textSpan), parent);
         }
-        const range = jsLanguageService.getSmartSelectionRange(jsDocument.doc.uri, jsDocument.doc.offsetAt(position));
+        const range = jsLanguageService.getSmartSelectionRange(jsDocument.uri, jsDocument.offsetAt(position));
         return convertSelectionRange(range);
     }
     format(document: FlatDocument, range: Range, formatParams: FormattingOptions): TextEdit[] {
@@ -329,18 +318,18 @@ export class Js implements Language {
 
         const initialIndentLevel = computeInitialIndent(document.doc, range, formatParams);
         const formatSettings = convertOptions(formatParams, formatterSettings, initialIndentLevel + 1);
-        const start = jsDocument.doc.offsetAt(range.start);
-        let end = jsDocument.doc.offsetAt(range.end);
+        const start = jsDocument.offsetAt(range.start);
+        let end = jsDocument.offsetAt(range.end);
         let lastLineRange = null;
         if (
             range.end.line > range.start.line &&
             (range.end.character === 0 ||
-                isWhitespaceOnly(jsDocument.doc.getText().substr(end - range.end.character, range.end.character)))
+                isWhitespaceOnly(jsDocument.getText().substr(end - range.end.character, range.end.character)))
         ) {
             end -= range.end.character;
             lastLineRange = Range.create(Position.create(range.end.line, 0), range.end);
         }
-        const edits = jsLanguageService.getFormattingEditsForRange(jsDocument.doc.uri, start, end, formatSettings);
+        const edits = jsLanguageService.getFormattingEditsForRange(jsDocument.uri, start, end, formatSettings);
         if (edits) {
             const result = [];
             for (const edit of edits) {
@@ -364,7 +353,7 @@ export class Js implements Language {
     async getFoldingRanges(document: FlatDocument): Promise<FoldingRange[]> {
         const jsDocument = this.jsDocuments.get(document);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
-        const spans = jsLanguageService.getOutliningSpans(jsDocument.doc.uri);
+        const spans = jsLanguageService.getOutliningSpans(jsDocument.uri);
         const ranges: FoldingRange[] = [];
         for (const span of spans) {
             const curr = convertRange(jsDocument.doc, span.textSpan);
@@ -372,7 +361,7 @@ export class Js implements Language {
             const endLine = curr.end.line;
             if (startLine < endLine) {
                 const foldingRange: FoldingRange = { startLine, endLine };
-                const match = document.doc.getText(curr).match(/^\s*\/(?:(\/\s*#(?:end)?region\b)|(\*|\/))/);
+                const match = document.getText(curr).match(/^\s*\/(?:(\/\s*#(?:end)?region\b)|(\*|\/))/);
                 if (match) {
                     foldingRange.kind = match[1] ? FoldingRangeKind.Region : FoldingRangeKind.Comment;
                 }
@@ -382,7 +371,7 @@ export class Js implements Language {
         return ranges;
     }
     onDocumentRemoved(document: FlatDocument) {
-        this.jsDocuments.delete(document.doc.uri);
+        this.jsDocuments.delete(document.uri);
     }
     dispose() {
         this.host.dispose();

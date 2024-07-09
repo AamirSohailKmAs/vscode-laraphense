@@ -1,8 +1,9 @@
 'use strict';
 
 import { Location } from 'php-parser';
-import { toFqcn, splitFqsen, toFqsen, psr4Path } from '../symbol';
+import { toFqsen, psr4Path } from '../symbol';
 import { RelativePathId } from '../../../../laraphense/workspaceFolder';
+import { Fqsen } from '../analyser';
 
 export const enum SymbolModifier {
     Public,
@@ -44,7 +45,12 @@ export const enum SymbolKind {
     Constant,
 }
 
-type Symbol = {
+export type PhpType = {
+    name: string;
+    items?: PhpType[];
+};
+
+export type Symbol = {
     name: string;
     kind: SymbolKind;
     loc: Location;
@@ -55,21 +61,8 @@ export type PhpSymbol = Symbol & {
     value?: string;
     modifiers: SymbolModifier[];
     containerName?: string;
+    type?: PhpType;
 };
-
-/**
- * a tagging type which is fully Qualified Class Name
- */
-export type Fqcn = string & { readonly Fqcn: unique symbol };
-
-/**
- * a tagging type which is Structural Element Selector
- */
-export type Selector = string & { readonly Selector: unique symbol };
-/**
- * a tagging type which is fully Qualified Structural Element Name
- */
-export type Fqsen = string & { readonly Fqsen: unique symbol };
 
 export class SymbolTable {
     private _symbolMap: Map<Fqsen, PhpSymbol> = new Map();

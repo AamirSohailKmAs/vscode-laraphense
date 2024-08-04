@@ -510,7 +510,7 @@ class Redis
      * }
      * </pre>
      */
-    public function get($key) {}
+    public function get(string $key): mixed {}
 
     /**
      * Set the string value in argument as value of the key.
@@ -2374,7 +2374,7 @@ class Redis
      *
      * @param string $pattern pattern, using '*' as a wildcard
      *
-     * @return array|false|Redis The keys that match a certain pattern or Redis if in multimode
+     * @return list<string>|false|Redis The keys that match a certain pattern or Redis if in multimode
      *
      * @throws RedisException
      *
@@ -3124,7 +3124,7 @@ class Redis
      * // }
      * </pre>
      */
-    public function mGet(array $array) {}
+    public function mGet(array $array): Redis|array {}
 
     /**
      * Set one ore more string keys but only if none of the key exist.
@@ -4013,7 +4013,7 @@ class Redis
      * $redis->hGet('h', 'key1');           // returns "plop"
      * </pre>
      */
-    public function hSet($key, $hashKey, $value) {}
+    public function hSet(string $key, string $hashKey, mixed $value): Redis|int|false {}
 
     /**
      * Adds a value to the hash stored at key only if this field isn't already in the hash.
@@ -4050,7 +4050,7 @@ class Redis
      *
      * @link    https://redis.io/commands/hget
      */
-    public function hGet($key, $hashKey) {}
+    public function hGet(string $key, string $hashKey): mixed {}
 
     /**
      * Returns the length of a hash, in number of items
@@ -4112,7 +4112,7 @@ class Redis
      *
      * @param string $key
      *
-     * @return array|false|Redis An array of elements, the keys of the hash. This works like PHP's array_keys() or Redis if in multimode
+     * @return list<string>|false|Redis An array of elements, the keys of the hash. This works like PHP's array_keys() or Redis if in multimode
      *
      * @throws RedisException
      *
@@ -4147,7 +4147,7 @@ class Redis
      *
      * @param string $key
      *
-     * @return array|false|Redis An array of elements, the values of the hash. This works like PHP's array_values() or Redis if in multimode
+     * @return list<mixed>|false|Redis An array of elements, the values of the hash. This works like PHP's array_values() or Redis if in multimode
      *
      * @throws RedisException
      *
@@ -4182,7 +4182,7 @@ class Redis
      *
      * @param string $key
      *
-     * @return array|false|Redis An array of elements, the contents of the hash or Redis if in multimode
+     * @return array<string, mixed>|false|Redis An array of elements, the contents of the hash or Redis if in multimode
      *
      * @throws RedisException
      *
@@ -4305,7 +4305,7 @@ class Redis
      * $redis->hIncrBy('user:1', 'salary', 100); // Joe earns 100 more now.
      * </pre>
      */
-    public function hMSet($key, $hashKeys) {}
+    public function hMSet(string $key, array $hashKeys): Redis|bool {}
 
     /**
      * Retrieve the values associated to the specified fields in the hash.
@@ -4803,7 +4803,7 @@ class Redis
      * $redis->evalSha($sha); // Returns 1
      * </pre>
      */
-    public function evalSha($scriptSha, $args = [], $numKeys = 0) {}
+    public function evalSha(string $scriptSha, array $args = [], int $numKeys = 0): mixed {}
 
     /**
      * @param string $scriptSha
@@ -5541,7 +5541,7 @@ class Redis
      * @example $redis->xTrim('stream', 3);
      * @example $redis->xTrim('stream', '2-1', false, true);
      */
-    public function xtrim(string $key, string $threshold, bool $approx = false, bool $minid = false, int $limit = -1): Redis|int|false;
+    public function xtrim(string $key, string $threshold, bool $approx = false, bool $minid = false, int $limit = -1): Redis|int|false {}
 
     /**
      * Adds a values to the set value stored at key.

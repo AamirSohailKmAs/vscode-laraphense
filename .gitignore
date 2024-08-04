@@ -2,3 +2,8 @@ out
 node_modules
 .vscode-test
 .DS_Store
+server/stubs/*
+!server/stubs/*/
+server/stubs/.github/
+server/stubs/.idea/
+server/stubs/tests/

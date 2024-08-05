@@ -3,7 +3,7 @@
 import { FoldingRange, FormattingOptions, Position, Range, SelectionRange } from 'vscode-languageserver';
 import { DocumentContext } from 'vscode-html-languageservice';
 import { Language } from './baseLang';
-import { DocLang, FlatDocument } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../support/document';
 import { Html } from './htmlLang';
 
 export class Blade implements Language {

@@ -8,7 +8,10 @@ export const DEFAULT_MAX_FILE_SIZE = 1024 * 1024; // 1MB
 export const DEFAULT_MAX_OPEN_FILES = 10;
 export const LARAPHENSE_VERSION = '0.1.0';
 
-export const DEFAULT_LARAPHENSE_CONFIG = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
+export const DEFAULT_LARAPHENSE_CONFIG = {
+    maxFileSize: DEFAULT_MAX_FILE_SIZE,
+    phpVersion: DEFAULT_PHP_VERSION,
+};
 
 export const DEFAULT_INCLUDE = ['**'];
 export const DEFAULT_EXCLUDE = [

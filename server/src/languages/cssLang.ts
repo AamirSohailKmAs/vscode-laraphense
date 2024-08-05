@@ -5,7 +5,7 @@
 'use strict';
 import { DocumentContext, LanguageService, Stylesheet } from 'vscode-css-languageservice';
 import { Language, Settings } from './baseLang';
-import { DocLang, FlatDocument, Regions } from '../laraphense/document';
+import { DocLang, FlatDocument, Regions } from '../support/document';
 import { MemoryCache } from '../support/cache';
 import { Color, CompletionList, Diagnostic, Position, Range } from 'vscode-languageserver';
 

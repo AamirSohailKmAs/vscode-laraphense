@@ -4,6 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 
 import {
+    DidChangeWatchedFilesParams,
+    FileChangeType,
     InitializeParams,
     LSPErrorCodes,
     ResponseError,
@@ -13,17 +15,17 @@ import {
 import { createConnection } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Laraphense } from './laraphense/laraphense';
-import { Workspace } from './laraphense/workspace';
-import { FolderKind } from './laraphense/workspaceFolder';
-import { URI } from 'vscode-uri';
+import { Laraphense } from './laraphense';
+import { Workspace } from './support/workspace';
+import { FolderKind } from './support/workspaceFolder';
 import { DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { runSafe } from './helpers/general';
 import { homedir } from 'os';
 import { FileCache } from './support/cache';
-import { FlatDocument } from './laraphense/document';
+import { FlatDocument } from './support/document';
+import { laraphenseRc } from './languages/baseLang';
 
 const connection = createConnection();
 
@@ -34,36 +36,39 @@ const emmetTriggerCharacters = ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2'
 
 connection.onInitialize(async (params: InitializeParams) => {
     console.log(`laraphense started at ${new Date().toLocaleTimeString()}`);
-    workspace = new Workspace(DEFAULT_LARAPHENSE_CONFIG);
+
+    const cachePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'porifa_laraphense');
+    const workspaceName: string = params.initializationOptions?.workspaceName ?? 'Porifa';
+    const clearCache: boolean = params.initializationOptions?.clearCache ?? true;
+
+    const config: laraphenseRc = { ...DEFAULT_LARAPHENSE_CONFIG, cachePath, workspaceName };
+
+    workspace = new Workspace(config);
 
     let stubsPath = join(__dirname, '../stubs');
 
     if (existsSync(stubsPath)) {
-        workspace.addFolder(URI.parse(stubsPath).toString(), FolderKind.Stub, DEFAULT_STUBS);
+        workspace.addFolder(stubsPath, FolderKind.Stub, DEFAULT_STUBS);
     }
 
     if (params.workspaceFolders) {
         params.workspaceFolders.forEach((folder) => {
-            workspace.addFolder(URI.parse(folder.uri).toString());
+            workspace.addFolder(folder.uri);
         });
     } else if (params.rootUri) {
-        workspace.addFolder(URI.parse(params.rootUri).toString());
+        workspace.addFolder(params.rootUri);
     }
-
-    const storagePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'porifa_laraphense');
-    const workspaceName: string = params.initializationOptions?.workspaceName ?? 'workspace';
-    const clearCache: boolean = params.initializationOptions?.clearCache ?? true;
 
     let storageCache: FileCache | undefined;
     if (workspace.folders.size > 1) {
-        storageCache = await FileCache.create(join(storagePath, workspaceName));
+        storageCache = await FileCache.create(join(cachePath, workspaceName));
 
         if (clearCache && storageCache) {
             storageCache = await storageCache.clear();
         }
     }
 
-    laraphense = new Laraphense(workspace);
+    laraphense = new Laraphense(workspace, storageCache);
 
     return {
         capabilities: {
@@ -112,6 +117,26 @@ documents.onDidOpen((_param) => {
 documents.onDidClose((param) => {
     connection.sendDiagnostics({ uri: param.document.uri, diagnostics: [] });
     laraphense.documentClosed(FlatDocument.fromTextDocument(param.document));
+});
+
+// Handle watched files changes
+connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+    for (const change of params.changes) {
+        switch (change.type) {
+            case FileChangeType.Created:
+                // Handle file creation
+                console.log(`watched File created: ${change.uri}`);
+                break;
+            case FileChangeType.Changed:
+                // Handle file change
+                console.log(`watched File changed: ${change.uri}`);
+                break;
+            case FileChangeType.Deleted:
+                // Handle file deletion
+                console.log(`watched File deleted: ${change.uri}`);
+                break;
+        }
+    }
 });
 
 connection.onCompletion(async (textDocumentPosition, token) => {

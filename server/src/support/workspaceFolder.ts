@@ -5,7 +5,6 @@ import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
 import { URI } from 'vscode-uri';
 import { isAbsolute, join } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
-import { IdGenerator, WordStore } from '../support/generator';
 
 /**
  * A tagging type for string properties that are actually Folder URI.
@@ -23,13 +22,10 @@ export type FileEntry = {
     size: number;
 };
 
-export type RelativePathId = string & { readonly PathId: unique symbol };
+export type RelativePath = string & { readonly PathId: unique symbol };
 
 export class WorkspaceFolder {
-    private _pathId: IdGenerator<RelativePathId>;
-
     constructor(
-        private _wordStore: WordStore,
         private _uri: string,
         private _kind: FolderKind = FolderKind.User,
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
@@ -41,7 +37,6 @@ export class WorkspaceFolder {
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
-        this._pathId = new IdGenerator<RelativePathId>(this._wordStore, '/');
     }
 
     public get uri(): FolderUri {
@@ -72,15 +67,15 @@ export class WorkspaceFolder {
         return uri.indexOf('/vendor/') !== -1;
     }
 
-    public relativePath(uri: DocumentUri): RelativePathId {
-        return this._pathId.toId(uri.replace(this._uri + '/', ''));
+    public relativePath(uri: DocumentUri): RelativePath {
+        return uri.replace(this._uri + '/', '') as RelativePath;
     }
 
     public documentUri(uri: string): DocumentUri {
         return `${this._uri}/${uri}`;
     }
 
-    public async findFiles() {
+    public async findFiles(): Promise<FileEntry[]> {
         const entries = await glob(this._includeGlobs, {
             stats: true,
             cwd: uriToPath(this._uri) + '/',

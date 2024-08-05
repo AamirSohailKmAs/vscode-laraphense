@@ -32,7 +32,7 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { getWordAtText, isWhitespaceOnly, repeat } from '../helpers/general';
-import { DocLang, FlatDocument, Regions } from '../laraphense/document';
+import { DocLang, FlatDocument, Regions } from '../support/document';
 import { DocumentContext } from 'vscode-html-languageservice';
 import { join, basename, dirname } from 'path';
 import { readFileSync } from 'fs';
@@ -753,4 +753,5 @@ export function isCompletionItemData(value: any): value is CompletionItemData {
         typeof value.offset === 'number'
     );
 }
+
 

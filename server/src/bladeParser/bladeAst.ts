@@ -1,7 +1,7 @@
 'use strict';
 
 import { Program } from 'php-parser';
-import { DocLang } from '../laraphense/document';
+import { DocLang } from '../support/document';
 
 export type Position = { line: number; character: number; offset: number };
 
@@ -91,3 +91,4 @@ export type Tree = {
 export function newAstTree(children: Array<AstNode | Program> = [], errors: Array<ErrorNode> = []): Tree {
     return { kind: 'tree', children, errors };
 }
+

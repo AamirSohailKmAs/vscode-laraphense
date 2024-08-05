@@ -2,7 +2,7 @@
 
 import { Location } from 'php-parser';
 import { toFqsen, psr4Path } from '../symbol';
-import { RelativePathId } from '../../../../laraphense/workspaceFolder';
+import { RelativePath } from '../../../../support/workspaceFolder';
 import { Fqsen } from '../analyser';
 
 export const enum SymbolModifier {
@@ -54,7 +54,7 @@ export type Symbol = {
     name: string;
     kind: SymbolKind;
     loc: Location;
-    path: RelativePathId; // not in use
+    path: RelativePath; // not in use
 };
 
 export type PhpSymbol = Symbol & {
@@ -66,11 +66,11 @@ export type PhpSymbol = Symbol & {
 
 export class SymbolTable {
     private _symbolMap: Map<Fqsen, PhpSymbol> = new Map();
-    private _pathMap: Map<RelativePathId, Set<Fqsen>> = new Map();
+    private _pathMap: Map<RelativePath, Set<Fqsen>> = new Map();
     private _aliasMap: Map<Fqsen, Set<PhpSymbol>> = new Map();
     // private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
 
-    public addSymbols(symbols: PhpSymbol[], path: RelativePathId) {
+    public addSymbols(symbols: PhpSymbol[], path: RelativePath) {
         for (let i = 0; i < symbols.length; i++) {
             const symbol = symbols[i];
             symbol.path = path;
@@ -101,7 +101,7 @@ export class SymbolTable {
         this._aliasMap.set(key, symbols.add(symbol));
     }
 
-    private addFileKeysMap(path: RelativePathId, key: Fqsen) {
+    private addFileKeysMap(path: RelativePath, key: Fqsen) {
         let keys = this._pathMap.get(path) || new Set();
         this._pathMap.set(path, keys.add(key));
     }
@@ -149,7 +149,7 @@ export class SymbolTable {
         }
     }
 
-    public findSymbolsByFilePath(uri: RelativePathId) {
+    public findSymbolsByFilePath(uri: RelativePath) {
         const symbols: PhpSymbol[] = [];
         let symbol: PhpSymbol | undefined;
 

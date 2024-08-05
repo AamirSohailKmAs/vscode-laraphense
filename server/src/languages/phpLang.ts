@@ -1,6 +1,6 @@
 'use strict';
 import { DocContext, Language } from './baseLang';
-import { DocLang, FlatDocument } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../support/document';
 import {
     CompletionItem,
     CompletionList,
@@ -14,27 +14,28 @@ import {
     SignatureHelp,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { Workspace } from '../laraphense/workspace';
+import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 import { Indexer } from './php/indexer';
-import { Compiler } from '../laraphense/compiler';
+import { Compiler } from '../support/compiler';
+import { FileCache } from '../support/cache';
 
 export class Php implements Language {
     public id: DocLang = DocLang.php;
+    public indexer: Indexer;
 
-    private _indexer: Indexer;
     private _providers: {
         documentSymbol: DocumentSymbolProvider;
     };
 
-    constructor(private _workspace: Workspace, private _compiler: Compiler) {
-        this._indexer = new Indexer(this._compiler, this._workspace.config);
+    constructor(private _workspace: Workspace, private _compiler: Compiler, private _fileCache: FileCache | undefined) {
+        this.indexer = new Indexer(this._compiler, this._workspace.config);
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
 
         this._workspace.folderAdded.addListener((data) => {
-            this._indexer.indexFolder(data.folder);
+            this.indexer.indexFolder(data.folder);
         });
     }
 
@@ -46,7 +47,7 @@ export class Php implements Language {
             return [];
         }
 
-        const symbolTable = this._indexer.symbolMap.get(folder.uri);
+        const symbolTable = this.indexer.symbolMap.get(folder.uri);
 
         if (!symbolTable) {
             console.log('symbolTable not found');
@@ -74,7 +75,7 @@ export class Php implements Language {
             return null;
         }
 
-        const referenceTable = this._indexer.referenceMap.get(folder.uri);
+        const referenceTable = this.indexer.referenceMap.get(folder.uri);
 
         if (!referenceTable) {
             console.log('referenceTable not found');

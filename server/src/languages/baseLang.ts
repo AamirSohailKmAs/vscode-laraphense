@@ -13,7 +13,7 @@ import {
     SignatureHelp,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { DocLang, FlatDocument } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../support/document';
 import { LanguageSettings as CssSetting } from 'vscode-css-languageservice';
 import {
     CompletionConfiguration,
@@ -85,8 +85,10 @@ type HtmlSetting = {
 };
 
 export type laraphenseRc = {
+    workspaceName: string;
     phpVersion: number;
     maxFileSize: number;
+    cachePath: string;
 };
 
 export type Settings = {

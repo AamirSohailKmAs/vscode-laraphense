@@ -1,18 +1,18 @@
 'use strict';
 
 import { Symbol } from './symbolTable';
-import { RelativePathId } from '../../../../laraphense/workspaceFolder';
+import { RelativePath } from '../../../../support/workspaceFolder';
 import { Fqsen } from '../analyser';
 
 export type PhpReference = Symbol & {};
 
 export class ReferenceTable {
     private _symbolMap: Map<Fqsen, PhpReference> = new Map();
-    private _pathMap: Map<RelativePathId, Set<Fqsen>> = new Map();
+    private _pathMap: Map<RelativePath, Set<Fqsen>> = new Map();
     private _aliasMap: Map<Fqsen, Set<PhpReference>> = new Map();
     // private _childrenMap: Map<Fqcn, Map<Selector, PhpReference>> = new Map();
 
-    public addReferences(symbols: PhpReference[], path: RelativePathId) {
+    public addReferences(symbols: PhpReference[], path: RelativePath) {
         for (let i = 0; i < symbols.length; i++) {
             const symbol = symbols[i];
             symbol.path = path;
@@ -34,7 +34,7 @@ export class ReferenceTable {
     //     }
     // }
 
-    private addFileKeysMap(path: RelativePathId, key: Fqsen) {
+    private addFileKeysMap(path: RelativePath, key: Fqsen) {
         let keys = this._pathMap.get(path) || new Set();
         this._pathMap.set(path, keys.add(key));
     }
@@ -54,7 +54,7 @@ export class ReferenceTable {
         }
     }
 
-    public findSymbolsByFilePath(uri: RelativePathId) {
+    public findSymbolsByFilePath(uri: RelativePath) {
         const symbols: PhpReference[] = [];
         let symbol: PhpReference | undefined;
 

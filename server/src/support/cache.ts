@@ -5,7 +5,7 @@ import { DEFAULT_MAX_OPEN_FILES } from './defaults';
 import { writeFile, readFile, unlink, emptyDir, ensureDir } from 'fs-extra';
 import { join } from 'path';
 import { runSafe } from '../helpers/general';
-import { FlatDocument } from '../laraphense/document';
+import { FlatDocument } from './document';
 
 export type CacheItem<T> = { version: number; languageId: string; createdAt: number; data: T };
 
@@ -75,10 +75,9 @@ export class MemoryCache<T> {
     private _validate() {
         if (this._itemsMap.size === this.maxEntries) {
             let oldestTime = Number.MAX_VALUE;
-            let oldestUri = null;
-            for (const uri in this._itemsMap) {
-                const itemInfo = this._itemsMap.get(uri);
-                if (itemInfo && itemInfo.createdAt < oldestTime) {
+            let oldestUri: DocumentUri | null = null;
+            for (const [uri, itemInfo] of this._itemsMap) {
+                if (itemInfo.createdAt < oldestTime) {
                     oldestUri = uri;
                     oldestTime = itemInfo.createdAt;
                 }
@@ -101,12 +100,27 @@ export class FileCache {
         return join(this._dir, path);
     }
 
-    public async read(key: string) {
+    public async read(key: string): Promise<string> {
         return readFile(this.fullPath(key), 'utf-8');
+    }
+
+    public async readJson<T>(key: string): Promise<T | undefined> {
+        return runSafe(
+            async () => {
+                const data = await this.read(key);
+                return JSON.parse(data);
+            },
+            undefined,
+            `Failed to read JSON from cache`
+        );
     }
 
     public async write(key: string, data: string) {
         return writeFile(this.fullPath(key), data, 'utf-8');
+    }
+
+    public async writeJson<T>(key: string, data: T) {
+        return this.write(key, JSON.stringify(data, null, 2));
     }
 
     public async delete(key: string) {

@@ -1,8 +1,8 @@
 'use strict';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Workspace } from './workspace';
-import { EMPTY_COMPLETION_LIST } from '../support/defaults';
+import { Workspace } from './support/workspace';
+import { EMPTY_COMPLETION_LIST } from './support/defaults';
 import { doComplete } from '@vscode/emmet-helper';
 import {
     CompletionContext,
@@ -12,37 +12,52 @@ import {
     Position,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { pushAll } from '../helpers/general';
-import { MemoryCache } from '../support/cache';
-import { DocLang, FlatDocument, Regions } from './document';
+import { pushAll } from './helpers/general';
+import { FileCache, MemoryCache } from './support/cache';
+import { DocLang, FlatDocument, Regions } from './support/document';
 
 import { getCSSLanguageService } from 'vscode-css-languageservice';
 import { getLanguageService as getHTMLLanguageService } from 'vscode-html-languageservice';
-import { Html } from '../languages/htmlLang';
-import { Css } from '../languages/cssLang';
-import { Language, Settings } from '../languages/baseLang';
-import { Js } from '../languages/jsLang';
-import { Blade } from '../languages/bladeLang';
-import { Php } from '../languages/phpLang';
-import { Compiler } from './compiler';
+import { Html } from './languages/htmlLang';
+import { Css } from './languages/cssLang';
+import { Language, Settings } from './languages/baseLang';
+import { Js } from './languages/jsLang';
+import { Blade } from './languages/bladeLang';
+import { Php } from './languages/phpLang';
+import { Compiler } from './support/compiler';
+import { Library } from './libraries/baseLibrary';
+import { Laravel } from './libraries/laravel';
+import { FolderKind } from './support/workspaceFolder';
+import { toFqsen } from './languages/php/indexing/symbol';
+import { SymbolKind } from './languages/php/indexing/tables/symbolTable';
 
 export class Laraphense {
-    private _openDocuments: MemoryCache<Regions>;
-    private _languages: Map<DocLang, Language> = new Map();
     private _compiler: Compiler;
     private _settings: Settings = {};
+    private _openDocuments: MemoryCache<Regions>;
+    private _languages: Map<DocLang, Language> = new Map();
 
-    constructor(private _workspace: Workspace) {
+    private _libraries: Library[] = [];
+
+    constructor(private _workspace: Workspace, private _fileCache: FileCache | undefined) {
         this._compiler = new Compiler(this._workspace.config);
         this._openDocuments = new MemoryCache((doc) => this.getRegions(doc));
 
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
+        const phpLang = new Php(_workspace, this._compiler, this._fileCache);
+        const bladeLang = new Blade(htmlLang);
 
         this._languages.set(DocLang.html, htmlLang);
-        this._languages.set(DocLang.php, new Php(_workspace, this._compiler));
-        this._languages.set(DocLang.blade, new Blade(htmlLang));
+        this._languages.set(DocLang.php, phpLang);
+        this._languages.set(DocLang.blade, bladeLang);
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
+
+        this._libraries.push(new Laravel(phpLang, bladeLang, this._workspace, this._fileCache));
+
+        phpLang.indexer.indexingEnded.addListener(() => {
+            this.initLibraries();
+        });
     }
 
     public set settings(settings: Settings) {
@@ -65,14 +80,12 @@ export class Laraphense {
             return result;
         }
 
-        // const folder = this._workspace.findFolderContainingUri(document.uri);
-        // if (folder) {
-        //     folder.libraries.forEach((library) => {
-        //         if (library.doComplete && library.canComplete(lang.id)) {
-        //             result = mergeCompletionItems(result, library.doComplete(document, position));
-        //         }
-        //     });
-        // }
+        for (let i = 0; i < this._libraries.length; i++) {
+            const library = this._libraries[i];
+            if (library.doComplete && library.canComplete(lang.id)) {
+                result = mergeCompletionItems(result, library.doComplete(document, position));
+            }
+        }
 
         if (!lang.doComplete) {
             return result;
@@ -236,6 +249,13 @@ export class Laraphense {
 
     public getRegions(doc: FlatDocument) {
         return new Regions(doc.uri).parse(this._compiler.parseFlatDoc(doc));
+    }
+
+    private initLibraries() {
+        for (let i = 0; i < this._libraries.length; i++) {
+            const library = this._libraries[i];
+            library.index();
+        }
     }
 }
 

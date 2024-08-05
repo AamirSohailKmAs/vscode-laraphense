@@ -1,7 +1,7 @@
 import { FoldingRange, FormattingOptions, Position, Range, SelectionRange } from 'vscode-languageserver';
 import { DocumentContext, HTMLDocument, HTMLFormatConfiguration, LanguageService } from 'vscode-html-languageservice';
 import { Language, Settings } from './baseLang';
-import { DocLang, FlatDocument } from '../laraphense/document';
+import { DocLang, FlatDocument } from '../support/document';
 import { MemoryCache } from '../support/cache';
 
 export class Html implements Language {

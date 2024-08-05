@@ -31,7 +31,7 @@ import {
 } from 'php-parser';
 import { PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
 import { Tree } from '../../../bladeParser/bladeAst';
-import { RelativePathId } from '../../../laraphense/workspaceFolder';
+import { RelativePath } from '../../../support/workspaceFolder';
 import { toFqcn, toFqsen } from './symbol';
 import { PhpReference } from './tables/referenceTable';
 
@@ -56,6 +56,7 @@ export class Analyser {
 
     private _reset() {
         this.symbols = [];
+        this.references = [];
         this.containerName = undefined;
         this.member = undefined;
     }
@@ -98,7 +99,7 @@ export class Analyser {
             name,
             kind,
             loc,
-            path: '' as RelativePathId,
+            path: '' as RelativePath,
             modifiers: modifiers,
             value,
             containerName,
@@ -117,7 +118,7 @@ export class Analyser {
             name,
             kind,
             loc,
-            path: '' as RelativePathId,
+            path: '' as RelativePath,
             // modifiers: modifiers,
             // value,
             // containerName,
@@ -353,6 +354,7 @@ export class Analyser {
         namespace: (node: Namespace): boolean => {
             this.containerName = node.name;
             this.member = undefined;
+            // todo: add namespace symbol for rename provider
             return true;
         },
         usegroup: this._analyseUseGroup.bind(this),

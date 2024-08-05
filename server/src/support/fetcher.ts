@@ -23,11 +23,12 @@ export class Fetcher {
             return undefined;
         }
 
-        return new FlatDocument(uri, lang, 0, content);
+        return new FlatDocument(uri, lang, 1, content);
     }
 
     public getFileContent(uri: string) {
         const path = uriToPath(uri);
+
         if (!existsSync(path)) {
             console.log(`path [${path}] doesn't exists while uri is [${uri}]`);
             return undefined;

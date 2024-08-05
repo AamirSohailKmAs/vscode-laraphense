@@ -8,7 +8,7 @@ import { Tree, newAstTree } from '../bladeParser/bladeAst';
 import { DocumentUri, TextDocumentContentChangeEvent } from 'vscode-languageserver';
 
 export class Compiler {
-    _loadedDocuments: Map<DocumentUri, FlatDocument> = new Map();
+    // private _loadedDocuments: Map<DocumentUri, FlatDocument> = new Map();
     private _analyser: Analyser;
     private _bladeParser: BladeParser;
 

@@ -14,8 +14,7 @@ import {
     Tree,
     newAstTree,
 } from './bladeAst';
-import { DocLang, FlatDocument } from '../laraphense/document';
-import { TextDocument } from 'vscode-languageserver-textdocument';
+import { DocLang, FlatDocument } from '../support/document';
 import { BladeLexer } from './lexer';
 import { toDocLang } from '../helpers/uri';
 

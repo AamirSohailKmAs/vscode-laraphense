@@ -48,20 +48,20 @@ connection.onInitialize(async (params: InitializeParams) => {
     let stubsPath = join(__dirname, '../stubs');
 
     if (existsSync(stubsPath)) {
-        workspace.addFolder(stubsPath, FolderKind.Stub, DEFAULT_STUBS);
+        workspace.addFolder('stubs', stubsPath, FolderKind.Stub, DEFAULT_STUBS);
     }
 
     if (params.workspaceFolders) {
         params.workspaceFolders.forEach((folder) => {
-            workspace.addFolder(folder.uri);
+            workspace.addFolder(folder.name, folder.uri);
         });
     } else if (params.rootUri) {
-        workspace.addFolder(params.rootUri);
+        workspace.addFolder(workspaceName, params.rootUri);
     }
 
     let storageCache: FileCache | undefined;
     if (workspace.folders.size > 1) {
-        storageCache = await FileCache.create(join(cachePath, workspaceName));
+        storageCache = await FileCache.create(cachePath);
 
         if (clearCache && storageCache) {
             storageCache = await storageCache.clear();
@@ -96,7 +96,7 @@ connection.onInitialize(async (params: InitializeParams) => {
 // });
 
 connection.onDidChangeConfiguration((change) => {
-    // fixme:
+    // fixme: Use the new pull model (`workspace/configuration` request)
     laraphense.settings = change.settings;
 });
 
@@ -121,6 +121,8 @@ documents.onDidClose((param) => {
 
 // Handle watched files changes
 connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
+    console.log(params);
+
     for (const change of params.changes) {
         switch (change.type) {
             case FileChangeType.Created:

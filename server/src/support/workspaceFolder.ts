@@ -9,7 +9,7 @@ import { DocumentUri } from 'vscode-languageserver';
 /**
  * A tagging type for string properties that are actually Folder URI.
  */
-export type FolderUri = string & { readonly FolderUri: unique symbol };
+export type FolderUri = string & { readonly FolderId: unique symbol };
 
 export const enum FolderKind {
     User = 0,
@@ -22,10 +22,11 @@ export type FileEntry = {
     size: number;
 };
 
-export type RelativePath = string & { readonly PathId: unique symbol };
+export type RelativeUri = string & { readonly PathId: unique symbol };
 
 export class WorkspaceFolder {
     constructor(
+        private _name: string,
         private _uri: string,
         private _kind: FolderKind = FolderKind.User,
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
@@ -37,6 +38,10 @@ export class WorkspaceFolder {
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
+    }
+
+    public get name(): string {
+        return this._name;
     }
 
     public get uri(): FolderUri {
@@ -67,8 +72,8 @@ export class WorkspaceFolder {
         return uri.indexOf('/vendor/') !== -1;
     }
 
-    public relativePath(uri: DocumentUri): RelativePath {
-        return uri.replace(this._uri + '/', '') as RelativePath;
+    public relativePath(uri: DocumentUri): RelativeUri {
+        return uri.replace(this._uri + '/', '') as RelativeUri;
     }
 
     public documentUri(uri: string): DocumentUri {

@@ -9,6 +9,7 @@ import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
 
 export class Workspace {
+    private _folderNames: string[] = [];
     private _folders: Map<FolderUri, WorkspaceFolder> = new Map();
     private _folderAdded: EventEmitter<{ folder: WorkspaceFolder }>;
     private _fileAdded: EventEmitter<{ uri: string }>;
@@ -57,6 +58,7 @@ export class Workspace {
     }
 
     public addFolder(
+        name: string,
         uri: string,
         _kind: FolderKind = FolderKind.User,
         _includeGlobs: string[] = DEFAULT_INCLUDE,
@@ -64,7 +66,11 @@ export class Workspace {
     ) {
         const folderUri = URI.parse(uri).toString() as FolderUri;
 
-        const folder = new WorkspaceFolder(folderUri, _kind, _includeGlobs, _excludeGlobs);
+        name = this._folderNames.includes(name) ? `${name}_${Math.round(Math.random() * 10)}` : name;
+
+        this._folderNames.push(name);
+
+        const folder = new WorkspaceFolder(name, folderUri, _kind, _includeGlobs, _excludeGlobs);
         this._folders.set(folderUri, folder);
         this._folderAdded.emit({
             folder,

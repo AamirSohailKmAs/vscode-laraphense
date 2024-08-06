@@ -2,7 +2,7 @@
 
 import { DocumentUri, TextDocument } from 'vscode-languageserver-textdocument';
 import { DEFAULT_MAX_OPEN_FILES } from './defaults';
-import { writeFile, readFile, unlink, emptyDir, ensureDir } from 'fs-extra';
+import { writeFile, readFile, unlink, emptyDir, ensureDir, ensureFile } from 'fs-extra';
 import { join } from 'path';
 import { runSafe } from '../helpers/general';
 import { FlatDocument } from './document';
@@ -107,7 +107,7 @@ export class FileCache {
     public async readJson<T>(key: string): Promise<T | undefined> {
         return runSafe(
             async () => {
-                const data = await this.read(key);
+                const data = await this.read(`${key}.json`);
                 return JSON.parse(data);
             },
             undefined,
@@ -115,12 +115,20 @@ export class FileCache {
         );
     }
 
-    public async write(key: string, data: string) {
-        return writeFile(this.fullPath(key), data, 'utf-8');
+    private async write(key: string, data: string) {
+        return runSafe(
+            async () => {
+                await ensureFile(this.fullPath(key));
+                console.log(this.fullPath(key));
+                return writeFile(this.fullPath(key), data, 'utf-8');
+            },
+            undefined,
+            `Failed to get workspace cache at ${key}`
+        );
     }
 
     public async writeJson<T>(key: string, data: T) {
-        return this.write(key, JSON.stringify(data, null, 2));
+        return this.write(`${key}.json`, JSON.stringify(data, null, 2));
     }
 
     public async delete(key: string) {

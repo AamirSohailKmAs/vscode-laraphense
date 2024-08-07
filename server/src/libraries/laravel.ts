@@ -11,7 +11,6 @@ import { Workspace } from '../support/workspace';
 import { FileCache } from '../support/cache';
 import { Php } from '../languages/phpLang';
 import { Blade } from '../languages/bladeLang';
-import { toFqsen } from '../languages/php/indexing/symbol';
 import { SymbolKind } from '../languages/php/indexing/tables/symbolTable';
 
 export type Snippet = {

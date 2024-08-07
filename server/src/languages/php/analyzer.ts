@@ -34,7 +34,7 @@ import {
 import { PhpSymbol, SymbolKind, SymbolModifier, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri } from '../../support/workspaceFolder';
-import { toFqcn, toFqsen } from './indexing/symbol';
+import { toFqcn, toFqsen } from '../../helpers/symbol';
 
 export type TreeLike = {
     kind: string;

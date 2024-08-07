@@ -2,7 +2,7 @@
 
 import { DocumentUri, SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
 import { PhpSymbol, SymbolKind } from '../indexing/tables/symbolTable';
-import { toLSPRange } from '../indexing/symbol';
+import { toLSPRange } from '../../../helpers/symbol';
 
 export class DocumentSymbolProvider {
     provide(symbols: PhpSymbol[], uri: DocumentUri): SymbolInformation[] {

@@ -28,8 +28,8 @@ export class Php implements Language {
         documentSymbol: DocumentSymbolProvider;
     };
 
-    constructor(private _workspace: Workspace, private _compiler: Compiler, private _fileCache: FileCache | undefined) {
-        this.indexer = new Indexer(this._compiler, this._workspace.config);
+    constructor(private _workspace: Workspace, private _compiler: Compiler, _fileCache: FileCache | undefined) {
+        this.indexer = new Indexer(this._compiler, this._workspace.config, _fileCache);
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
@@ -56,7 +56,7 @@ export class Php implements Language {
         }
 
         return this._providers.documentSymbol.provide(
-            symbolTable.findSymbolsByFilePath(folder.relativePath(document.uri)),
+            symbolTable.findSymbolsByUri(folder.relativePath(document.uri)),
             document.uri
         );
     }

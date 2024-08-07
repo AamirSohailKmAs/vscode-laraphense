@@ -1,9 +1,15 @@
 'use strict';
 
 import { Location } from 'php-parser';
-import { toFqsen, psr4Path } from '../symbol';
-import { RelativePath } from '../../../../support/workspaceFolder';
-import { Fqsen } from '../analyser';
+import { RelativeUri } from '../../../../support/workspaceFolder';
+import * as fs from 'fs';
+import { Trie } from '../../../../support/searchTree';
+
+interface CacheData {
+    symbols: [number, PhpSymbol][];
+    uriIndex: { [uri: string]: number[] };
+    scopeIndex: { [scope: string]: number[] };
+}
 
 export const enum SymbolModifier {
     Public,
@@ -51,126 +57,186 @@ export type PhpType = {
 };
 
 export type Symbol = {
+    id: number;
     name: string;
     kind: SymbolKind;
     loc: Location;
-    path: RelativePath; // not in use
+    uri: RelativeUri;
 };
 
 export type PhpSymbol = Symbol & {
+    // namePosition: number;
     value?: string;
     modifiers: SymbolModifier[];
-    containerName?: string;
+    scope: string;
     type?: PhpType;
+
+    referenceIds: number[];
 };
+export class DefinitionTable {
+    private index: number = 0;
+    private trie: Trie = new Trie();
+    private symbols: Map<number, PhpSymbol> = new Map();
+    private symbolsByUri: Map<string, number[]> = new Map();
+    private symbolsByScope: Map<string, number[]> = new Map();
 
-export class SymbolTable {
-    private _symbolMap: Map<Fqsen, PhpSymbol> = new Map();
-    private _pathMap: Map<RelativePath, Set<Fqsen>> = new Map();
-    private _aliasMap: Map<Fqsen, Set<PhpSymbol>> = new Map();
-    // private _childrenMap: Map<Fqcn, Map<Selector, PhpSymbol>> = new Map();
-
-    public addSymbols(symbols: PhpSymbol[], path: RelativePath) {
+    public addSymbols(symbols: PhpSymbol[], path: RelativeUri) {
         for (let i = 0; i < symbols.length; i++) {
             const symbol = symbols[i];
-            symbol.path = path;
+            symbol.uri = path;
             this.addSymbol(symbol);
         }
     }
 
-    // public addChildrenSymbols(allSymbols: Map<Fqsen, PhpSymbol[]>) {
-    //     for (const [fqsen, symbols] of allSymbols) {
-    //         const { fqcn, selector } = splitFqsen(fqsen);
-    //         if (!this._symbolMap.has(fqcn) && !this._aliasMap.has(fqcn)) {
-    //             continue;
-    //         }
-    //         const children = this._childrenMap.get(fqcn) ?? new Map<Selector, PhpSymbol>();
-    //         for (let i = 0, l = symbols.length; i < l; i++) {
-    //             const symbol = symbols[i];
-    //             if (!children.has(selector)) children.set(selector, symbol);
-    //         }
-    //         this._childrenMap.set(fqcn, children);
-    //     }
-    // }
-
-    private setAlias(symbol: PhpSymbol) {
-        const key = toFqsen(symbol.kind, symbol.name, symbol.containerName);
-
-        let symbols = this._aliasMap.get(key) || new Set();
-
-        this._aliasMap.set(key, symbols.add(symbol));
-    }
-
-    private addFileKeysMap(path: RelativePath, key: Fqsen) {
-        let keys = this._pathMap.get(path) || new Set();
-        this._pathMap.set(path, keys.add(key));
-    }
-
     public addSymbol(symbol: PhpSymbol) {
-        let key = toFqsen(symbol.kind, symbol.name, symbol.containerName);
-        const oldSymbol = this._symbolMap.get(key);
-
-        if (!oldSymbol) {
-            this.addFileKeysMap(symbol.path, key);
-            this._symbolMap.set(key, symbol);
+        if (symbol.id !== 0 && this.symbols.has(symbol.id)) {
             return;
         }
 
-        if (oldSymbol.path === symbol.path) {
-            return;
+        // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
+        // const oldSymbol = this._symbolMap.get(key);
+
+        const index = this.index++;
+        symbol.id = index;
+        this.symbols.set(index, symbol);
+
+        if (!this.symbolsByUri.has(symbol.uri)) {
+            this.symbolsByUri.set(symbol.uri, []);
         }
+        this.symbolsByUri.get(symbol.uri)!.push(index); // todo: validate uniqueness
 
-        const paths = [oldSymbol.path, symbol.path];
-
-        const finalPath = psr4Path(key, paths);
-
-        if (finalPath === oldSymbol.path) {
-            this.setAlias(symbol);
-            return;
+        if (!this.symbolsByScope.has(symbol.scope)) {
+            this.symbolsByScope.set(symbol.scope, []);
         }
+        this.symbolsByScope.get(symbol.scope)!.push(index); // todo: validate uniqueness
 
-        if (this._symbolMap.delete(toFqsen(oldSymbol.kind, oldSymbol.name, oldSymbol.containerName))) {
-            this.setAlias(symbol);
+        this.trie.insert(symbol.name, index);
+    }
+
+    public findSymbolByNamePrefix(prefix: string): PhpSymbol[] {
+        const indices = this.trie.search(prefix);
+        return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
+    }
+
+    public findSymbolByOffsetInUri(uri: string, offset: number): PhpSymbol | undefined {
+        const indices = this.symbolsByUri.get(uri) || [];
+        for (const index of indices) {
+            const symbol = this.symbols.get(index);
+            if (symbol && symbol.loc.start.offset <= offset && symbol.loc.end.offset >= offset) {
+                return symbol;
+            }
+        }
+        return undefined;
+    }
+
+    public findSymbolsByUri(uri: RelativeUri): PhpSymbol[] {
+        const indices = this.symbolsByUri.get(uri) || [];
+        return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
+    }
+
+    public findSymbolsByScope(scope: string): PhpSymbol[] {
+        const indices = this.symbolsByScope.get(scope) || [];
+        return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
+    }
+
+    public updateSymbol(index: number, newSymbol: PhpSymbol) {
+        const oldSymbol = this.symbols.get(index);
+        if (oldSymbol) {
+            this.symbols.set(index, newSymbol);
+
+            // Update Trie
+            this.trie.remove(oldSymbol.name, index);
+            this.trie.insert(newSymbol.name, index);
+
+            // Update URI index
+            const uriIndices = this.symbolsByUri.get(oldSymbol.uri)!;
+            const uriIndexPos = uriIndices.indexOf(index);
+            if (uriIndexPos > -1) {
+                uriIndices[uriIndexPos] = index;
+            }
+
+            // Update scope index
+            const scopeIndices = this.symbolsByScope.get(oldSymbol.scope)!;
+            const scopeIndexPos = scopeIndices.indexOf(index);
+            if (scopeIndexPos > -1) {
+                scopeIndices[scopeIndexPos] = index;
+            }
         }
     }
 
-    public getSymbolNested(fullyQualifiedStructuralElementName: Fqsen): PhpSymbol | undefined {
-        return this._symbolMap.get(fullyQualifiedStructuralElementName);
-    }
+    public deleteSymbol(index: number) {
+        const symbol = this.symbols.get(index);
+        if (symbol) {
+            this.symbols.delete(index);
 
-    private getSymbolByKey(key: Fqsen): PhpSymbol | undefined {
-        let symbol = this._symbolMap.get(key);
-        if (symbol) return symbol;
+            // Update Trie
+            this.trie.remove(symbol.name, index);
 
-        const symbols = this._aliasMap.get(key);
-        if (!symbols) return undefined;
-        for (const symbol of symbols) {
-            return symbol;
+            // Update URI index
+            const uriIndices = this.symbolsByUri.get(symbol.uri)!;
+            const uriIndexPos = uriIndices.indexOf(index);
+            if (uriIndexPos > -1) {
+                uriIndices.splice(uriIndexPos, 1);
+            }
+
+            // Update scope index
+            const scopeIndices = this.symbolsByScope.get(symbol.scope)!;
+            const scopeIndexPos = scopeIndices.indexOf(index);
+            if (scopeIndexPos > -1) {
+                scopeIndices.splice(scopeIndexPos, 1);
+            }
         }
     }
 
-    public findSymbolsByFilePath(uri: RelativePath) {
-        const symbols: PhpSymbol[] = [];
-        let symbol: PhpSymbol | undefined;
+    public deleteSymbolsByUri(uri: string) {
+        const indices = this.symbolsByUri.get(uri) || [];
+        for (const index of indices) {
+            const symbol = this.symbols.get(index);
+            if (symbol) {
+                this.symbols.delete(index);
 
-        const keys = this._pathMap.get(uri);
+                // Update Trie
+                this.trie.remove(symbol.name, index);
 
-        if (!keys) return symbols;
-
-        const keyArray = Array.from(keys);
-
-        for (let i = 0; i < keyArray.length; i++) {
-            const key = keyArray[i];
-            if ((symbol = this.getSymbolByKey(key))) {
-                symbols.push(symbol);
+                // Update scope index
+                const scopeIndices = this.symbolsByScope.get(symbol.scope)!;
+                const scopeIndexPos = scopeIndices.indexOf(index);
+                if (scopeIndexPos > -1) {
+                    scopeIndices.splice(scopeIndexPos, 1);
+                }
             }
         }
 
-        return symbols;
+        this.symbolsByUri.delete(uri);
+    }
+
+    public saveForFile(): CacheData {
+        return {
+            symbols: Array.from(this.symbols.entries()),
+            uriIndex: Object.fromEntries(this.symbolsByUri),
+            scopeIndex: Object.fromEntries(this.symbolsByScope),
+        };
+    }
+
+    public loadFromFile(filePath: string) {
+        const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        this.symbols = new Map(data.symbols);
+        this.symbolsByUri = new Map(Object.entries(data.uriIndex));
+        this.symbolsByScope = new Map(Object.entries(data.scopeIndex));
+
+        // Reconstruct trie
+        this.trie = new Trie();
+        for (const [index, symbol] of this.symbols) {
+            this.trie.insert(symbol.name, index);
+        }
+    }
+
+    public getSymbolNested(name: string, scope: string, kind: SymbolKind): PhpSymbol | undefined {
+        return this.findSymbolsByScope(scope).find((symbol) => symbol.kind === kind && symbol.name === name);
     }
 
     public getAllSymbols(): PhpSymbol[] {
-        return Array.from(this._symbolMap.values());
+        return Array.from(this.symbols.values());
     }
 }
 

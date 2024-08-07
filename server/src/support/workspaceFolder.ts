@@ -90,7 +90,7 @@ export class WorkspaceFolder {
         });
 
         return entries.map((entry) => ({
-            uri: this.documentUri(entry.path),
+            uri: entry.path,
             modified: entry.stats ? entry.stats.mtime.getTime() : 0,
             size: entry.stats ? entry.stats.size : 0,
         }));

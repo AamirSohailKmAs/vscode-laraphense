@@ -1,7 +1,6 @@
 'use strict';
 
-import { DocumentUri } from 'vscode-languageserver-textdocument';
-import { FolderKind, FolderUri, WorkspaceFolder } from './workspaceFolder';
+import { FolderKind, FolderUri, RelativeUri, WorkspaceFolder } from './workspaceFolder';
 import { DocContext, laraphenseRc } from '../languages/baseLang';
 import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE } from './defaults';
 import { EventEmitter } from './eventEmitter';
@@ -100,6 +99,16 @@ export class Workspace {
         }
 
         return false;
+    }
+
+    public splitUri(uri: string): { folderUri: FolderUri; fileUri: RelativeUri } | undefined {
+        const folderUri = this.findFolderUriContainingUri(uri);
+
+        if (!folderUri) return;
+
+        let fileUri = uri.substring(folderUri.length + 1) as RelativeUri;
+
+        return { folderUri, fileUri };
     }
 
     public findFolderContainingUri(uri: string): WorkspaceFolder | undefined {

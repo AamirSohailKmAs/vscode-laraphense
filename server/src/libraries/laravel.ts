@@ -71,16 +71,21 @@ export class Laravel implements Library {
                 continue;
             }
 
-            const classConst = toFqsen(SymbolKind.ClassConstant, 'VERSION', 'Illuminate\\Foundation\\Application');
-            const version = symbolTable.getSymbolNested(classConst)?.value;
+            const version = symbolTable.getSymbolNested(
+                'VERSION',
+                'Illuminate\\Foundation\\Application',
+                SymbolKind.ClassConstant
+            )?.value;
             if (!version) {
                 continue;
             }
 
             console.log(`Laravel found v${version}`);
             this._versions.set(uri, version);
-            const entries = await folder.findFiles();
-            console.log(entries);
+            console.log(this._php.indexer.fileMap.get(uri));
+
+            // const entries = await folder.findFiles();
+            // console.log(entries);
         }
     }
 

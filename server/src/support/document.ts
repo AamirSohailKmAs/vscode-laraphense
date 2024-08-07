@@ -9,6 +9,7 @@ import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
 import { toLocation } from '../languages/php/indexing/symbol';
 import { substituteWithWhitespace } from '../helpers/general';
+import { BinarySearch } from './searchTree';
 
 export enum DocLang {
     html = 'html',
@@ -133,7 +134,7 @@ export class FlatDocument {
         const offset = this.doc.offsetAt(position);
         let match = this.doc
             .getText()
-            .slice(this._lineLengths[offset], offset)
+            .slice(this._lineLengths[position.line], offset)
             .match(regex || this.WORD_REGEX);
         if (match) {
             return match[0];
@@ -422,67 +423,6 @@ export class Regions {
             default:
                 return '';
         }
-    }
-}
-
-export class BinarySearch {
-    constructor(protected _sortedArray: Array<number>) {}
-
-    set sortedArray(sortedArray: Array<number>) {
-        this._sortedArray = sortedArray;
-    }
-
-    find(matchFn: (midPoint: number) => number) {
-        let result = this.search(matchFn);
-        if (result.isExactMatch) {
-            return this._sortedArray[result.rank];
-        } else {
-            return null;
-        }
-    }
-
-    rank(matchFn: (midPoint: number) => number) {
-        return this.search(matchFn).rank;
-    }
-
-    range(matchFn: (midPoint: number) => number, matchToFn: (midPoint: number) => number) {
-        let rank = this.rank(matchFn);
-        return this._sortedArray.slice(rank, this.search(matchToFn, rank).rank);
-    }
-
-    search(matchFn: (midPoint: number) => number, defaultRank?: number) {
-        let result: {
-            rank: number;
-            isExactMatch: boolean;
-        };
-        let rank = defaultRank || 0;
-        let length = this._sortedArray.length - 1;
-        let mid = 0;
-        let key = 0;
-        for (;;) {
-            if (rank > length) {
-                result = {
-                    rank: rank,
-                    isExactMatch: false,
-                };
-                break;
-            }
-            mid = Math.floor((rank + length) / 2);
-            key = matchFn(this._sortedArray[mid]);
-            if (key < 0) {
-                rank = mid + 1;
-            } else {
-                if (!(key > 0)) {
-                    result = {
-                        rank: mid,
-                        isExactMatch: true,
-                    };
-                    break;
-                }
-                length = mid - 1;
-            }
-        }
-        return result;
     }
 }
 

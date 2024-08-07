@@ -1,81 +1,125 @@
 'use strict';
 
+import { RelativeUri } from '../../../../support/workspaceFolder';
+import * as fs from 'fs';
 import { Symbol } from './symbolTable';
-import { RelativePath } from '../../../../support/workspaceFolder';
-import { Fqsen } from '../analyser';
+import { BinarySearchTree } from '../../../../support/searchTree';
 
-export type PhpReference = Symbol & {};
+export type PhpReference = Symbol & {
+    symbolId: number;
+};
+
+interface CacheData {
+    references: [number, PhpReference][];
+    uriIndex: { [uri: string]: number[] };
+}
 
 export class ReferenceTable {
-    private _symbolMap: Map<Fqsen, PhpReference> = new Map();
-    private _pathMap: Map<RelativePath, Set<Fqsen>> = new Map();
-    private _aliasMap: Map<Fqsen, Set<PhpReference>> = new Map();
-    // private _childrenMap: Map<Fqcn, Map<Selector, PhpReference>> = new Map();
+    private references: Map<number, PhpReference> = new Map();
+    private referencesByUri: Map<string, number[]> = new Map();
+    private uriTrees: Map<string, BinarySearchTree<PhpReference>> = new Map();
+    private index: number = 0;
 
-    public addReferences(symbols: PhpReference[], path: RelativePath) {
-        for (let i = 0; i < symbols.length; i++) {
-            const symbol = symbols[i];
-            symbol.path = path;
+    public addReferences(references: PhpReference[], uri: RelativeUri) {
+        for (let i = 0; i < references.length; i++) {
+            const reference = references[i];
+            reference.uri = uri;
+            this.addReference(reference);
         }
     }
 
-    // public addChildrenSymbols(allSymbols: Map<Fqsen, PhpReference[]>) {
-    //     for (const [fqsen, symbols] of allSymbols) {
-    //         const { fqcn, selector } = splitFqsen(fqsen);
-    //         if (!this._symbolMap.has(fqcn) && !this._aliasMap.has(fqcn)) {
-    //             continue;
-    //         }
-    //         const children = this._childrenMap.get(fqcn) ?? new Map<Selector, PhpReference>();
-    //         for (let i = 0, l = symbols.length; i < l; i++) {
-    //             const symbol = symbols[i];
-    //             if (!children.has(selector)) children.set(selector, symbol);
-    //         }
-    //         this._childrenMap.set(fqcn, children);
-    //     }
-    // }
+    public addReference(reference: PhpReference) {
+        const index = this.index++;
+        this.references.set(index, reference);
 
-    private addFileKeysMap(path: RelativePath, key: Fqsen) {
-        let keys = this._pathMap.get(path) || new Set();
-        this._pathMap.set(path, keys.add(key));
+        if (!this.referencesByUri.has(reference.uri)) {
+            this.referencesByUri.set(reference.uri, []);
+            this.uriTrees.set(reference.uri, new BinarySearchTree());
+        }
+        this.referencesByUri.get(reference.uri)!.push(index);
+        this.uriTrees.get(reference.uri)!.insert(reference.loc.start.offset, reference);
     }
 
-    public getSymbolNested(fullyQualifiedStructuralElementName: Fqsen): PhpReference | undefined {
-        return this._symbolMap.get(fullyQualifiedStructuralElementName);
+    public findReferenceByOffsetInUri(uri: string, offset: number): PhpReference | undefined {
+        const tree = this.uriTrees.get(uri);
+        if (!tree) {
+            return undefined;
+        }
+        const references = tree.between({ gte: offset, lte: offset });
+        return references.length > 0 ? references[0] : undefined;
     }
 
-    private getSymbolByKey(key: Fqsen): PhpReference | undefined {
-        let symbol = this._symbolMap.get(key);
-        if (symbol) return symbol;
+    public findReferencesByUri(uri: string): PhpReference[] {
+        const indices = this.referencesByUri.get(uri) || [];
+        return indices.map((index) => this.references.get(index)!).filter((reference) => reference);
+    }
 
-        const symbols = this._aliasMap.get(key);
-        if (!symbols) return undefined;
-        for (const symbol of symbols) {
-            return symbol;
+    public updateReference(index: number, newReference: PhpReference) {
+        const oldReference = this.references.get(index);
+        if (oldReference) {
+            this.references.set(index, newReference);
+
+            // Update URI index and Tree
+            const uriIndices = this.referencesByUri.get(oldReference.uri)!;
+            uriIndices[uriIndices.indexOf(index)] = index;
+            const tree = this.uriTrees.get(oldReference.uri)!;
+            tree.delete(oldReference.loc.start.offset);
+            tree.insert(newReference.loc.start.offset, newReference);
         }
     }
 
-    public findSymbolsByFilePath(uri: RelativePath) {
-        const symbols: PhpReference[] = [];
-        let symbol: PhpReference | undefined;
+    public deleteReference(index: number) {
+        const reference = this.references.get(index);
+        if (reference) {
+            this.references.delete(index);
 
-        const keys = this._pathMap.get(uri);
+            // Update URI index and Tree
+            const uriIndices = this.referencesByUri.get(reference.uri)!;
+            const uriIndexPos = uriIndices.indexOf(index);
+            if (uriIndexPos > -1) {
+                uriIndices.splice(uriIndexPos, 1);
+            }
+            const tree = this.uriTrees.get(reference.uri)!;
+            tree.delete(reference.loc.start.offset);
+        }
+    }
 
-        if (!keys) return symbols;
+    public deleteReferencesByUri(uri: string) {
+        const indices = this.referencesByUri.get(uri) || [];
+        for (const index of indices) {
+            const reference = this.references.get(index);
+            if (reference) {
+                this.references.delete(index);
 
-        const keyArray = Array.from(keys);
-
-        for (let i = 0; i < keyArray.length; i++) {
-            const key = keyArray[i];
-            if ((symbol = this.getSymbolByKey(key))) {
-                symbols.push(symbol);
+                // Update URI Tree
+                const tree = this.uriTrees.get(uri)!;
+                tree.delete(reference.loc.start.offset);
             }
         }
 
-        return symbols;
+        this.referencesByUri.delete(uri);
     }
 
-    public getAllSymbols(): PhpReference[] {
-        return Array.from(this._symbolMap.values());
+    public saveForFile(): CacheData {
+        return {
+            references: Array.from(this.references.entries()),
+            uriIndex: Object.fromEntries(this.referencesByUri),
+        };
+    }
+
+    public loadFromFile(filePath: string) {
+        const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        this.references = new Map(data.references);
+        this.referencesByUri = new Map(Object.entries(data.uriIndex));
+
+        // Reconstruct binary search trees
+        this.uriTrees = new Map();
+        for (const [_index, reference] of this.references) {
+            if (!this.uriTrees.has(reference.uri)) {
+                this.uriTrees.set(reference.uri, new BinarySearchTree());
+            }
+            this.uriTrees.get(reference.uri)!.insert(reference.loc.start.offset, reference);
+        }
     }
 }
 

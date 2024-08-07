@@ -31,7 +31,7 @@ import {
 } from 'php-parser';
 import { PhpSymbol, SymbolKind, SymbolModifier } from './tables/symbolTable';
 import { Tree } from '../../../bladeParser/bladeAst';
-import { RelativePath } from '../../../support/workspaceFolder';
+import { RelativeUri } from '../../../support/workspaceFolder';
 import { toFqcn, toFqsen } from './symbol';
 import { PhpReference } from './tables/referenceTable';
 
@@ -44,7 +44,7 @@ export type TreeLike = {
 export class Analyser {
     symbols: PhpSymbol[] = [];
     references: PhpReference[] = [];
-    containerName: string | undefined = undefined;
+    containerName: string = '';
     member?: PhpSymbol = undefined;
 
     public analyse(tree: Tree) {
@@ -57,7 +57,7 @@ export class Analyser {
     private _reset() {
         this.symbols = [];
         this.references = [];
-        this.containerName = undefined;
+        this.containerName = '';
         this.member = undefined;
     }
 
@@ -79,7 +79,7 @@ export class Analyser {
     private _newSymbol(
         name: string | Identifier,
         kind: SymbolKind,
-        loc: Location | null,
+        loc: Location | null | undefined,
         modifiers: SymbolModifier[] = [],
         value?: string | number | boolean | Node | null,
         containerName?: string
@@ -90,35 +90,39 @@ export class Analyser {
             containerName = this.containerName;
         }
 
-        if (loc === null) {
+        if (loc === null || loc === undefined) {
             loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
             console.log(`symbol ${name} of kind ${kind} does not have a location`);
         }
 
         return {
+            id: 0,
             name,
             kind,
             loc,
-            path: '' as RelativePath,
+            uri: '' as RelativeUri,
             modifiers: modifiers,
             value,
-            containerName,
+            scope: containerName,
+            referenceIds: [],
         } satisfies PhpSymbol;
     }
 
-    private _newReference(name: string | Identifier, kind: SymbolKind, loc: Location | null): PhpReference {
+    private _newReference(name: string | Identifier, kind: SymbolKind, loc: Location | null | undefined): PhpReference {
         name = normalizeName(name);
 
-        if (loc === null) {
+        if (loc === null || loc === undefined) {
             loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
             console.log(`symbol ${name} of kind ${kind} does not have a location`);
         }
 
         return {
+            id: 0,
+            symbolId: 0,
             name,
             kind,
             loc,
-            path: '' as RelativePath,
+            uri: '' as RelativeUri,
             // modifiers: modifiers,
             // value,
             // containerName,
@@ -126,9 +130,10 @@ export class Analyser {
     }
 
     private _analyseUseGroup(node: UseGroup): boolean {
-        if (node.item) {
-            node.item.forEach((use) => {
+        if (node.items) {
+            node.items.forEach((use) => {
                 // todo: type, alias
+
                 this.references.push(this._newReference(use.name, SymbolKind.Class, use.loc));
             });
         }
@@ -149,7 +154,7 @@ export class Analyser {
                 if (node.trait) {
                     this.references.push(this._newReference(node.trait, SymbolKind.Trait, node.trait.loc));
                 }
-                this.references.push(this._newReference(node.method, SymbolKind.Method, node.method.loc));
+                this.references.push(this._newReference(node.method, SymbolKind.Method, node.loc));
                 node.instead.forEach((instead) => {
                     this.references.push(this._newReference(instead, SymbolKind.Trait, instead.loc));
                 });
@@ -158,7 +163,7 @@ export class Analyser {
                 if (node.trait) {
                     this.references.push(this._newReference(node.trait, SymbolKind.Trait, node.trait.loc));
                 }
-                this.references.push(this._newReference(node.method, SymbolKind.Method, node.method.loc));
+                this.references.push(this._newReference(node.method, SymbolKind.Method, node.loc));
             },
         };
         if (node.adaptations) {
@@ -322,7 +327,7 @@ export class Analyser {
                         isVariadic: param.variadic,
                     }),
                     param.value,
-                    toFqsen(method.kind, method.name, method.containerName)
+                    toFqsen(method.kind, method.name, method.scope)
                 ),
                 method
             );
@@ -355,9 +360,11 @@ export class Analyser {
             this.containerName = node.name;
             this.member = undefined;
             // todo: add namespace symbol for rename provider
+            // todo: we need loc of namespace name instead of given loc
+            // this.symbols.push(this._newSymbol(node.name, SymbolKind.Namespace, node.loc));
             return true;
         },
-        usegroup: this._analyseUseGroup.bind(this),
+        usegroup: this._analyseUseGroup.bind(this), // for references
         function: this._analyseFunction.bind(this),
 
         class: this._analyseClass.bind(this),

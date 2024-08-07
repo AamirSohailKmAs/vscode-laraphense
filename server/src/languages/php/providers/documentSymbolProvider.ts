@@ -23,7 +23,7 @@ export class DocumentSymbolProvider {
             this.toLSPSymbolKind(symbol.kind),
             toLSPRange(symbol.loc),
             uri,
-            this.getContainerName(symbol.containerName)
+            this.getContainerName(symbol.scope)
         );
     }
 

@@ -34,6 +34,7 @@ export class FlatDocument {
     private _lineLengths: Array<number> = [];
     private WORD_REGEX: string | RegExp = /[\w\d\-_\.\:\\\/@]+$/;
     private _search: BinarySearch;
+    private _doc: TextDocument;
     constructor(
         private _uri: DocumentUri,
         private _languageId: DocLang,
@@ -44,12 +45,14 @@ export class FlatDocument {
     ) {
         this.createdAt = createdAt ?? Date.now();
         this.lastCompile = process.hrtime();
+        this._doc = TextDocument.create(this._uri, this._languageId, this._version, this._content);
+
         this._lineLengths = this.lineLengths(_content, true);
         this._search = new BinarySearch(this._lineLengths);
     }
 
     public get doc() {
-        return TextDocument.create(this._uri, this._languageId, this._version, this._content);
+        return this._doc;
     }
 
     public get uri() {
@@ -95,7 +98,9 @@ export class FlatDocument {
     }
 
     public offsetAt(position: Position): number {
+        return this._doc.offsetAt(position);
         let lineOffsets = this.lineOffsets;
+
         if (position.line >= lineOffsets.length) {
             return this._content.length;
         } else if (position.line < 0) {
@@ -263,6 +268,9 @@ export class FlatDocument {
     }
 
     protected lineLengths(text: string, isAtLineStart: boolean = true, textOffset = 0) {
+        const lines = text.split('\n');
+        return lines.map((line) => line.length);
+
         const offsets: Array<number> = isAtLineStart ? [textOffset] : [];
 
         let newLine = false;

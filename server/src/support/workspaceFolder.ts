@@ -3,7 +3,7 @@ import { glob } from 'fast-glob';
 import { folderContainsUri, uriToPath } from '../helpers/uri';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
 import { URI } from 'vscode-uri';
-import { isAbsolute, join } from 'path';
+import { isAbsolute, join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
 
 /**
@@ -73,17 +73,17 @@ export class WorkspaceFolder {
     }
 
     public relativePath(uri: DocumentUri): RelativeUri {
-        return uri.replace(this._uri + '/', '') as RelativeUri;
+        return uri.replace(this._uri + sep, '') as RelativeUri;
     }
 
     public documentUri(uri: string): DocumentUri {
-        return `${this._uri}/${uri}`;
+        return join(this._uri, uri);
     }
 
     public async findFiles(): Promise<FileEntry[]> {
         const entries = await glob(this._includeGlobs, {
             stats: true,
-            cwd: uriToPath(this._uri) + '/',
+            cwd: uriToPath(this._uri) + sep,
             ignore: this._excludeGlobs,
             dot: true,
             suppressErrors: true,

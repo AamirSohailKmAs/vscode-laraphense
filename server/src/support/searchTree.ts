@@ -133,6 +133,34 @@ export class BinarySearchTree<T> {
         }
     }
 
+    delete(key: number): void {
+        this.root = this.deleteNode(this.root, key);
+    }
+
+    find(key: number): T | null {
+        let node = this.root;
+        while (node !== null) {
+            if (key < node.key) {
+                node = node.left;
+            } else if (key > node.key) {
+                node = node.right;
+            } else {
+                return node.value;
+            }
+        }
+        return null;
+    }
+
+    between(range: { gte: number; lte: number }): T[] {
+        const result: T[] = [];
+        this.inOrderTraverse((node) => {
+            if (node.key >= range.gte && node.key <= range.lte) {
+                result.push(node.value);
+            }
+        });
+        return result;
+    }
+
     private insertNode(node: BinarySearchTreeNode<T>, newNode: BinarySearchTreeNode<T>) {
         if (newNode.key < node.key) {
             if (node.left === null) {
@@ -147,10 +175,6 @@ export class BinarySearchTree<T> {
                 this.insertNode(node.right, newNode);
             }
         }
-    }
-
-    delete(key: number): void {
-        this.root = this.deleteNode(this.root, key);
     }
 
     private deleteNode(node: BinarySearchTreeNode<T> | null, key: number): BinarySearchTreeNode<T> | null {
@@ -190,30 +214,6 @@ export class BinarySearchTree<T> {
         return node;
     }
 
-    find(key: number): T | null {
-        let node = this.root;
-        while (node !== null) {
-            if (key < node.key) {
-                node = node.left;
-            } else if (key > node.key) {
-                node = node.right;
-            } else {
-                return node.value;
-            }
-        }
-        return null;
-    }
-
-    between(range: { gte: number; lte: number }): T[] {
-        const result: T[] = [];
-        this.inOrderTraverse((node) => {
-            if (node.key >= range.gte && node.key <= range.lte) {
-                result.push(node.value);
-            }
-        });
-        return result;
-    }
-
     private inOrderTraverse(callback: (node: BinarySearchTreeNode<T>) => void) {
         this.inOrderTraverseNode(this.root, callback);
     }
@@ -229,3 +229,4 @@ export class BinarySearchTree<T> {
         }
     }
 }
+

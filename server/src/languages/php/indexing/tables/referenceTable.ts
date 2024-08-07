@@ -3,7 +3,6 @@
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import * as fs from 'fs';
 import { Symbol } from './symbolTable';
-import { BinarySearchTree } from '../../../../support/searchTree';
 
 export type PhpReference = Symbol & {
     symbolId: number;
@@ -17,7 +16,6 @@ interface CacheData {
 export class ReferenceTable {
     private references: Map<number, PhpReference> = new Map();
     private referencesByUri: Map<string, number[]> = new Map();
-    private uriTrees: Map<string, BinarySearchTree<PhpReference>> = new Map();
     private index: number = 0;
 
     public addReferences(references: PhpReference[], uri: RelativeUri) {
@@ -34,19 +32,20 @@ export class ReferenceTable {
 
         if (!this.referencesByUri.has(reference.uri)) {
             this.referencesByUri.set(reference.uri, []);
-            this.uriTrees.set(reference.uri, new BinarySearchTree());
         }
         this.referencesByUri.get(reference.uri)!.push(index);
-        this.uriTrees.get(reference.uri)!.insert(reference.loc.start.offset, reference);
     }
 
     public findReferenceByOffsetInUri(uri: string, offset: number): PhpReference | undefined {
-        const tree = this.uriTrees.get(uri);
-        if (!tree) {
-            return undefined;
+        const indices = this.referencesByUri.get(uri) || [];
+
+        for (const index of indices) {
+            const reference = this.references.get(index);
+            if (reference && reference.loc.start.offset <= offset && reference.loc.end.offset >= offset) {
+                return reference;
+            }
         }
-        const references = tree.between({ gte: offset, lte: offset });
-        return references.length > 0 ? references[0] : undefined;
+        return undefined;
     }
 
     public findReferencesByUri(uri: string): PhpReference[] {
@@ -59,12 +58,12 @@ export class ReferenceTable {
         if (oldReference) {
             this.references.set(index, newReference);
 
-            // Update URI index and Tree
+            // Update URI index
             const uriIndices = this.referencesByUri.get(oldReference.uri)!;
-            uriIndices[uriIndices.indexOf(index)] = index;
-            const tree = this.uriTrees.get(oldReference.uri)!;
-            tree.delete(oldReference.loc.start.offset);
-            tree.insert(newReference.loc.start.offset, newReference);
+            const uriIndexPos = uriIndices.indexOf(index);
+            if (uriIndexPos > -1) {
+                uriIndices[uriIndexPos] = index;
+            }
         }
     }
 
@@ -73,14 +72,12 @@ export class ReferenceTable {
         if (reference) {
             this.references.delete(index);
 
-            // Update URI index and Tree
+            // Update URI index
             const uriIndices = this.referencesByUri.get(reference.uri)!;
             const uriIndexPos = uriIndices.indexOf(index);
             if (uriIndexPos > -1) {
                 uriIndices.splice(uriIndexPos, 1);
             }
-            const tree = this.uriTrees.get(reference.uri)!;
-            tree.delete(reference.loc.start.offset);
         }
     }
 
@@ -90,10 +87,6 @@ export class ReferenceTable {
             const reference = this.references.get(index);
             if (reference) {
                 this.references.delete(index);
-
-                // Update URI Tree
-                const tree = this.uriTrees.get(uri)!;
-                tree.delete(reference.loc.start.offset);
             }
         }
 
@@ -111,15 +104,6 @@ export class ReferenceTable {
         const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         this.references = new Map(data.references);
         this.referencesByUri = new Map(Object.entries(data.uriIndex));
-
-        // Reconstruct binary search trees
-        this.uriTrees = new Map();
-        for (const [_index, reference] of this.references) {
-            if (!this.uriTrees.has(reference.uri)) {
-                this.uriTrees.set(reference.uri, new BinarySearchTree());
-            }
-            this.uriTrees.get(reference.uri)!.insert(reference.loc.start.offset, reference);
-        }
     }
 }
 

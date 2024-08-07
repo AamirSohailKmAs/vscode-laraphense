@@ -17,8 +17,8 @@ import {
 import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 import { Indexer } from './php/indexer';
-import { Compiler } from '../support/compiler';
 import { FileCache } from '../support/cache';
+import { BladeParser } from '../bladeParser/parser';
 
 export class Php implements Language {
     public id: DocLang = DocLang.php;
@@ -28,8 +28,8 @@ export class Php implements Language {
         documentSymbol: DocumentSymbolProvider;
     };
 
-    constructor(private _workspace: Workspace, private _compiler: Compiler, _fileCache: FileCache | undefined) {
-        this.indexer = new Indexer(this._compiler, this._workspace.config, _fileCache);
+    constructor(private _workspace: Workspace, private _parser: BladeParser, _fileCache: FileCache | undefined) {
+        this.indexer = new Indexer(this._parser, this._workspace.config, _fileCache);
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
@@ -40,25 +40,23 @@ export class Php implements Language {
     }
 
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
-        const folder = this._workspace.findFolderContainingUri(document.uri);
-        if (!folder) {
+        const uriParts = this._workspace.splitUri(document.uri);
+        if (!uriParts) {
             console.log('folder not found');
 
             return [];
         }
 
-        const symbolTable = this.indexer.symbolMap.get(folder.uri);
+        const symbolTable = this.indexer.symbolMap.get(uriParts.folderUri);
 
         if (!symbolTable) {
+            // todo: wait for indexer to get ready
             console.log('symbolTable not found');
 
             return [];
         }
 
-        return this._providers.documentSymbol.provide(
-            symbolTable.findSymbolsByUri(folder.relativePath(document.uri)),
-            document.uri
-        );
+        return this._providers.documentSymbol.provide(symbolTable.findSymbolsByUri(uriParts.fileUri), document.uri);
     }
     doComplete(
         document: FlatDocument,
@@ -67,15 +65,20 @@ export class Php implements Language {
     ): CompletionList | Promise<CompletionList> {
         return CompletionList.create();
     }
+
+    doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {
+        return item;
+    }
+
     doHover(document: FlatDocument, position: Position): Hover | null {
-        const folder = this._workspace.findFolderContainingUri(document.uri);
-        if (!folder) {
+        let uriParts = this._workspace.splitUri(document.uri);
+        if (!uriParts) {
             console.log('folder not found');
 
             return null;
         }
 
-        const referenceTable = this.indexer.referenceMap.get(folder.uri);
+        const referenceTable = this.indexer.referenceMap.get(uriParts.folderUri);
 
         if (!referenceTable) {
             console.log('referenceTable not found');
@@ -83,12 +86,10 @@ export class Php implements Language {
             return null;
         }
 
-        console.log(document.getWordAtPosition(position), referenceTable);
+        console.log(referenceTable.findReferenceByOffsetInUri(uriParts.fileUri, document.offsetAt(position)));
         return null;
     }
-    doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {
-        return item;
-    }
+
     doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {
         return null;
     }

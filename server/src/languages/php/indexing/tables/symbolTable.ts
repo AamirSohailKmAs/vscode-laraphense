@@ -73,12 +73,16 @@ export type PhpSymbol = Symbol & {
 
     referenceIds: number[];
 };
-export class DefinitionTable {
+export class SymbolTable {
     private index: number = 0;
     private trie: Trie = new Trie();
     private symbols: Map<number, PhpSymbol> = new Map();
     private symbolsByUri: Map<string, number[]> = new Map();
     private symbolsByScope: Map<string, number[]> = new Map();
+
+    public generateId(): number {
+        return this.index++;
+    }
 
     public addSymbols(symbols: PhpSymbol[], path: RelativeUri) {
         for (let i = 0; i < symbols.length; i++) {
@@ -89,15 +93,20 @@ export class DefinitionTable {
     }
 
     public addSymbol(symbol: PhpSymbol) {
-        if (symbol.id !== 0 && this.symbols.has(symbol.id)) {
+        if (symbol.id === 0) {
+            symbol.id = this.generateId();
+        }
+
+        if (this.symbols.has(symbol.id)) {
+            console.log(symbol, ' already exists');
+
             return;
         }
 
         // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
         // const oldSymbol = this._symbolMap.get(key);
 
-        const index = this.index++;
-        symbol.id = index;
+        const index = symbol.id;
         this.symbols.set(index, symbol);
 
         if (!this.symbolsByUri.has(symbol.uri)) {

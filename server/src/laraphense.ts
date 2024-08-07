@@ -24,15 +24,12 @@ import { Language, Settings } from './languages/baseLang';
 import { Js } from './languages/jsLang';
 import { Blade } from './languages/bladeLang';
 import { Php } from './languages/phpLang';
-import { Compiler } from './support/compiler';
 import { Library } from './libraries/baseLibrary';
 import { Laravel } from './libraries/laravel';
-import { FolderKind } from './support/workspaceFolder';
-import { toFqsen } from './languages/php/indexing/symbol';
-import { SymbolKind } from './languages/php/indexing/tables/symbolTable';
+import { BladeParser } from './bladeParser/parser';
 
 export class Laraphense {
-    private _compiler: Compiler;
+    private _parser: BladeParser;
     private _settings: Settings = {};
     private _openDocuments: MemoryCache<Regions>;
     private _languages: Map<DocLang, Language> = new Map();
@@ -40,11 +37,15 @@ export class Laraphense {
     private _libraries: Library[] = [];
 
     constructor(private _workspace: Workspace, private _fileCache: FileCache | undefined) {
-        this._compiler = new Compiler(this._workspace.config);
+        this._parser = new BladeParser({
+            parser: { extractDoc: true, suppressErrors: true, version: this._workspace.config.phpVersion },
+            ast: { withPositions: true },
+            lexer: { short_tags: true },
+        });
         this._openDocuments = new MemoryCache((doc) => this.getRegions(doc));
 
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
-        const phpLang = new Php(_workspace, this._compiler, this._fileCache);
+        const phpLang = new Php(_workspace, this._parser, this._fileCache);
         const bladeLang = new Blade(htmlLang);
 
         this._languages.set(DocLang.html, htmlLang);
@@ -248,7 +249,7 @@ export class Laraphense {
     }
 
     public getRegions(doc: FlatDocument) {
-        return new Regions(doc.uri).parse(this._compiler.parseFlatDoc(doc));
+        return new Regions(doc.uri).parse(this._parser.parseFlatDoc(doc));
     }
 
     private initLibraries() {

@@ -14,9 +14,13 @@ interface CacheData {
 }
 
 export class ReferenceTable {
+    private index: number = 0;
     private references: Map<number, PhpReference> = new Map();
     private referencesByUri: Map<string, number[]> = new Map();
-    private index: number = 0;
+
+    public generateId(): number {
+        return this.index++;
+    }
 
     public addReferences(references: PhpReference[], uri: RelativeUri) {
         for (let i = 0; i < references.length; i++) {
@@ -27,7 +31,20 @@ export class ReferenceTable {
     }
 
     public addReference(reference: PhpReference) {
-        const index = this.index++;
+        if (reference.id === 0) {
+            reference.id = this.generateId();
+        }
+
+        if (this.references.has(reference.id)) {
+            console.log(reference, ' already exists');
+
+            return;
+        }
+
+        // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
+        // const oldSymbol = this._symbolMap.get(key);
+
+        const index = reference.id;
         this.references.set(index, reference);
 
         if (!this.referencesByUri.has(reference.uri)) {

@@ -46,6 +46,18 @@ export class BladeParser {
         this._doc = new FlatDocument('init', DocLang.unknown, 1, '');
     }
 
+    public parseFlatDoc(flatDoc: FlatDocument): Tree {
+        if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
+            return newAstTree();
+        }
+
+        try {
+            return this.parse(flatDoc, flatDoc.languageId);
+        } catch (error) {
+            return newAstTree();
+        }
+    }
+
     public parse(doc: FlatDocument, languageId: DocLang.blade | DocLang.php): Tree {
         this._doc = doc;
         if (languageId === DocLang.php) {

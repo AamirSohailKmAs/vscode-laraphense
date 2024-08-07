@@ -1,21 +1,21 @@
 'use strict';
 
-import { DocumentUri, TextDocumentChangeEvent } from 'vscode-languageserver';
+import { DocumentUri } from 'vscode-languageserver';
 import { laraphenseRc } from '../baseLang';
-import { Compiler } from '../../support/compiler';
+import { Analyzer } from './analyzer';
 import { DocLang, FlatDocument } from '../../support/document';
 import { Fetcher } from '../../support/fetcher';
-import { FileEntry, FolderKind, FolderUri, WorkspaceFolder } from '../../support/workspaceFolder';
-import { SymbolKind, DefinitionTable } from './indexing/tables/symbolTable';
+import { FileEntry, FolderUri, RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
+import { SymbolTable } from './indexing/tables/symbolTable';
 import { ReferenceTable } from './indexing/tables/referenceTable';
-import { TextDocument } from 'vscode-languageserver-textdocument';
 import { EventEmitter } from '../../support/eventEmitter';
 import { FileCache } from '../../support/cache';
 import { join } from 'path';
+import { BladeParser } from '../../bladeParser/parser';
 export class Indexer {
-    public symbolMap: Map<FolderUri, DefinitionTable> = new Map();
-    public referenceMap: Map<FolderUri, ReferenceTable> = new Map();
     public fileMap: Map<FolderUri, FileEntry[]> = new Map();
+    public symbolMap: Map<FolderUri, SymbolTable> = new Map();
+    public referenceMap: Map<FolderUri, ReferenceTable> = new Map();
 
     private _fetcher: Fetcher;
     private _indexCount: number = 0;
@@ -25,14 +25,14 @@ export class Indexer {
     private _folderIndexingStarted: EventEmitter<{ uri: FolderUri }>;
     private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; filesCount: number }>;
 
-    constructor(private _compiler: Compiler, private config: laraphenseRc, private _fileCache: FileCache | undefined) {
-        this._indexingStarted = new EventEmitter(true);
-        this._indexingEnded = new EventEmitter();
+    constructor(private _parser: BladeParser, private config: laraphenseRc, private _fileCache: FileCache | undefined) {
+        this._fetcher = new Fetcher();
 
         this._folderIndexingStarted = new EventEmitter();
         this._folderIndexingEnded = new EventEmitter();
 
-        this._fetcher = new Fetcher();
+        this._indexingEnded = new EventEmitter();
+        this._indexingStarted = new EventEmitter(true);
     }
 
     public get indexingStarted() {
@@ -92,16 +92,18 @@ export class Indexer {
 
         this._folderIndexingStarted.emit({ uri: folder.uri });
 
-        const symbolTable = new DefinitionTable();
+        const symbolTable = new SymbolTable();
         const referenceTable = new ReferenceTable();
         this.referenceMap.set(folder.uri, referenceTable);
         this.symbolMap.set(folder.uri, symbolTable);
+
+        const analyze = new Analyzer(symbolTable, referenceTable);
 
         const missingFiles: Array<{ uri: string; reason: string }> = [];
 
         let count = 0;
 
-        const fileBatches = this.createBatches(files, 10); // Create batches of 10 files
+        const fileBatches = this.createBatches(files, 10);
 
         for (const batch of fileBatches) {
             await Promise.all(
@@ -115,7 +117,7 @@ export class Indexer {
                         return; // maybe is shouldn't return
                     }
 
-                    const compiled = this.indexFile(join(folder.uri, entry.uri));
+                    const compiled = this.indexFile(analyze, folder.uri, entry);
                     if (!compiled) {
                         missingFiles.push({ uri: entry.uri, reason: "can't compile" });
                         return; // maybe is shouldn't return
@@ -166,14 +168,20 @@ export class Indexer {
         this._fileCache?.writeJson(join(folder.name, 'filesEntries'), files);
     }
 
-    private indexFile(uri: DocumentUri) {
-        const flatDoc = this._fetcher.loadUriIfLang(uri, [DocLang.php, DocLang.blade]);
+    private indexFile(analyzer: Analyzer, folderUri: FolderUri, entry: FileEntry) {
+        const flatDoc = this._fetcher.loadUriIfLang(join(folderUri, entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {
             return undefined;
         }
 
-        return this._compiler.compileUri(flatDoc);
+        const astTree = this._parser.parseFlatDoc(flatDoc);
+
+        const { symbols, references } = analyzer.analyse(astTree, entry.uri as RelativeUri);
+
+        flatDoc.lastCompile = process.hrtime();
+
+        return { astTree, symbols, references };
     }
 }
 

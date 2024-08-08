@@ -11,8 +11,66 @@ import {
     MODIFIER_PUBLIC,
     MODIFIER_PROTECTED,
     NullKeyword,
+    Location,
 } from 'php-parser';
-import { SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, SymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
+import { RelativeUri } from '../support/workspaceFolder';
+import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
+
+export function createSymbol(
+    name: string | Identifier,
+    kind: SymbolKind,
+    loc: Location | null | undefined,
+    scope: string = '',
+    modifiers: SymbolModifier[] = [],
+    value?: string | number | boolean | Node | null
+): PhpSymbol {
+    name = normalizeName(name);
+    value = normalizeValue(value);
+
+    if (loc === null || loc === undefined) {
+        loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
+        console.log(`symbol ${name} of kind ${kind} does not have a location`);
+    }
+
+    const symbol: PhpSymbol = {
+        id: 0,
+        name,
+        kind,
+        loc,
+        uri: '' as RelativeUri,
+        modifiers,
+        value,
+        scope,
+        referenceIds: [],
+    };
+
+    return symbol;
+}
+
+export function createReference(
+    name: string | Identifier,
+    kind: SymbolKind,
+    loc: Location | null | undefined
+): PhpReference {
+    name = normalizeName(name);
+
+    if (loc === null || loc === undefined) {
+        loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
+        console.log(`symbol ${name} of kind ${kind} does not have a location`);
+    }
+
+    const reference: PhpReference = {
+        id: 0,
+        symbolId: 0,
+        name,
+        kind,
+        loc,
+        uri: '' as RelativeUri,
+    };
+
+    return reference;
+}
 
 export function normalizeName(name: string | Identifier) {
     if (typeof name !== 'string') {

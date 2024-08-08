@@ -3,30 +3,24 @@
 import { Interface } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class InterfaceVisitor implements NodeVisitor {
-    private analyzer: Analyzer;
-
-    constructor(analyzer: Analyzer) {
-        this.analyzer = analyzer;
-    }
+    constructor(private analyzer: Analyzer) {}
 
     visit(interfaceNode: Interface): boolean {
-        const symbol = this.analyzer.createSymbol(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc);
-        this.analyzer.member = symbol;
-
         // todo: Attribute
-        this.analyzer.addSymbol(symbol);
+        const symbol = this.analyzer.addSymbol(
+            createSymbol(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc, this.analyzer.scope)
+        );
+        this.analyzer.member = symbol;
 
         if (interfaceNode.extends) {
             interfaceNode.extends.forEach((interfaceNode) => {
                 // fixme: resolution, uqn,qf, rn
-                const reference = this.analyzer.createReference(
-                    interfaceNode.name,
-                    SymbolKind.Interface,
-                    interfaceNode.loc
+                this.analyzer.addReference(
+                    createReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc)
                 );
-                this.analyzer.addReference(reference);
             });
         }
         return true;

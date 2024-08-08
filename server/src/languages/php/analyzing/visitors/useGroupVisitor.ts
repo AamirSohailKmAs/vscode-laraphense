@@ -3,20 +3,29 @@
 import { UseGroup } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { createReference, normalizeName } from '../../../../helpers/analyze';
 
 export class UseGroupVisitor implements NodeVisitor {
-    private analyzer: Analyzer;
-
-    constructor(analyzer: Analyzer) {
-        this.analyzer = analyzer;
-    }
+    constructor(private analyzer: Analyzer) {}
 
     visit(node: UseGroup): boolean {
         if (node.items) {
             node.items.forEach((use) => {
-                // todo: type, alias
-                const reference = this.analyzer.createReference(use.name, SymbolKind.Class, use.loc);
-                this.analyzer.addReference(reference);
+                let type = SymbolKind.Class;
+
+                if (use.type === 'function') {
+                    type = SymbolKind.Function;
+                } else if (use.type === 'const') {
+                    type = SymbolKind.Constant;
+                }
+
+                this.analyzer.addReference(createReference(use.name, type, use.loc));
+
+                this.analyzer.addUseGroup({
+                    fqn: use.name,
+                    type: use.type ?? '', // todo: do we need this?
+                    alias: normalizeName(use.alias ?? ''),
+                });
             });
         }
 

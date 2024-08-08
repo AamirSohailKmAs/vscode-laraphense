@@ -22,6 +22,7 @@ export function toLSPPosition(position: ParserPosition) {
     return LSPPosition.create(position.line - 1, position.column);
 }
 
+// fixme: not in use
 export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
     switch (kind) {
         case SymbolKind.Class:
@@ -34,11 +35,13 @@ export function toFqsen(kind: SymbolKind, name: string, containerName: string | 
     }
 }
 
+// fixme: not in use
 export function splitFqsen(fqsen: Fqsen): { fqcn: Fqcn; selector: Selector } {
     const keys = fqsen.split(':');
     return { fqcn: keys[0] as Fqcn, selector: keys[1] as Selector };
 }
 
+// fixme: not in use
 export function toSelector(kind: SymbolKind, name: string): Selector {
     switch (kind) {
         case SymbolKind.Function:
@@ -57,6 +60,7 @@ export function toSelector(kind: SymbolKind, name: string): Selector {
     }
 }
 
+// fixme: not in use
 export function toFqcn(name: string, containerName: string | undefined): Fqcn {
     let separator = '\\';
     if (!containerName) {
@@ -108,5 +112,32 @@ function calculateScore(namespaceParts: string[], paths: string, mapping?: { [ve
     }
 
     return score;
+}
+
+export function joinNamespace(base: string, name: string) {
+    if (!base && !name) {
+        return '';
+    }
+
+    if (!base) {
+        return name;
+    }
+
+    if (!name) {
+        return base;
+    }
+
+    if (base.slice(-1) === '\\') {
+        base = base.slice(0, -1);
+    }
+    if (name.slice(0, 1) === '\\') {
+        name = name.slice(1);
+    }
+    return `${base}\\${name}`;
+}
+
+export function splitNamespace(fqn: string): { scope: string; name: string } {
+    const lastIndex = fqn.lastIndexOf('\\');
+    return { scope: fqn.substring(0, lastIndex), name: fqn.substring(lastIndex + 1) };
 }
 

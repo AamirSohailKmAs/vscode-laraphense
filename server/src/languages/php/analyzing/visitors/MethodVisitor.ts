@@ -2,24 +2,21 @@
 
 import { Block, Method } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { modifier, normalizeName, parseFlag } from '../../../../helpers/analyze';
-import { toFqcn, toFqsen } from '../../../../helpers/symbol';
+import { createSymbol, modifier, normalizeName, parseFlag } from '../../../../helpers/analyze';
+import { joinNamespace } from '../../../../helpers/symbol';
 import { PhpSymbol, SymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
-    private analyzer: Analyzer;
-
-    constructor(analyzer: Analyzer) {
-        this.analyzer = analyzer;
-    }
+    constructor(private analyzer: Analyzer) {}
 
     public visit(methodNode: unknown): boolean {
         const node = methodNode as Method;
         // todo: Attribute, type, byref
-        const method = this.analyzer.createSymbol(
+        const method = createSymbol(
             node.name,
             SymbolKind.Method,
             node.loc,
+            joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
             modifier({
                 isAbstract: node.isAbstract,
                 isFinal: node.isFinal,
@@ -27,8 +24,7 @@ export class MethodVisitor implements NodeVisitor {
                 isNullable: node.nullable,
                 visibility: node.visibility,
             }),
-            undefined,
-            toFqcn(this.analyzer.member?.name || '', this.analyzer.containerName)
+            undefined
         );
         this.analyzer.addSymbol(method);
 
@@ -37,30 +33,30 @@ export class MethodVisitor implements NodeVisitor {
             //todo: Attribute, type, byref
             if (normalizeName(node.name) === '__construct' && param.flags > 0) {
                 this.analyzer.addSymbol(
-                    this.analyzer.createSymbol(
+                    createSymbol(
                         param.name,
                         SymbolKind.Property,
                         param.loc,
+                        joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
                         modifier({ visibility: parseFlag(param.flags) }),
-                        param.value,
-                        toFqcn(this.analyzer.member?.name || '', this.analyzer.containerName)
+                        param.value
                     )
                 );
                 continue;
             }
 
             this.analyzer.addSymbol(
-                this.analyzer.createSymbol(
+                createSymbol(
                     param.name,
                     SymbolKind.Parameter,
                     param.loc,
+                    joinNamespace(method.scope, method.name),
                     modifier({
                         isReadonly: param.readonly,
                         isNullable: param.nullable,
                         isVariadic: param.variadic,
                     }),
-                    param.value,
-                    toFqsen(method.kind, method.name, method.scope)
+                    param.value
                 )
             );
         }

@@ -4,10 +4,13 @@
  * ------------------------------------------------------------------------------------------ */
 
 import {
+    ConfigurationItem,
+    DidChangeConfigurationNotification,
     DidChangeWatchedFilesParams,
     FileChangeType,
     InitializeParams,
     LSPErrorCodes,
+    NotificationType,
     ResponseError,
     TextDocuments,
     TextDocumentSyncKind,
@@ -17,24 +20,61 @@ import { createConnection } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Laraphense } from './laraphense';
 import { Workspace } from './support/workspace';
-import { FolderKind } from './support/workspaceFolder';
-import { DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
+import { FolderKind, FolderUri } from './support/workspaceFolder';
+import { CONFIG_SECTION, DEFAULT_LARAPHENSE_CONFIG, DEFAULT_STUBS, EMPTY_COMPLETION_LIST } from './support/defaults';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { runSafe } from './helpers/general';
+import { getNestedValue, runSafe } from './helpers/general';
 import { homedir } from 'os';
 import { FileCache } from './support/cache';
 import { FlatDocument } from './support/document';
 import { laraphenseRc } from './languages/baseLang';
+import { Indexer } from './languages/php/indexer';
+import { pathToUri } from './helpers/uri';
 
 const connection = createConnection();
 
+let settings: any;
+let indexer: Indexer;
 let workspace: Workspace;
 let laraphense: Laraphense;
+let startTime: [number, number];
+let InitializeParams: InitializeParams;
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const emmetTriggerCharacters = ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
+const INDEXING_STARTED_NOTIFICATION = new NotificationType('indexingStarted');
+const INDEXING_ENDED_NOTIFICATION = new NotificationType('indexingEnded');
+
+function hasCapability<T>(key: string, defaultValue: T) {
+    return getNestedValue(InitializeParams.capabilities, key, defaultValue);
+}
+
+async function setSettings() {
+    if (!hasCapability('workspace.configuration', false)) {
+        return;
+    }
+
+    const items: ConfigurationItem[] = ['editor', 'html', 'css', 'javascript', CONFIG_SECTION, 'js/ts'].map((key) => {
+        return { section: key };
+    });
+
+    for (const [uri, folder] of workspace.folders) {
+        if (folder.kind !== FolderKind.Stub) {
+            items.push({
+                section: CONFIG_SECTION,
+                scopeUri: uri,
+            });
+        }
+    }
+
+    settings = await connection.workspace.getConfiguration(items);
+    laraphense.settings = Object.assign({}, settings[0]);
+}
+
 connection.onInitialize(async (params: InitializeParams) => {
+    InitializeParams = params;
+    startTime = process.hrtime();
     console.log(`laraphense started at ${new Date().toLocaleTimeString()}`);
 
     const cachePath: string = params.initializationOptions?.storagePath ?? join(homedir(), 'porifa_laraphense');
@@ -67,8 +107,9 @@ connection.onInitialize(async (params: InitializeParams) => {
             storageCache = await storageCache.clear();
         }
     }
+    indexer = new Indexer(workspace.config, storageCache, pathToUri(stubsPath) as FolderUri);
 
-    laraphense = new Laraphense(workspace, storageCache);
+    laraphense = new Laraphense(workspace, indexer);
 
     return {
         capabilities: {
@@ -91,13 +132,39 @@ connection.onInitialize(async (params: InitializeParams) => {
     };
 });
 
-// connection.onInitialized(() => {
-//     workspace.indexWorkspace();
-// });
+connection.onInitialized(async () => {
+    indexer.indexingStarted.addListener(() => {
+        console.info('Indexing started.');
+        startTime = process.hrtime();
+        connection.sendNotification(INDEXING_STARTED_NOTIFICATION.method);
+    });
 
-connection.onDidChangeConfiguration((change) => {
-    // fixme: Use the new pull model (`workspace/configuration` request)
-    laraphense.settings = change.settings;
+    indexer.indexingEnded.addListener((e) => {
+        console.info(`Indexing ended. ${e} files indexed in ${process.hrtime(startTime)[0]}s.`);
+        connection.sendNotification(INDEXING_ENDED_NOTIFICATION.method);
+    });
+
+    if (hasCapability('workspace.workspaceFolders', false)) {
+        connection.workspace.onDidChangeWorkspaceFolders(async (e) => {
+            for (let i = 0; i < e.added.length; ++i) {
+                workspace.addFolder(e.added[i].name, e.added[i].uri);
+            }
+            for (let j = 0; j < e.removed.length; ++j) {
+                workspace.removeFolder(e.removed[j].uri);
+            }
+        });
+    }
+    setSettings();
+
+    if (hasCapability('workspace.didChangeConfiguration.dynamicRegistration', false)) {
+        await connection.client.register(DidChangeConfigurationNotification.type, {
+            section: CONFIG_SECTION,
+        });
+    }
+});
+
+connection.onDidChangeConfiguration(async () => {
+    setSettings();
 });
 
 connection.onShutdown(() => {

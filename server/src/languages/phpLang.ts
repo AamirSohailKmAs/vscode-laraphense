@@ -17,19 +17,14 @@ import {
 import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 import { Indexer } from './php/indexer';
-import { FileCache } from '../support/cache';
-import { BladeParser } from '../bladeParser/parser';
 
 export class Php implements Language {
     public id: DocLang = DocLang.php;
-    public indexer: Indexer;
-
     private _providers: {
         documentSymbol: DocumentSymbolProvider;
     };
 
-    constructor(private _workspace: Workspace, private _parser: BladeParser, _fileCache: FileCache | undefined) {
-        this.indexer = new Indexer(this._parser, this._workspace.config, _fileCache);
+    constructor(private _workspace: Workspace, public indexer: Indexer) {
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(),
         };
@@ -40,23 +35,18 @@ export class Php implements Language {
     }
 
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
-        const uriParts = this._workspace.splitUri(document.uri);
-        if (!uriParts) {
-            console.log('folder not found');
+        let space = this.indexer.getProjectSpace(document.uri);
 
-            return [];
-        }
-
-        const symbolTable = this.indexer.symbolMap.get(uriParts.folderUri);
-
-        if (!symbolTable) {
+        if (!space) {
             // todo: wait for indexer to get ready
-            console.log('symbolTable not found');
-
+            console.warn('project folder not found', document.uri);
             return [];
         }
 
-        return this._providers.documentSymbol.provide(symbolTable.findSymbolsByUri(uriParts.fileUri), document.uri);
+        return this._providers.documentSymbol.provide(
+            space.project.symbolTable.findSymbolsByUri(space.fileUri),
+            document.uri
+        );
     }
     doComplete(
         document: FlatDocument,
@@ -71,22 +61,15 @@ export class Php implements Language {
     }
 
     doHover(document: FlatDocument, position: Position): Hover | null {
-        let uriParts = this._workspace.splitUri(document.uri);
-        if (!uriParts) {
-            console.log('folder not found');
-
+        let space = this.indexer.getProjectSpace(document.uri);
+        if (!space) {
+            console.warn('project folder not found');
             return null;
         }
 
-        const referenceTable = this.indexer.referenceMap.get(uriParts.folderUri);
-
-        if (!referenceTable) {
-            console.log('referenceTable not found');
-
-            return null;
-        }
-
-        console.log(referenceTable.findReferenceByOffsetInUri(uriParts.fileUri, document.offsetAt(position)));
+        console.log(
+            space.project.referenceTable.findReferenceByOffsetInUri(space.fileUri, document.offsetAt(position))
+        );
         return null;
     }
 

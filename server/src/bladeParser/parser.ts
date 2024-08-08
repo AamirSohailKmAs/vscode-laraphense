@@ -18,7 +18,7 @@ import { DocLang, FlatDocument } from '../support/document';
 import { BladeLexer } from './lexer';
 import { toDocLang } from '../helpers/uri';
 
-export type parserConfig = {
+type config = {
     parser: {
         extractDoc: boolean;
         suppressErrors: boolean;
@@ -40,8 +40,14 @@ export class BladeParser {
     private index: number = 0;
     private tree: Tree = { kind: 'tree', children: [], errors: [] };
     private inVerbatim = false;
+    private _config: config;
 
-    constructor(private _config: parserConfig) {
+    constructor(version: number = 820, extractDoc: boolean = true, suppressErrors: boolean = true) {
+        this._config = {
+            parser: { version, extractDoc, suppressErrors },
+            ast: { withPositions: true },
+            lexer: { short_tags: true },
+        };
         this.phpParser = new Engine(this._config);
         this._doc = new FlatDocument('init', DocLang.unknown, 1, '');
     }

@@ -5,13 +5,11 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocLang } from '../support/document';
 import { Library } from './baseLibrary';
 import { lte } from 'semver';
-import { FolderUri, WorkspaceFolder } from '../support/workspaceFolder';
+import { FolderUri } from '../support/workspaceFolder';
 import { directives } from './laravel/directives';
 import { Workspace } from '../support/workspace';
-import { FileCache } from '../support/cache';
-import { Php } from '../languages/phpLang';
-import { Blade } from '../languages/bladeLang';
 import { SymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { Indexer } from '../languages/php/indexer';
 
 export type Snippet = {
     label: string;
@@ -22,12 +20,7 @@ export type Snippet = {
 };
 export class Laravel implements Library {
     private _versions: Map<FolderUri, string> = new Map();
-    constructor(
-        private _php: Php,
-        private _blade: Blade,
-        private _workspace: Workspace,
-        private _fileCache: FileCache | undefined
-    ) {
+    constructor(private _workspace: Workspace, private _indexer: Indexer) {
         this.index();
     }
 
@@ -65,12 +58,15 @@ export class Laravel implements Library {
 
     public async index() {
         for (const [uri, folder] of this._workspace.folders) {
-            const symbolTable = this._php.indexer.symbolMap.get(uri);
-            if (!symbolTable) {
-                continue;
+            // todo: wait for indexer to get ready
+            let space = this._indexer.getProjectSpace(uri);
+
+            if (!space) {
+                console.warn('project folder not found', uri);
+                return [];
             }
 
-            const version = symbolTable.getSymbolNested(
+            const version = space.project.symbolTable.getSymbolNested(
                 'VERSION',
                 'Illuminate\\Foundation\\Application',
                 SymbolKind.ClassConstant
@@ -81,7 +77,7 @@ export class Laravel implements Library {
 
             console.log(`Laravel found v${version}`);
             this._versions.set(uri, version);
-            console.log(this._php.indexer.fileMap.get(uri));
+            console.log(space.project.files);
 
             // const entries = await folder.findFiles();
             // console.log(entries);

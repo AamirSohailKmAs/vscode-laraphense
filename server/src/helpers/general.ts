@@ -125,3 +125,17 @@ function append(result: string, str: string, n: number): string {
     }
     return result;
 }
+
+export function getNestedValue<T>(obj: Record<string, any>, path: string, defaultValue: T): T {
+    const pathArray = path.split('.');
+    let current = obj;
+
+    for (const key of pathArray) {
+        if (current === undefined || current === null || !(key in current)) {
+            return defaultValue;
+        }
+        current = current[key];
+    }
+
+    return current as T;
+}

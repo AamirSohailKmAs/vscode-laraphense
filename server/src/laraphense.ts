@@ -27,6 +27,7 @@ import { Php } from './languages/phpLang';
 import { Library } from './libraries/baseLibrary';
 import { Laravel } from './libraries/laravel';
 import { BladeParser } from './bladeParser/parser';
+import { Indexer } from './languages/php/indexer';
 
 export class Laraphense {
     private _parser: BladeParser;
@@ -36,16 +37,12 @@ export class Laraphense {
 
     private _libraries: Library[] = [];
 
-    constructor(private _workspace: Workspace, private _fileCache: FileCache | undefined) {
-        this._parser = new BladeParser({
-            parser: { extractDoc: true, suppressErrors: true, version: this._workspace.config.phpVersion },
-            ast: { withPositions: true },
-            lexer: { short_tags: true },
-        });
+    constructor(private _workspace: Workspace, _indexer: Indexer) {
+        this._parser = new BladeParser(this._workspace.config.phpVersion);
         this._openDocuments = new MemoryCache((doc) => this.getRegions(doc));
 
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
-        const phpLang = new Php(_workspace, this._parser, this._fileCache);
+        const phpLang = new Php(_workspace, _indexer);
         const bladeLang = new Blade(htmlLang);
 
         this._languages.set(DocLang.html, htmlLang);
@@ -54,7 +51,7 @@ export class Laraphense {
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
 
-        this._libraries.push(new Laravel(phpLang, bladeLang, this._workspace, this._fileCache));
+        this._libraries.push(new Laravel(this._workspace, _indexer));
 
         phpLang.indexer.indexingEnded.addListener(() => {
             this.initLibraries();

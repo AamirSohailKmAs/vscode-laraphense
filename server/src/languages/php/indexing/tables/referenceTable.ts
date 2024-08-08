@@ -22,10 +22,9 @@ export class ReferenceTable {
         return this.index++;
     }
 
-    public addReferences(references: PhpReference[], uri: RelativeUri) {
+    public addReferences(references: PhpReference[]) {
         for (let i = 0; i < references.length; i++) {
             const reference = references[i];
-            reference.uri = uri;
             this.addReference(reference);
         }
     }
@@ -51,6 +50,23 @@ export class ReferenceTable {
             this.referencesByUri.set(reference.uri, []);
         }
         this.referencesByUri.get(reference.uri)!.push(index);
+    }
+
+    public getReferenceByIds(referenceIds: number[]) {
+        const references: PhpReference[] = [];
+
+        for (let i = 0; i < referenceIds.length; i++) {
+            const ref = this.references.get(referenceIds[i]);
+            if (ref) {
+                references.push(ref);
+            }
+        }
+
+        return references;
+    }
+
+    public getReferenceById(referenceId: number) {
+        return this.references.get(referenceId);
     }
 
     public findReferenceByOffsetInUri(uri: string, offset: number): PhpReference | undefined {

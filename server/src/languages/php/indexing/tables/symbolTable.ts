@@ -84,10 +84,9 @@ export class SymbolTable {
         return this.index++;
     }
 
-    public addSymbols(symbols: PhpSymbol[], path: RelativeUri) {
+    public addSymbols(symbols: PhpSymbol[]) {
         for (let i = 0; i < symbols.length; i++) {
             const symbol = symbols[i];
-            symbol.uri = path;
             this.addSymbol(symbol);
         }
     }
@@ -122,9 +121,17 @@ export class SymbolTable {
         this.trie.insert(symbol.name, index);
     }
 
+    public getSymbolById(symbolId: number) {
+        return this.symbols.get(symbolId);
+    }
+
     public findSymbolByNamePrefix(prefix: string): PhpSymbol[] {
         const indices = this.trie.search(prefix);
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
+    }
+
+    public findSymbolByFqn(scope: string, name: string) {
+        return this.findSymbolsByScope(scope).find((symbol) => symbol.name === name);
     }
 
     public findSymbolByOffsetInUri(uri: string, offset: number): PhpSymbol | undefined {

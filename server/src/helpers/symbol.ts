@@ -135,8 +135,9 @@ export function joinNamespace(base: string, name: string) {
     }
     return `${base}\\${name}`;
 }
+export type FQN = { scope: string; name: string };
 
-export function splitNamespace(fqn: string): { scope: string; name: string } {
+export function splitNamespace(fqn: string): FQN {
     const lastIndex = fqn.lastIndexOf('\\');
     return { scope: fqn.substring(0, lastIndex), name: fqn.substring(lastIndex + 1) };
 }

@@ -119,7 +119,7 @@ export class FileCache {
         return runSafe(
             async () => {
                 await ensureFile(this.fullPath(key));
-                console.log(this.fullPath(key));
+                // console.log(this.fullPath(key));
                 return writeFile(this.fullPath(key), data, 'utf-8');
             },
             undefined,

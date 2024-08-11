@@ -13,7 +13,7 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { pushAll } from './helpers/general';
-import { FileCache, MemoryCache } from './support/cache';
+import { MemoryCache } from './support/cache';
 import { DocLang, FlatDocument, Regions } from './support/document';
 
 import { getCSSLanguageService } from 'vscode-css-languageservice';
@@ -186,6 +186,7 @@ export class Laraphense {
         if (!lang || !lang.findDocumentHighlight) {
             return [];
         }
+        console.log('provideDocumentHighlight');
         return lang.findDocumentHighlight(document, position);
     }
 

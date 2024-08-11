@@ -4,6 +4,7 @@ import { Location } from 'php-parser';
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import * as fs from 'fs';
 import { Trie } from '../../../../support/searchTree';
+import { FQN } from '../../../../helpers/symbol';
 
 interface CacheData {
     symbols: [number, PhpSymbol][];
@@ -130,7 +131,11 @@ export class SymbolTable {
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
 
-    public findSymbolByFqn(scope: string, name: string) {
+    public findSymbolByFqn({ scope, name }: FQN) {
+        return this.findSymbolByScopeName(scope, name);
+    }
+
+    public findSymbolByScopeName(scope: string, name: string) {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.name === name);
     }
 

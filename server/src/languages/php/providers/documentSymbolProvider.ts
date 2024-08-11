@@ -3,15 +3,24 @@
 import { DocumentUri, SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
 import { PhpSymbol, SymbolKind } from '../indexing/tables/symbolTable';
 import { toLSPRange } from '../../../helpers/symbol';
+import { Indexer } from '../indexer';
+import { FlatDocument } from '../../../support/document';
 
 export class DocumentSymbolProvider {
-    provide(symbols: PhpSymbol[], uri: DocumentUri): SymbolInformation[] {
+    constructor(private indexer: Indexer) {}
+
+    provide(doc: FlatDocument): SymbolInformation[] {
         const symbolsInfo: SymbolInformation[] = [];
+
+        let space = this.indexer.getProjectSpace(doc.uri);
+        if (!space) return symbolsInfo;
+
+        const symbols = space.project.symbolTable.findSymbolsByUri(space.fileUri);
 
         for (let i = 0; i < symbols.length; i++) {
             const symbol = symbols[i];
 
-            symbolsInfo.push(this.createSymbol(symbol, uri));
+            symbolsInfo.push(this.createSymbol(symbol, space.uri));
         }
 
         return symbolsInfo;

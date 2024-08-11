@@ -26,7 +26,7 @@ export class Php implements Language {
 
     constructor(private _workspace: Workspace, public indexer: Indexer) {
         this._providers = {
-            documentSymbol: new DocumentSymbolProvider(),
+            documentSymbol: new DocumentSymbolProvider(indexer),
         };
 
         this._workspace.folderAdded.addListener((data) => {
@@ -35,19 +35,9 @@ export class Php implements Language {
     }
 
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
-        let space = this.indexer.getProjectSpace(document.uri);
-
-        if (!space) {
-            // todo: wait for indexer to get ready
-            console.warn('project folder not found', document.uri);
-            return [];
-        }
-
-        return this._providers.documentSymbol.provide(
-            space.project.symbolTable.findSymbolsByUri(space.fileUri),
-            document.uri
-        );
+        return this._providers.documentSymbol.provide(document);
     }
+
     doComplete(
         document: FlatDocument,
         position: Position,
@@ -76,18 +66,23 @@ export class Php implements Language {
     doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {
         return null;
     }
+
     doValidation(document: FlatDocument): Diagnostic[] | Promise<Diagnostic[]> {
         return [];
     }
+
     findReferences(document: FlatDocument, position: Position): Location[] {
         return [];
     }
+
     findDefinition(document: FlatDocument, position: Position): Definition | null {
         return null;
     }
+
     findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {
         return [];
     }
+
     findDocumentLinks(document: FlatDocument, documentContext: DocContext): DocumentLink[] {
         return [];
     }

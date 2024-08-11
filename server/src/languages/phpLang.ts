@@ -17,16 +17,19 @@ import {
 import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 import { Indexer } from './php/indexer';
+import { HoverProvider } from './php/providers/HoverProvider';
 
 export class Php implements Language {
     public id: DocLang = DocLang.php;
     private _providers: {
         documentSymbol: DocumentSymbolProvider;
+        hover: HoverProvider;
     };
 
     constructor(private _workspace: Workspace, public indexer: Indexer) {
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(indexer),
+            hover: new HoverProvider(indexer),
         };
 
         this._workspace.folderAdded.addListener((data) => {
@@ -51,16 +54,7 @@ export class Php implements Language {
     }
 
     doHover(document: FlatDocument, position: Position): Hover | null {
-        let space = this.indexer.getProjectSpace(document.uri);
-        if (!space) {
-            console.warn('project folder not found');
-            return null;
-        }
-
-        console.log(
-            space.project.referenceTable.findReferenceByOffsetInUri(space.fileUri, document.offsetAt(position))
-        );
-        return null;
+        return this._providers.hover.provide(document, position);
     }
 
     doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {

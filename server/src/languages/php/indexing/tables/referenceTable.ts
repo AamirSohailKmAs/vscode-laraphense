@@ -3,8 +3,10 @@
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import * as fs from 'fs';
 import { Symbol } from './symbolTable';
+import { FQN } from '../../../../helpers/symbol';
 
 export type PhpReference = Symbol & {
+    fqn: FQN;
     symbolId: number;
 };
 
@@ -16,7 +18,15 @@ interface CacheData {
 export class ReferenceTable {
     private index: number = 0;
     private references: Map<number, PhpReference> = new Map();
-    private referencesByUri: Map<string, number[]> = new Map();
+    private referencesByUri: Map<RelativeUri, number[]> = new Map();
+    private pendingReferences: PhpReference[] = [];
+
+    public get pendingReferencesArray() {
+        const pending = this.pendingReferences;
+
+        this.pendingReferences = [];
+        return pending;
+    }
 
     public generateId(): number {
         return this.index++;
@@ -24,8 +34,7 @@ export class ReferenceTable {
 
     public addReferences(references: PhpReference[]) {
         for (let i = 0; i < references.length; i++) {
-            const reference = references[i];
-            this.addReference(reference);
+            this.addReference(references[i]);
         }
     }
 
@@ -40,6 +49,10 @@ export class ReferenceTable {
             return;
         }
 
+        if (reference.symbolId === 0) {
+            this.pendingReferences.push(reference);
+            return;
+        }
         // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
         // const oldSymbol = this._symbolMap.get(key);
 
@@ -69,7 +82,7 @@ export class ReferenceTable {
         return this.references.get(referenceId);
     }
 
-    public findReferenceByOffsetInUri(uri: string, offset: number): PhpReference | undefined {
+    public findReferenceByOffsetInUri(uri: RelativeUri, offset: number): PhpReference | undefined {
         const indices = this.referencesByUri.get(uri) || [];
 
         for (const index of indices) {
@@ -81,7 +94,7 @@ export class ReferenceTable {
         return undefined;
     }
 
-    public findReferencesByUri(uri: string): PhpReference[] {
+    public findReferencesByUri(uri: RelativeUri): PhpReference[] {
         const indices = this.referencesByUri.get(uri) || [];
         return indices.map((index) => this.references.get(index)!).filter((reference) => reference);
     }
@@ -114,7 +127,7 @@ export class ReferenceTable {
         }
     }
 
-    public deleteReferencesByUri(uri: string) {
+    public deleteReferencesByUri(uri: RelativeUri) {
         const indices = this.referencesByUri.get(uri) || [];
         for (const index of indices) {
             const reference = this.references.get(index);
@@ -133,10 +146,10 @@ export class ReferenceTable {
         };
     }
 
-    public loadFromFile(filePath: string) {
-        const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        this.references = new Map(data.references);
-        this.referencesByUri = new Map(Object.entries(data.uriIndex));
-    }
+    // public loadFromFile(filePath: string) {
+    //     const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    //     this.references = new Map(data.references);
+    //     this.referencesByUri = new Map(Object.entries(data.uriIndex));
+    // }
 }
 

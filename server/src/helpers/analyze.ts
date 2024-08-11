@@ -16,6 +16,7 @@ import {
 import { PhpSymbol, SymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
+import { FQN } from './symbol';
 
 export function createSymbol(
     name: string | Identifier,
@@ -51,7 +52,8 @@ export function createSymbol(
 export function createReference(
     name: string | Identifier,
     kind: SymbolKind,
-    loc: Location | null | undefined
+    loc: Location | null | undefined,
+    fqn: FQN = { scope: '', name: '' }
 ): PhpReference {
     name = normalizeName(name);
 
@@ -66,6 +68,7 @@ export function createReference(
         name,
         kind,
         loc,
+        fqn,
         uri: '' as RelativeUri,
     };
 

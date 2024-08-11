@@ -4,6 +4,7 @@ import { UseGroup } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, normalizeName } from '../../../../helpers/analyze';
+import { splitNamespace } from '../../../../helpers/symbol';
 
 export class UseGroupVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -22,8 +23,8 @@ export class UseGroupVisitor implements NodeVisitor {
                 this.analyzer.addReference(createReference(use.name, type, use.loc));
 
                 this.analyzer.addUseGroup({
-                    fqn: use.name,
-                    type: use.type ?? '', // todo: do we need this?
+                    name: use.name,
+                    fqn: splitNamespace(use.name),
                     alias: normalizeName(use.alias ?? ''),
                 });
             });

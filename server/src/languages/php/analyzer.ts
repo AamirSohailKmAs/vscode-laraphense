@@ -16,7 +16,7 @@ import { TraitUseVisitor } from './analyzing/visitors/TraitUseVisitor';
 import { PropertyVisitor } from './analyzing/visitors/PropertyVisitor';
 import { ClassConstantVisitor } from './analyzing/visitors/ClassConstantVisitor';
 import { MethodVisitor } from './analyzing/visitors/MethodVisitor';
-import { joinNamespace, splitNamespace } from '../../helpers/symbol';
+import { FQN, joinNamespace, splitNamespace } from '../../helpers/symbol';
 
 export type TreeLike = {
     kind: string;
@@ -29,8 +29,8 @@ export interface NodeVisitor {
 }
 
 type UseGroupInfo = {
-    fqn: string;
-    type: string;
+    fqn: FQN;
+    name: string;
     alias?: string;
 };
 
@@ -134,11 +134,11 @@ export class Analyzer {
         reference.id = this.referenceTable.generateId();
         reference.uri = this.uri;
         this.references.push(reference);
-        this.resolveReferenceOrKeep(reference);
+        this.linkReferenceOrKeep(reference);
     }
 
-    private resolveReferenceOrKeep(reference: PhpReference) {
-        if (this.resolveReference(reference)) {
+    private linkReferenceOrKeep(reference: PhpReference) {
+        if (this.linkReference(reference)) {
             return;
         }
 
@@ -148,7 +148,7 @@ export class Analyzer {
         this.pendingReferences.get(reference.name)!.push(reference);
     }
 
-    private resolveReference(reference: PhpReference) {
+    private linkReference(reference: PhpReference) {
         const symbol = this.findSymbolForReference(reference);
 
         if (!symbol) return false;
@@ -160,13 +160,11 @@ export class Analyzer {
 
     private findSymbolForReference(reference: PhpReference): PhpSymbol | undefined {
         // Utilize useGroups to resolve FQN for references
-        const useGroup = this.useGroups.find((ug) => ug.alias === reference.name || ug.fqn.endsWith(reference.name));
+        const useGroup = this.useGroups.find((ug) => ug.alias === reference.name || ug.name.endsWith(reference.name));
 
         if (useGroup) {
-            const fqn = useGroup.alias ? useGroup.fqn.replace(useGroup.alias, reference.name) : useGroup.fqn;
-            // fixme: what if reference can have fqn we'll set it
-            const split = splitNamespace(fqn);
-            const symbol = this.symbolTable.findSymbolByFqn(split.scope, split.name);
+            reference.fqn = useGroup.fqn;
+            const symbol = this.symbolTable.findSymbolByFqn(useGroup.fqn);
             return symbol;
         }
         // Implement logic to find the corresponding symbol for the given reference
@@ -189,7 +187,7 @@ export class Analyzer {
     public resolvePendingReferences() {
         this.pendingReferences.forEach((references, name) => {
             for (let i = 0; i < references.length; i++) {
-                this.resolveReference(references[i]);
+                this.linkReference(references[i]);
                 // this.pendingReferences.delete(symbol.name);
             }
         });

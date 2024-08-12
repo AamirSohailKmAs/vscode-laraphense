@@ -3,12 +3,19 @@
     "typescript.tsc.autoDetect": "off",
     "typescript.preferences.quoteStyle": "single",
     "cSpell.words": [
+        "classconstant",
+        "constantstatement",
         "endphp",
         "endverbatim",
+        "enumcase",
+        "expressionstatement",
         "languageservice",
         "laraphenserc",
+        "propertystatement",
         "Skippable",
         "skippables",
+        "traituse",
+        "usegroup",
         "whitespaces"
     ]
 }

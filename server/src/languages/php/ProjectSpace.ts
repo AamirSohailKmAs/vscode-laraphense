@@ -99,10 +99,15 @@ export class ProjectSpace {
     }
 
     public linkPendingReferences() {
-        const references = this.referenceTable.pendingReferencesArray;
+        const references = this.referenceTable.pendingReferences;
+        const stillPending: PhpReference[] = [];
         for (let i = 0, l = references.length; i < l; i++) {
-            this.linkReference(references[i]);
+            if (!this.linkReference(references[i])) {
+                stillPending.push(references[i]);
+            }
         }
+
+        this.referenceTable.pendingReferences = stillPending;
     }
 
     private linkReference(reference: PhpReference) {
@@ -112,6 +117,7 @@ export class ProjectSpace {
 
         reference.symbolId = symbol.id;
         symbol.referenceIds.push(reference.id);
+        return true;
     }
 
     public findSymbolForReference(reference: PhpReference): PhpSymbol | undefined {

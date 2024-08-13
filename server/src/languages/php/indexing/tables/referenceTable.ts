@@ -19,14 +19,7 @@ export class ReferenceTable {
     private index: number = 0;
     private references: Map<number, PhpReference> = new Map();
     private referencesByUri: Map<RelativeUri, number[]> = new Map();
-    private pendingReferences: PhpReference[] = [];
-
-    public get pendingReferencesArray() {
-        const pending = this.pendingReferences;
-
-        this.pendingReferences = [];
-        return pending;
-    }
+    public pendingReferences: PhpReference[] = [];
 
     public generateId(): number {
         return this.index++;

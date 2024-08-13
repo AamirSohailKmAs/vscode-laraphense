@@ -56,7 +56,7 @@ export class Indexer {
         const folderUri = this.findFolderUriContainingUri(uri);
 
         if (!folderUri) {
-            console.warn('project folder not found', uri);
+            console.warn(`project folder not found for ${uri}`, Array.from(this.projectSpaces.keys()));
             return undefined;
         }
 
@@ -112,6 +112,7 @@ export class Indexer {
         const { count, missingFiles } = await context.indexFiles(this._fetcher);
 
         context.linkPendingReferences();
+        console.log(context.referenceTable.pendingReferences);
 
         this._folderIndexingEnded.emit({ uri: folder.uri, filesCount: count });
         console.log(`folder [${folder.uri}] indexing completed with files [${count}]`);

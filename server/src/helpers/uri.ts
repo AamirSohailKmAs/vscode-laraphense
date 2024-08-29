@@ -20,7 +20,7 @@ export function getUriScheme(uri: string) {
 }
 
 export function folderContainsUri(folder: string, uri: string) {
-    return uri.indexOf(folder + '/') === 0;
+    return uri.indexOf(folder) === 0;
 }
 
 export function guessLangFromUri(uri: string) {

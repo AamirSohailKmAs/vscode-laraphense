@@ -29,7 +29,7 @@ export function toFqsen(kind: SymbolKind, name: string, containerName: string | 
         case SymbolKind.Interface:
         case SymbolKind.Enum:
         case SymbolKind.Trait:
-            return toFqcn(name, containerName) as unknown as Fqsen;
+            return joinNamespace(containerName, name) as unknown as Fqsen;
         default:
             return `${containerName}${toSelector(kind, name)}` as Fqsen;
     }
@@ -58,17 +58,6 @@ export function toSelector(kind: SymbolKind, name: string): Selector {
             console.log(`default selector kind:${kind}, name:${name}`);
             return `:${name}` as Selector;
     }
-}
-
-// fixme: not in use
-export function toFqcn(name: string, containerName: string | undefined): Fqcn {
-    let separator = '\\';
-    if (!containerName) {
-        containerName = '';
-        separator = '';
-    }
-
-    return `${containerName}${separator}${name}` as Fqcn;
 }
 
 export function psr4Path(namespace: string, paths: string[], mapping?: { [vendor: string]: string }): string {

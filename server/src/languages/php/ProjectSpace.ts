@@ -9,6 +9,7 @@ import { FolderUri, RelativeUri, FileEntry } from '../../support/workspaceFolder
 import { Analyzer } from './analyzer';
 import { ReferenceTable, PhpReference } from './indexing/tables/referenceTable';
 import { SymbolTable, PhpSymbol } from './indexing/tables/symbolTable';
+import { splitNamespace } from '../../helpers/symbol';
 
 export type Space = {
     project: ProjectSpace;
@@ -80,6 +81,7 @@ export class ProjectSpace {
                     }
                     this.symbolTable.addSymbols(compiled.symbols);
                     this.referenceTable.addReferences(compiled.references);
+                    this.referenceTable.addImports(compiled.importStatements);
 
                     count++;
                 })
@@ -122,11 +124,25 @@ export class ProjectSpace {
 
     public findSymbolForReference(reference: PhpReference): PhpSymbol | undefined {
         if (this.stubsContext) {
-            const symbol = this.stubsContext.symbolTable.findSymbolByFqn(reference.fqn);
+            let symbol = this.findReferenceFromTable(this.stubsContext.symbolTable, reference);
             if (symbol) return symbol;
         }
 
-        return this.symbolTable.findSymbolByFqn(reference.fqn);
+        let symbol = this.findReferenceFromTable(this.symbolTable, reference);
+        if (symbol) return symbol;
+
+        return undefined;
+    }
+
+    private findReferenceFromTable(table: SymbolTable, reference: PhpReference) {
+        let symbol = table.findSymbolByFqn(reference.fqn);
+        if (symbol) return symbol;
+        symbol = table.findSymbolByFqn(reference.definedIn);
+        if (symbol) return symbol;
+        symbol = table.findSymbolByFqn(splitNamespace(reference.name));
+        if (symbol) return symbol;
+        symbol = table.findSymbolByScopeName('', reference.name);
+        if (symbol) return symbol;
     }
 
     private indexFile(fetcher: Fetcher, entry: FileEntry) {
@@ -137,7 +153,7 @@ export class ProjectSpace {
         }
 
         const astTree = this.parser.parseFlatDoc(flatDoc);
-        const { symbols, references } = this.analyzer.analyse(astTree, entry.uri as RelativeUri);
+        const { symbols, references, importStatements } = this.analyzer.analyse(astTree, entry.uri as RelativeUri);
         flatDoc.lastCompile = process.hrtime();
 
         // Link references to stubs if necessary
@@ -151,7 +167,7 @@ export class ProjectSpace {
             });
         }
 
-        return { astTree, symbols, references };
+        return { astTree, symbols, references, importStatements };
     }
 
     private createBatches<T>(array: T[], batchSize: number): T[][] {

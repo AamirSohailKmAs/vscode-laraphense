@@ -93,6 +93,9 @@ export class SymbolTable {
     }
 
     public addSymbol(symbol: PhpSymbol) {
+        if (symbol.uri === '') {
+            return;
+        }
         if (symbol.id === 0) {
             symbol.id = this.generateId();
         }

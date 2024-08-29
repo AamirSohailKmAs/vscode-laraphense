@@ -1,10 +1,9 @@
 'use strict';
 
-import { Identifier, PropertyStatement } from 'php-parser';
+import { PropertyStatement } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
-import { createReference, createSymbol, modifier } from '../../../../helpers/analyze';
-import { joinNamespace } from '../../../../helpers/symbol';
+import { createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class PropertyVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -19,7 +18,7 @@ export class PropertyVisitor implements NodeVisitor {
                     prop.name,
                     SymbolKind.Property,
                     node.loc,
-                    joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
+                    this.analyzer.scope,
                     modifier({
                         isReadonly: prop.readonly,
                         isStatic: node.isStatic,

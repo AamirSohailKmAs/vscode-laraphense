@@ -1,77 +1,63 @@
 'use strict';
 
-import { Block, Method } from 'php-parser';
+import { Method, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { createSymbol, modifier, normalizeName, parseFlag } from '../../../../helpers/analyze';
-import { joinNamespace } from '../../../../helpers/symbol';
-import { PhpSymbol, SymbolKind } from '../../indexing/tables/symbolTable';
+import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
+import { SymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    public visit(methodNode: unknown): boolean {
-        const node = methodNode as Method;
+    public visit(node: unknown): boolean {
+        const methodNode = node as Method;
         // todo: Attribute, type, byref
         const method = createSymbol(
-            node.name,
+            methodNode.name,
             SymbolKind.Method,
-            node.loc,
-            joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
+            methodNode.loc,
+            this.analyzer.scope,
             modifier({
-                isAbstract: node.isAbstract,
-                isFinal: node.isFinal,
-                isStatic: node.isStatic,
-                isNullable: node.nullable,
-                visibility: node.visibility,
+                isAbstract: methodNode.isAbstract,
+                isFinal: methodNode.isFinal,
+                isStatic: methodNode.isStatic,
+                isNullable: methodNode.nullable,
+                visibility: methodNode.visibility,
             }),
             undefined
         );
-        this.analyzer.addSymbol(method);
+        this.analyzer.setMember(method);
 
-        for (let i = 0; i < node.arguments.length; i++) {
-            const param = node.arguments[i];
+        // Visit parameters
+        if (methodNode.arguments) {
             //todo: Attribute, type, byref
-            if (normalizeName(node.name) === '__construct' && param.flags > 0) {
-                this.analyzer.addSymbol(
-                    createSymbol(
-                        param.name,
-                        SymbolKind.Property,
-                        param.loc,
-                        joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
-                        modifier({ visibility: parseFlag(param.flags) }),
-                        param.value
-                    )
-                );
-                continue;
-            }
-
-            this.analyzer.addSymbol(
-                createSymbol(
-                    param.name,
-                    SymbolKind.Parameter,
-                    param.loc,
-                    joinNamespace(method.scope, method.name),
-                    modifier({
-                        isReadonly: param.readonly,
-                        isNullable: param.nullable,
-                        isVariadic: param.variadic,
-                    }),
-                    param.value
-                )
-            );
+            methodNode.arguments.forEach((param) => this.visitParameter(param, method.name));
         }
 
-        if (node.body) {
-            // should go inside and get the symbols and references
-            this._analyseInsideMethod(node.body, method);
-        }
-        return false;
+        return true;
     }
 
-    private _analyseInsideMethod(body: Block, method: PhpSymbol) {
-        // body.children.forEach((param) => {
-        //     this.addChildrenSymbol(this._newSymbol(param.name, SymbolKind.Variable, param.loc), method);
-        // });
+    private visitParameter(param: Parameter, methodName: string): void {
+        const kind = methodName === '__construct' && param.flags > 0 ? SymbolKind.Property : SymbolKind.Parameter;
+
+        const modifiers = modifier({
+            isReadonly: param.readonly,
+            isNullable: param.nullable,
+            isVariadic: param.variadic,
+            visibility: kind === SymbolKind.Property ? parseFlag(param.flags) : undefined,
+        });
+
+        this.analyzer.addSymbol(createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.value));
+
+        //todo: Attribute, type, byref
+        // Handle any default values or type hints as references
+        if (param.value) {
+            // console.log(param.value);
+            // this.visitExpression(param.value);
+        }
+        if (param.type) {
+            // console.log(param.type);
+            // this.analyzer.addReference(createReference(param.type, param.loc));
+        }
     }
 }
 

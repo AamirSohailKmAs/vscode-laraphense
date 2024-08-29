@@ -10,10 +10,8 @@ export class InterfaceVisitor implements NodeVisitor {
 
     visit(interfaceNode: Interface): boolean {
         // todo: Attribute
-        const symbol = this.analyzer.addSymbol(
-            createSymbol(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc, this.analyzer.scope)
-        );
-        this.analyzer.member = symbol;
+        const scope = this.analyzer.resetMember();
+        this.analyzer.setMember(createSymbol(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc, scope));
 
         if (interfaceNode.extends) {
             interfaceNode.extends.forEach((interfaceNode) => {

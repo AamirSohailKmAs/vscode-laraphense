@@ -10,11 +10,9 @@ export class TraitVisitor implements NodeVisitor {
 
     visit(traitNode: Trait): boolean {
         // todo: how to set loc of name
-        const symbol = createSymbol(traitNode.name, SymbolKind.Trait, traitNode.loc, this.analyzer.scope);
+        const scope = this.analyzer.resetMember();
         // todo: Attribute
-        this.analyzer.addSymbol(symbol);
-
-        this.analyzer.member = symbol;
+        this.analyzer.setMember(createSymbol(traitNode.name, SymbolKind.Trait, traitNode.loc, scope));
         return true;
     }
 }

@@ -10,9 +10,8 @@ export class EnumVisitor implements NodeVisitor {
 
     visit(node: Enum): boolean {
         // todo: Attribute, type
-        const symbol = this.analyzer.addSymbol(createSymbol(node.name, SymbolKind.Enum, node.loc, this.analyzer.scope));
-
-        this.analyzer.member = symbol;
+        const scope = this.analyzer.resetMember();
+        this.analyzer.setMember(createSymbol(node.name, SymbolKind.Enum, node.loc, scope));
 
         if (node.implements) {
             node.implements.forEach((interfaceNode) => {

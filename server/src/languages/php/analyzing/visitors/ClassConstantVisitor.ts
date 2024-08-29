@@ -3,7 +3,6 @@
 import { ClassConstant } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol, modifier } from '../../../../helpers/analyze';
-import { joinNamespace } from '../../../../helpers/symbol';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
 
 export class ClassConstantVisitor implements NodeVisitor {
@@ -17,7 +16,7 @@ export class ClassConstantVisitor implements NodeVisitor {
                     constant.name,
                     SymbolKind.Constant,
                     constant.loc,
-                    joinNamespace(this.analyzer.scope, this.analyzer.member?.name || ''),
+                    this.analyzer.scope,
                     modifier({ isFinal: node.final, visibility: node.visibility }),
                     constant.value
                 )

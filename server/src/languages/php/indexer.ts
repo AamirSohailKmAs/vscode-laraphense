@@ -112,7 +112,7 @@ export class Indexer {
         const { count, missingFiles } = await context.indexFiles(this._fetcher);
 
         context.linkPendingReferences();
-        console.log(context.referenceTable.pendingReferences);
+        // console.log(context.referenceTable.pendingReferences);
 
         this._folderIndexingEnded.emit({ uri: folder.uri, filesCount: count });
         console.log(`folder [${folder.uri}] indexing completed with files [${count}]`);

@@ -9,11 +9,12 @@ export class ClassVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
     visit(classNode: Class): boolean {
+        const scope = this.analyzer.resetMember();
         const symbol = createSymbol(
             classNode.name,
             SymbolKind.Class,
             classNode.loc,
-            this.analyzer.scope,
+            scope,
             modifier({
                 isAbstract: classNode.isAbstract,
                 isFinal: classNode.isFinal,
@@ -22,8 +23,7 @@ export class ClassVisitor implements NodeVisitor {
             })
         );
         // todo: Attribute
-        this.analyzer.addSymbol(symbol);
-        this.analyzer.member = symbol;
+        this.analyzer.setMember(symbol);
 
         if (classNode.extends) {
             this.analyzer.addReference(createReference(classNode.extends, SymbolKind.Class, classNode.extends.loc));

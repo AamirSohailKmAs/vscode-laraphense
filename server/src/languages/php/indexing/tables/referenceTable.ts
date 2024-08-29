@@ -7,7 +7,12 @@ import { FQN } from '../../../../helpers/symbol';
 
 export type PhpReference = Symbol & {
     fqn: FQN;
+    definedIn: FQN;
     symbolId: number;
+};
+
+export type ImportStatement = PhpReference & {
+    alias: string;
 };
 
 interface CacheData {
@@ -19,6 +24,7 @@ export class ReferenceTable {
     private index: number = 0;
     private references: Map<number, PhpReference> = new Map();
     private referencesByUri: Map<RelativeUri, number[]> = new Map();
+    private importsByUri: Map<RelativeUri, number[]> = new Map();
     public pendingReferences: PhpReference[] = [];
 
     public generateId(): number {
@@ -31,6 +37,17 @@ export class ReferenceTable {
         }
     }
 
+    public addImports(references: ImportStatement[]) {
+        for (let i = 0; i < references.length; i++) {
+            const ref = this.addReference(references[i]);
+
+            if (!this.importsByUri.has(ref.uri)) {
+                this.importsByUri.set(ref.uri, []);
+            }
+            this.importsByUri.get(ref.uri)!.push(ref.id);
+        }
+    }
+
     public addReference(reference: PhpReference) {
         if (reference.id === 0) {
             reference.id = this.generateId();
@@ -39,12 +56,12 @@ export class ReferenceTable {
         if (this.references.has(reference.id)) {
             console.log(reference, ' already exists');
 
-            return;
+            return reference;
         }
 
         if (reference.symbolId === 0) {
             this.pendingReferences.push(reference);
-            return;
+            return reference;
         }
         // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
         // const oldSymbol = this._symbolMap.get(key);
@@ -56,6 +73,8 @@ export class ReferenceTable {
             this.referencesByUri.set(reference.uri, []);
         }
         this.referencesByUri.get(reference.uri)!.push(index);
+
+        return reference;
     }
 
     public getReferenceByIds(referenceIds: number[]) {

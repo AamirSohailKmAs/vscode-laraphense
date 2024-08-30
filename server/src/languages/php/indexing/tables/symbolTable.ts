@@ -5,6 +5,7 @@ import { RelativeUri } from '../../../../support/workspaceFolder';
 import * as fs from 'fs';
 import { Trie } from '../../../../support/searchTree';
 import { FQN } from '../../../../helpers/symbol';
+import { Position } from 'vscode-languageserver-textdocument';
 
 interface CacheData {
     symbols: [number, PhpSymbol][];

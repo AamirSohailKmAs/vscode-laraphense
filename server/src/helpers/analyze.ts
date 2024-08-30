@@ -13,7 +13,7 @@ import {
     NullKeyword,
     Location,
 } from 'php-parser';
-import { PhpSymbol, SymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, SymbolKind, SymbolModifier, Value, ValueKind } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { ImportStatement, PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { FQN } from './symbol';
@@ -27,7 +27,7 @@ export function createSymbol(
     value?: string | number | boolean | Node | null
 ): PhpSymbol {
     name = normalizeName(name);
-    value = normalizeValue(value);
+    const valueObject = normalizeValue(value);
 
     if (loc === null || loc === undefined) {
         loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
@@ -41,7 +41,7 @@ export function createSymbol(
         loc,
         uri: '' as RelativeUri,
         modifiers,
-        value,
+        value: valueObject,
         scope,
         referenceIds: [],
     };
@@ -113,34 +113,33 @@ export function normalizeName(name: string | Identifier) {
     return name;
 }
 
-export function normalizeValue(value: string | number | boolean | Node | null | undefined) {
-    if (value === undefined) {
+export function normalizeValue(value: string | number | boolean | Node | null | undefined): Value | undefined {
+    if (value === undefined || value === null) {
         return undefined;
     }
-    if (value === null) {
-        return 'null';
+
+    if (typeof value === 'string') {
+        return { raw: `'${value}'`, kind: ValueKind.String };
     }
-    if (
-        typeof value === 'string' ||
-        typeof value === 'number' ||
-        typeof value === 'boolean' ||
-        typeof value === 'bigint'
-    ) {
-        return `${value}`;
+    if (typeof value === 'number' || typeof value === 'bigint') {
+        return { raw: `${value}`, kind: ValueKind.Number };
+    }
+    if (typeof value === 'boolean') {
+        return { raw: `${value}`, kind: ValueKind.Boolean };
     }
 
-    const valueMap: Record<string, (node: any) => string | undefined> = {
-        number: (node: ParserNumber): string | undefined => {
-            return node.raw;
+    const valueMap: Record<string, (node: any) => Value | undefined> = {
+        number: (node: ParserNumber): Value | undefined => {
+            return { raw: node.raw, kind: ValueKind.Number };
         },
-        string: (node: ParserString): string | undefined => {
-            return node.value;
+        string: (node: ParserString): Value | undefined => {
+            return { raw: node.raw, kind: ValueKind.String };
         },
-        boolean: (node: ParserBoolean): string | undefined => {
-            return node.raw;
+        boolean: (node: ParserBoolean): Value | undefined => {
+            return { raw: node.raw, kind: ValueKind.Boolean };
         },
-        nullkeyword: (_node: NullKeyword): string | undefined => {
-            return 'null';
+        nullkeyword: (_node: NullKeyword): Value | undefined => {
+            return { raw: 'null', kind: ValueKind.Null };
         },
         // array: (node: ParserArray): string | undefined => {
         //     node.raw

@@ -52,9 +52,25 @@ export const enum SymbolKind {
     Constant,
 }
 
+export const enum ValueKind {
+    EnumMember,
+    ClassConstant,
+    Array,
+    Null,
+    String,
+    Number,
+    Boolean,
+    Constant,
+}
+
 export type PhpType = {
     name: string;
     items?: PhpType[];
+};
+
+export type Value = {
+    kind: ValueKind;
+    raw: string;
 };
 
 export type Symbol = {
@@ -67,7 +83,7 @@ export type Symbol = {
 
 export type PhpSymbol = Symbol & {
     // namePosition: number;
-    value?: string;
+    value?: Value;
     modifiers: SymbolModifier[];
     scope: string;
     type?: PhpType;

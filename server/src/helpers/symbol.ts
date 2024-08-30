@@ -22,7 +22,6 @@ export function toLSPPosition(position: ParserPosition) {
     return LSPPosition.create(position.line - 1, position.column);
 }
 
-// fixme: not in use
 export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
     switch (kind) {
         case SymbolKind.Class:
@@ -41,12 +40,11 @@ export function splitFqsen(fqsen: Fqsen): { fqcn: Fqcn; selector: Selector } {
     return { fqcn: keys[0] as Fqcn, selector: keys[1] as Selector };
 }
 
-// fixme: not in use
 export function toSelector(kind: SymbolKind, name: string): Selector {
     switch (kind) {
         case SymbolKind.Function:
         case SymbolKind.Method:
-            return `:(${name}` as Selector;
+            return `:${name}()` as Selector;
         case SymbolKind.Property:
         case SymbolKind.Parameter:
             return `:$${name}` as Selector;

@@ -69,6 +69,14 @@ export class NamespaceVisitor implements NodeVisitor {
     }
 }
 
+export class BlockVisitor implements NodeVisitor {
+    constructor(private analyzer: Analyzer) {}
+
+    visit(_node: Block): boolean {
+        return true;
+    }
+}
+
 export class Analyzer {
     private namespace: string = '';
     private member?: PhpSymbol = undefined;
@@ -100,6 +108,8 @@ export class Analyzer {
             propertystatement: new PropertyVisitor(this),
             classconstant: new ClassConstantVisitor(this),
             method: new MethodVisitor(this),
+
+            block: new BlockVisitor(this),
 
             // define("FOO",     "something"); todo:
             constantstatement: new ConstantStatementVisitor(this),

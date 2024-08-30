@@ -9,7 +9,7 @@ export class SwitchVisitor implements NodeVisitor {
     visit(node: Switch): boolean {
         // this.visitExpression(node.test);
 
-        return true;
+        return false;
     }
 }
 

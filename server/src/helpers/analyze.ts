@@ -208,8 +208,10 @@ export function normalizeVisibility(visibility: string | null): SymbolModifier {
             return SymbolModifier.Private;
         case 'protected':
             return SymbolModifier.Protected;
+        case 'public':
+            return SymbolModifier.Public;
         default:
-            return SymbolModifier.Protected;
+            return SymbolModifier.Public;
     }
 }
 

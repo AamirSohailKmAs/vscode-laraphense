@@ -133,14 +133,14 @@ connection.onInitialize(async (params: InitializeParams) => {
 });
 
 connection.onInitialized(async () => {
-    indexer.indexingStarted.addListener(() => {
-        console.info('Indexing started.');
+    indexer.folderIndexingStarted.addListener((e) => {
+        console.log(`Indexing (${e.name}) started with ${e.withFiles} files`);
         startTime = process.hrtime();
         connection.sendNotification(INDEXING_STARTED_NOTIFICATION.method);
     });
 
-    indexer.indexingEnded.addListener((e) => {
-        console.info(`Indexing ended. ${e} files indexed in ${process.hrtime(startTime)[0]}s.`);
+    indexer.folderIndexingEnded.addListener((e) => {
+        console.info(`Indexing (${e.name}) ended. ${e.filesCount} files indexed in ${process.hrtime(startTime)[0]}s.`);
         connection.sendNotification(INDEXING_ENDED_NOTIFICATION.method);
     });
 

@@ -5,15 +5,18 @@
     "cSpell.words": [
         "classconstant",
         "constantstatement",
+        "encapsed",
         "endphp",
         "endverbatim",
         "enumcase",
         "expressionstatement",
         "languageservice",
         "laraphenserc",
+        "nullkeyword",
         "propertystatement",
         "Skippable",
         "skippables",
+        "staticlookup",
         "traituse",
         "usegroup",
         "whitespaces"

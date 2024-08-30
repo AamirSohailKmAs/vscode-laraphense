@@ -3,7 +3,7 @@
 import { laraphenseRc } from '../baseLang';
 import { FlatDocument } from '../../support/document';
 import { Fetcher } from '../../support/fetcher';
-import { FileEntry, FolderUri, RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
+import { FileEntry, FolderKind, FolderUri, RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
 import { EventEmitter } from '../../support/eventEmitter';
 import { FileCache } from '../../support/cache';
 import { join } from 'path';
@@ -17,10 +17,8 @@ export class Indexer {
     private stubsSpace: ProjectSpace;
     private projectSpaces: Map<FolderUri, ProjectSpace> = new Map();
 
-    private _indexingStarted: EventEmitter<{}>;
-    private _indexingEnded: EventEmitter<{ filesCount: number }>;
-    private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; withFiles: number }>;
-    private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; filesCount: number }>;
+    private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
+    private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; filesCount: number }>;
 
     constructor(private config: laraphenseRc, public cache: FileCache | undefined, stubsUri: FolderUri) {
         this._fetcher = new Fetcher();
@@ -31,17 +29,6 @@ export class Indexer {
 
         this._folderIndexingStarted = new EventEmitter();
         this._folderIndexingEnded = new EventEmitter();
-
-        this._indexingEnded = new EventEmitter();
-        this._indexingStarted = new EventEmitter(true);
-    }
-
-    public get indexingStarted() {
-        return this._indexingStarted;
-    }
-
-    public get indexingEnded() {
-        return this._indexingEnded;
     }
 
     public get folderIndexingStarted() {
@@ -102,8 +89,9 @@ export class Indexer {
             return;
         }
 
-        this._folderIndexingStarted.emit({ uri: folder.uri, withFiles: files.length });
-        console.log(`indexing Folder [${folder.uri}] having files [${files.length}]`);
+        if (folder.kind === FolderKind.User) {
+            this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
+        }
 
         const context = new ProjectSpace(folder.uri, new BladeParser(this.config.phpVersion), this.stubsSpace);
         context.addFiles(files);
@@ -114,8 +102,10 @@ export class Indexer {
         context.linkPendingReferences();
         // console.log(context.referenceTable.pendingReferences);
 
-        this._folderIndexingEnded.emit({ uri: folder.uri, filesCount: count });
-        console.log(`folder [${folder.uri}] indexing completed with files [${count}]`);
+        if (folder.kind === FolderKind.User) {
+            this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, filesCount: count });
+        }
+
         if (missingFiles.length > 0) {
             console.log('missingFiles', missingFiles);
         }

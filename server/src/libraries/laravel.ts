@@ -57,31 +57,27 @@ export class Laravel implements Library {
     }
 
     public async index() {
-        for (const [uri, folder] of this._workspace.folders) {
-            // todo: wait for indexer to get ready
-            let space = this._indexer.getProjectSpace(uri);
-
-            if (!space) {
-                console.warn('project folder not found', uri);
-                return [];
-            }
-
-            const version = space.project.symbolTable.getSymbolNested(
-                'VERSION',
-                'Illuminate\\Foundation\\Application',
-                SymbolKind.ClassConstant
-            )?.value;
-            if (!version) {
-                continue;
-            }
-
-            console.log(`Laravel found v${version}`);
-            this._versions.set(uri, version);
-            console.log(space.project.files);
-
-            // const entries = await folder.findFiles();
-            // console.log(entries);
-        }
+        // for (const [uri, folder] of this._workspace.folders) {
+        //     // todo: wait for indexer to get ready
+        //     let space = this._indexer.getProjectSpace(uri);
+        //     if (!space) {
+        //         console.warn('project folder not found', uri);
+        //         return [];
+        //     }
+        //     const version = space.project.symbolTable.getSymbolNested(
+        //         'VERSION',
+        //         'Illuminate\\Foundation\\Application',
+        //         SymbolKind.ClassConstant
+        //     )?.value;
+        //     if (!version) {
+        //         continue;
+        //     }
+        //     console.log(`Laravel found v${version}`);
+        //     this._versions.set(uri, version);
+        //     console.log(space.project.files);
+        //     // const entries = await folder.findFiles();
+        //     // console.log(entries);
+        // }
     }
 
     private getSnippetsUpToVersion(allObjects: Snippet[], version: string): Snippet[] {

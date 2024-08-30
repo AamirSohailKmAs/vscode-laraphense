@@ -264,8 +264,9 @@ export class Analyzer {
     public resolvePendingReferences() {
         this.pendingReferences.forEach((references, name) => {
             for (let i = 0; i < references.length; i++) {
-                this.linkReference(references[i]);
-                // this.pendingReferences.delete(symbol.name);
+                if (this.linkReference(references[i])) {
+                    // this.pendingReferences.delete(references[i].name);
+                }
             }
         });
     }
@@ -285,7 +286,7 @@ export class Analyzer {
             }
             if (treeNode.kind === 'namespace') {
                 if (this.stateStack.length !== 1) {
-                    console.log(this.uri);
+                    // console.log(this.uri);
                 }
 
                 this.stateStack.pop();

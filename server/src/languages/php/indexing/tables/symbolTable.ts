@@ -146,6 +146,10 @@ export class SymbolTable {
         return this.symbols.get(symbolId);
     }
 
+    public getSymbolsById(symbolIds: number[]) {
+        return symbolIds.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
+    }
+
     public findSymbolByNamePrefix(prefix: string): PhpSymbol[] {
         const indices = this.trie.search(prefix);
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);

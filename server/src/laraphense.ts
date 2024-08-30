@@ -51,9 +51,9 @@ export class Laraphense {
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
 
-        this._libraries.push(new Laravel(this._workspace, _indexer));
+        // this._libraries.push(new Laravel(this._workspace, _indexer));
 
-        phpLang.indexer.indexingEnded.addListener(() => {
+        phpLang.indexer.folderIndexingEnded.addListener(() => {
             this.initLibraries();
         });
     }

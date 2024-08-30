@@ -3,7 +3,7 @@
 import { Method, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbol, SymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -30,14 +30,14 @@ export class MethodVisitor implements NodeVisitor {
         // Visit parameters
         if (methodNode.arguments) {
             //todo: Attribute, type, byref
-            methodNode.arguments.forEach((param) => this.visitParameter(param, method.name));
+            methodNode.arguments.forEach((param) => this.visitParameter(param, method));
         }
 
         return true;
     }
 
-    private visitParameter(param: Parameter, methodName: string): void {
-        const kind = methodName === '__construct' && param.flags > 0 ? SymbolKind.Property : SymbolKind.Parameter;
+    private visitParameter(param: Parameter, method: PhpSymbol): void {
+        const kind = method.name === '__construct' && param.flags > 0 ? SymbolKind.Property : SymbolKind.Parameter;
 
         const modifiers = modifier({
             isReadonly: param.readonly,
@@ -46,7 +46,11 @@ export class MethodVisitor implements NodeVisitor {
             visibility: kind === SymbolKind.Property ? parseFlag(param.flags) : undefined,
         });
 
-        this.analyzer.addSymbol(createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.value));
+        const arg = this.analyzer.addSymbol(
+            createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.value)
+        );
+
+        method.relatedIds.push(arg.id);
 
         //todo: Attribute, type, byref
         // Handle any default values or type hints as references

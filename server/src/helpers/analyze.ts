@@ -44,6 +44,7 @@ export function createSymbol(
         value: valueObject,
         scope,
         referenceIds: [],
+        relatedIds: [],
     };
 
     return symbol;

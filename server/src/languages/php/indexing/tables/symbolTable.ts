@@ -89,6 +89,7 @@ export type PhpSymbol = Symbol & {
     type?: PhpType;
 
     referenceIds: number[];
+    relatedIds: number[];
 };
 export class SymbolTable {
     private index: number = 0;

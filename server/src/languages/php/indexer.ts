@@ -18,7 +18,7 @@ export class Indexer {
     private projectSpaces: Map<FolderUri, ProjectSpace> = new Map();
 
     private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
-    private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; filesCount: number }>;
+    private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
 
     constructor(private config: laraphenseRc, public cache: FileCache | undefined, stubsUri: FolderUri) {
         this._fetcher = new Fetcher();
@@ -103,7 +103,7 @@ export class Indexer {
         // console.log(context.referenceTable.pendingReferences);
 
         if (folder.kind === FolderKind.User) {
-            this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, filesCount: count });
+            this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });
         }
 
         if (missingFiles.length > 0) {

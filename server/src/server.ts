@@ -140,7 +140,7 @@ connection.onInitialized(async () => {
     });
 
     indexer.folderIndexingEnded.addListener((e) => {
-        console.info(`Indexing (${e.name}) ended. ${e.filesCount} files indexed in ${process.hrtime(startTime)[0]}s.`);
+        console.info(`Indexing (${e.name}) ended with ${e.withFiles} files in ${process.hrtime(startTime)[0]}s.`);
         connection.sendNotification(INDEXING_ENDED_NOTIFICATION.method);
     });
 

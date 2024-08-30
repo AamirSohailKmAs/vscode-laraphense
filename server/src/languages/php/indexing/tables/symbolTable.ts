@@ -163,15 +163,28 @@ export class SymbolTable {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.name === name);
     }
 
-    public findSymbolByOffsetInUri(uri: string, offset: number): PhpSymbol | undefined {
-        const indices = this.symbolsByUri.get(uri) || [];
-        for (const index of indices) {
-            const symbol = this.symbols.get(index);
-            if (symbol && symbol.loc.start.offset <= offset && symbol.loc.end.offset >= offset) {
-                return symbol;
+    public findSymbolByPositionOffsetInUri(uri: RelativeUri, pos: Position, offset: number): PhpSymbol | undefined {
+        let closestSymbol: PhpSymbol | undefined;
+        let closestDistance = Number.MAX_VALUE;
+
+        for (const symbol of this.findSymbolsByUri(uri)) {
+            const distance = Math.min(
+                Math.abs(symbol.loc.start.offset - offset),
+                Math.abs(symbol.loc.end.offset - offset)
+            );
+
+            if (
+                distance < closestDistance &&
+                symbol.loc.start.offset <= offset &&
+                symbol.loc.end.offset >= offset &&
+                [symbol.loc.start.line, symbol.loc.end.line].includes(pos.line + 1)
+            ) {
+                closestSymbol = symbol;
+                closestDistance = distance;
             }
         }
-        return undefined;
+
+        return closestSymbol;
     }
 
     public findSymbolsByUri(uri: RelativeUri): PhpSymbol[] {

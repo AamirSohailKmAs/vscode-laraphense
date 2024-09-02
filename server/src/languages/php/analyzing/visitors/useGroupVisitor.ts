@@ -3,7 +3,7 @@
 import { UseGroup } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { SymbolKind } from '../../indexing/tables/symbolTable';
-import { createImportStatement, createReference, normalizeName } from '../../../../helpers/analyze';
+import { createImportStatement, normalizeName } from '../../../../helpers/analyze';
 import { splitNamespace } from '../../../../helpers/symbol';
 
 export class UseGroupVisitor implements NodeVisitor {
@@ -23,7 +23,7 @@ export class UseGroupVisitor implements NodeVisitor {
                 this.analyzer.addImportStatement(
                     createImportStatement(
                         use.name,
-                        normalizeName(use.alias ?? ''),
+                        normalizeName(use.alias ?? '').name,
                         type,
                         use.loc,
                         splitNamespace(use.name)

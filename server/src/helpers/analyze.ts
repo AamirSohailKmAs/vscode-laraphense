@@ -26,7 +26,7 @@ export function createSymbol(
     modifiers: SymbolModifier[] = [],
     value?: string | number | boolean | Node | null
 ): PhpSymbol {
-    name = normalizeName(name);
+    name = normalizeName(name).name;
     const valueObject = normalizeValue(value);
 
     if (loc === null || loc === undefined) {
@@ -57,7 +57,7 @@ export function createImportStatement(
     loc: Location | null | undefined,
     fqn: FQN = { scope: '', name: '' }
 ): ImportStatement {
-    name = normalizeName(name);
+    name = normalizeName(name).name;
 
     if (loc === null || loc === undefined) {
         loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
@@ -86,7 +86,7 @@ export function createReference(
     fqn: FQN = { scope: '', name: '' },
     definedIn: FQN = { scope: '', name: '' }
 ): PhpReference {
-    name = normalizeName(name);
+    name = normalizeName(name).name;
 
     if (loc === null || loc === undefined) {
         loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
@@ -107,11 +107,13 @@ export function createReference(
     return reference;
 }
 
-export function normalizeName(name: string | Identifier) {
+export function normalizeName(name: string | Identifier): { name: string; offset: number } {
+    let offset = 0;
     if (typeof name !== 'string') {
+        offset = name.loc?.start.offset ?? 0;
         name = name.name;
     }
-    return name;
+    return { name, offset };
 }
 
 export function normalizeValue(value: string | number | boolean | Node | null | undefined): Value | undefined {

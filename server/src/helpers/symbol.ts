@@ -131,4 +131,3 @@ export function splitNamespace(fqn: string): FQN {
     const lastIndex = fqn.lastIndexOf('\\');
     return { scope: fqn.substring(0, lastIndex), name: fqn.substring(lastIndex + 1) };
 }
-

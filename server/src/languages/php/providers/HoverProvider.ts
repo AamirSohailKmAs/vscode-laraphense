@@ -3,25 +3,25 @@
 import { Position, Hover } from 'vscode-languageserver';
 import { PhpSymbol, SymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
-import { Indexer } from '../indexer';
 import { FlatDocument } from '../../../support/document';
 import { Location } from 'php-parser';
-import { ProjectSpace } from '../ProjectSpace';
+import { Workspace } from '../../../support/workspace';
+import { WorkspaceFolder } from '../../../support/workspaceFolder';
 
 export class HoverProvider {
-    project: ProjectSpace | undefined;
-    constructor(private indexer: Indexer) {}
+    folder: WorkspaceFolder | undefined;
+    constructor(private workspace: Workspace) {}
 
     provide(doc: FlatDocument, pos: Position): Hover | null {
-        let space = this.indexer.getProjectSpace(doc.uri);
+        let space = this.workspace.getProjectSpace(doc.uri);
 
         if (!space) return null;
-        this.project = space.project;
+        this.folder = space.folder;
 
-        const ref = space.project.referenceTable.findReferenceByOffsetInUri(space.fileUri, doc.offsetAt(pos));
+        const ref = space.folder.referenceTable.findReferenceByOffsetInUri(space.fileUri, doc.offsetAt(pos));
 
         if (!ref) {
-            const symbol = space.project.symbolTable.findSymbolByPositionOffsetInUri(
+            const symbol = space.folder.symbolTable.findSymbolByPositionOffsetInUri(
                 space.fileUri,
                 pos,
                 doc.offsetAt(pos)
@@ -30,7 +30,7 @@ export class HoverProvider {
             return this.createHover(symbol, symbol.loc);
         }
 
-        const symbol = space.project.symbolTable.getSymbolById(ref.symbolId);
+        const symbol = space.folder.symbolTable.getSymbolById(ref.symbolId);
 
         if (!symbol) return null;
 
@@ -83,8 +83,8 @@ export class HoverProvider {
     private getMethodHover(symbol: PhpSymbol) {
         //todo: docblock, type, return type
         let parameters = '';
-        if (this.project) {
-            const relatedSymbols = this.project.symbolTable.getSymbolsById(symbol.relatedIds);
+        if (this.folder) {
+            const relatedSymbols = this.folder.symbolTable.getSymbolsById(symbol.relatedIds);
             parameters = relatedSymbols
                 .map((symbol) => {
                     let property = `${this.getModifier(symbol.modifiers)}$${symbol.name}`;

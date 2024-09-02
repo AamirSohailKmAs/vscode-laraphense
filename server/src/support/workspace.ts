@@ -1,37 +1,46 @@
 'use strict';
 
-import { FolderKind, FolderUri, RelativeUri, WorkspaceFolder } from './workspaceFolder';
+import { FolderKind, FolderUri, WorkspaceFolder, RelativeUri, Space } from './workspaceFolder';
 import { DocContext, laraphenseRc } from '../languages/baseLang';
-import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE } from './defaults';
+import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, DEFAULT_STUBS } from './defaults';
 import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
+import { join } from 'path';
+import { BladeParser } from '../bladeParser/parser';
+import { FileCache } from './cache';
+import { Fetcher } from './fetcher';
 
 export class Workspace {
+    private _fetcher: Fetcher;
     private _folderNames: string[] = [];
-    private _folders: Map<FolderUri, WorkspaceFolder> = new Map();
-    private _folderAdded: EventEmitter<{ folder: WorkspaceFolder }>;
-    private _fileAdded: EventEmitter<{ uri: string }>;
-    private _fileRemoved: EventEmitter<{ uri: string }>;
-    private _folderRemoved: EventEmitter<{ uri: FolderUri }>;
 
-    constructor(private _config: laraphenseRc) {
-        this._folderAdded = new EventEmitter(true);
-        this._fileAdded = new EventEmitter();
-        this._fileRemoved = new EventEmitter();
-        this._folderRemoved = new EventEmitter();
+    private stubsSpace: WorkspaceFolder;
+    private _folders: Map<FolderUri, WorkspaceFolder> = new Map();
+
+    private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
+    private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
+
+    constructor(private _config: laraphenseRc, public cache: FileCache | undefined, stubsUri: FolderUri) {
+        this._fetcher = new Fetcher();
+
+        this.stubsSpace = new WorkspaceFolder(
+            'stubs',
+            stubsUri,
+            new BladeParser(),
+            undefined,
+            FolderKind.Stub,
+            DEFAULT_STUBS
+        );
+        this._folders.set(stubsUri, this.stubsSpace);
+        this.indexFolder(this.stubsSpace);
+
+        this._folderIndexingStarted = new EventEmitter();
+        this._folderIndexingEnded = new EventEmitter();
     }
 
     public get config() {
         return this._config;
-    }
-
-    public get folderAdded() {
-        return this._folderAdded;
-    }
-
-    public get folderRemoved() {
-        return this._folderRemoved;
     }
 
     public set config(config: laraphenseRc) {
@@ -44,16 +53,10 @@ export class Workspace {
 
     public addFile(uri: string) {
         // this._files.set(uri);
-        this._fileAdded.emit({
-            uri,
-        });
     }
 
     public removeFile(uri: string) {
         // this._files.delete(uri);
-        this._fileRemoved.emit({
-            uri,
-        });
     }
 
     public addFolder(
@@ -69,32 +72,29 @@ export class Workspace {
 
         this._folderNames.push(name);
 
-        const folder = new WorkspaceFolder(name, folderUri, _kind, _includeGlobs, _excludeGlobs);
+        const folder = new WorkspaceFolder(
+            name,
+            folderUri,
+            new BladeParser(this._config.phpVersion),
+            this.stubsSpace,
+            _kind,
+            _includeGlobs,
+            _excludeGlobs
+        );
         this._folders.set(folderUri, folder);
-        this._folderAdded.emit({
-            folder,
-        });
+        this.indexFolder(folder);
     }
 
     public removeFolder(uri: string) {
         let folderUri = uri as FolderUri;
 
         if (this._folders.delete(folderUri)) {
-            this._folderRemoved.emit({
-                uri: folderUri,
-            });
-            this._folderRemoved.emit({
-                uri: folderUri,
-            });
             return true;
         }
 
         folderUri = URI.parse(uri).toString() as FolderUri;
 
         if (this._folders.delete(folderUri)) {
-            this._folderRemoved.emit({
-                uri: folderUri,
-            });
             return true;
         }
 
@@ -133,6 +133,57 @@ export class Workspace {
 
     public getDocumentContext(documentUri: string) {
         return new DocContext(Array.from(this._folders.keys()), documentUri);
+    }
+
+    public get folderIndexingStarted() {
+        return this._folderIndexingStarted;
+    }
+
+    public get folderIndexingEnded() {
+        return this._folderIndexingEnded;
+    }
+
+    public getProjectSpace(uri: string): Space | undefined {
+        const folderUri = this.findFolderUriContainingUri(uri);
+
+        if (!folderUri) {
+            console.warn(`project folder not found for ${uri}`, Array.from(this._folders.keys()));
+            return undefined;
+        }
+
+        let fileUri = uri.substring(folderUri.length + 1) as RelativeUri;
+
+        return { folder: this._folders.get(folderUri)!, folderUri, fileUri, uri };
+    }
+
+    public async indexFolder(folder: WorkspaceFolder) {
+        const files = await folder.findFiles();
+        if (files.length < 1) {
+            return;
+        }
+
+        if (folder.kind === FolderKind.User) {
+            this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
+        }
+
+        folder.addFiles(files);
+
+        const { count, missingFiles } = await folder.indexFiles(this._fetcher);
+
+        folder.linkPendingReferences();
+        // console.log(folder.referenceTable.pendingReferences);
+
+        if (folder.kind === FolderKind.User) {
+            this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });
+        }
+
+        if (missingFiles.length > 0) {
+            console.log('missingFiles', missingFiles);
+        }
+
+        this.cache?.writeJson(join(folder.name, 'symbols'), folder.symbolTable.saveForFile());
+        this.cache?.writeJson(join(folder.name, 'references'), folder.referenceTable.saveForFile());
+        this.cache?.writeJson(join(folder.name, 'filesEntries'), files);
     }
 }
 

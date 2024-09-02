@@ -16,7 +16,6 @@ import {
 } from 'vscode-languageserver';
 import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
-import { Indexer } from './php/indexer';
 import { HoverProvider } from './php/providers/HoverProvider';
 
 export class Php implements Language {
@@ -26,15 +25,11 @@ export class Php implements Language {
         hover: HoverProvider;
     };
 
-    constructor(private _workspace: Workspace, public indexer: Indexer) {
+    constructor(private _workspace: Workspace) {
         this._providers = {
-            documentSymbol: new DocumentSymbolProvider(indexer),
-            hover: new HoverProvider(indexer),
+            documentSymbol: new DocumentSymbolProvider(this._workspace),
+            hover: new HoverProvider(this._workspace),
         };
-
-        this._workspace.folderAdded.addListener((data) => {
-            this.indexer.indexFolder(data.folder);
-        });
     }
 
     findDocumentSymbols(document: FlatDocument): SymbolInformation[] {

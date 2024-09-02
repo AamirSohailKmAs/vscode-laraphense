@@ -29,13 +29,11 @@ import { homedir } from 'os';
 import { FileCache } from './support/cache';
 import { FlatDocument } from './support/document';
 import { laraphenseRc } from './languages/baseLang';
-import { Indexer } from './languages/php/indexer';
 import { pathToUri } from './helpers/uri';
 
 const connection = createConnection();
 
 let settings: any;
-let indexer: Indexer;
 let workspace: Workspace;
 let laraphense: Laraphense;
 let startTime: [number, number];
@@ -83,13 +81,13 @@ connection.onInitialize(async (params: InitializeParams) => {
 
     const config: laraphenseRc = { ...DEFAULT_LARAPHENSE_CONFIG, cachePath, workspaceName };
 
-    workspace = new Workspace(config);
+    let storageCache = await FileCache.create(cachePath);
 
-    let stubsPath = join(__dirname, '../stubs');
-
-    if (existsSync(stubsPath)) {
-        workspace.addFolder('stubs', stubsPath, FolderKind.Stub, DEFAULT_STUBS);
+    if (clearCache && storageCache) {
+        storageCache = await storageCache.clear();
     }
+
+    workspace = new Workspace(config, storageCache, pathToUri(join(__dirname, '../stubs')) as FolderUri);
 
     if (params.workspaceFolders) {
         params.workspaceFolders.forEach((folder) => {
@@ -99,17 +97,7 @@ connection.onInitialize(async (params: InitializeParams) => {
         workspace.addFolder(workspaceName, params.rootUri);
     }
 
-    let storageCache: FileCache | undefined;
-    if (workspace.folders.size > 1) {
-        storageCache = await FileCache.create(cachePath);
-
-        if (clearCache && storageCache) {
-            storageCache = await storageCache.clear();
-        }
-    }
-    indexer = new Indexer(workspace.config, storageCache, pathToUri(stubsPath) as FolderUri);
-
-    laraphense = new Laraphense(workspace, indexer);
+    laraphense = new Laraphense(workspace);
 
     return {
         capabilities: {
@@ -133,13 +121,13 @@ connection.onInitialize(async (params: InitializeParams) => {
 });
 
 connection.onInitialized(async () => {
-    indexer.folderIndexingStarted.addListener((e) => {
+    workspace.folderIndexingStarted.addListener((e) => {
         console.log(`Indexing (${e.name}) started with ${e.withFiles} files`);
         startTime = process.hrtime();
         connection.sendNotification(INDEXING_STARTED_NOTIFICATION.method);
     });
 
-    indexer.folderIndexingEnded.addListener((e) => {
+    workspace.folderIndexingEnded.addListener((e) => {
         console.info(`Indexing (${e.name}) ended with ${e.withFiles} files in ${process.hrtime(startTime)[0]}s.`);
         connection.sendNotification(INDEXING_ENDED_NOTIFICATION.method);
     });

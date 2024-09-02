@@ -24,10 +24,7 @@ import { Language, Settings } from './languages/baseLang';
 import { Js } from './languages/jsLang';
 import { Blade } from './languages/bladeLang';
 import { Php } from './languages/phpLang';
-import { Library } from './libraries/baseLibrary';
-import { Laravel } from './libraries/laravel';
 import { BladeParser } from './bladeParser/parser';
-import { Indexer } from './languages/php/indexer';
 
 export class Laraphense {
     private _parser: BladeParser;
@@ -35,14 +32,12 @@ export class Laraphense {
     private _openDocuments: MemoryCache<Regions>;
     private _languages: Map<DocLang, Language> = new Map();
 
-    private _libraries: Library[] = [];
-
-    constructor(private _workspace: Workspace, _indexer: Indexer) {
+    constructor(private _workspace: Workspace) {
         this._parser = new BladeParser(this._workspace.config.phpVersion);
         this._openDocuments = new MemoryCache((doc) => this.getRegions(doc));
 
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
-        const phpLang = new Php(_workspace, _indexer);
+        const phpLang = new Php(_workspace);
         const bladeLang = new Blade(htmlLang);
 
         this._languages.set(DocLang.html, htmlLang);
@@ -50,12 +45,6 @@ export class Laraphense {
         this._languages.set(DocLang.blade, bladeLang);
         this._languages.set(DocLang.js, new Js(this._openDocuments, DocLang.js, this._settings));
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
-
-        // this._libraries.push(new Laravel(this._workspace, _indexer));
-
-        phpLang.indexer.folderIndexingEnded.addListener(() => {
-            this.initLibraries();
-        });
     }
 
     public set settings(settings: Settings) {
@@ -76,13 +65,6 @@ export class Laraphense {
 
         if (!lang) {
             return result;
-        }
-
-        for (let i = 0; i < this._libraries.length; i++) {
-            const library = this._libraries[i];
-            if (library.doComplete && library.canComplete(lang.id)) {
-                result = mergeCompletionItems(result, library.doComplete(document, position));
-            }
         }
 
         if (!lang.doComplete) {
@@ -248,13 +230,6 @@ export class Laraphense {
 
     public getRegions(doc: FlatDocument) {
         return new Regions(doc.uri).parse(this._parser.parseFlatDoc(doc));
-    }
-
-    private initLibraries() {
-        for (let i = 0; i < this._libraries.length; i++) {
-            const library = this._libraries[i];
-            library.index();
-        }
     }
 }
 

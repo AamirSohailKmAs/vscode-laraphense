@@ -64,6 +64,9 @@ export class HoverProvider {
             case SymbolKind.Property:
                 value += this.getPropertyHover(symbol);
                 break;
+            case SymbolKind.ClassConstant:
+                value += this.getClassConstantHover(symbol);
+                break;
             default:
                 value += `${symbol.name} \n`;
                 break;
@@ -73,7 +76,23 @@ export class HoverProvider {
     }
     private getPropertyHover(symbol: PhpSymbol) {
         //todo: docblock, type, value
-        let property = `${this.getModifier(symbol.modifiers)}$${symbol.name}`;
+        let property = `${this.getModifier(symbol.modifiers)}`;
+
+        if (symbol.type.declared) {
+            property += `${symbol.type.declared.name}`;
+        }
+
+        property += `$${symbol.name}`;
+        if (symbol.value) {
+            property += ` = ${symbol.value.raw}`;
+        }
+
+        return `${property};\n`;
+    }
+
+    private getClassConstantHover(symbol: PhpSymbol) {
+        //todo: docblock, type, value
+        let property = `${this.getModifier(symbol.modifiers)} const ${symbol.name}`;
         if (symbol.value) {
             property += ` = ${symbol.value.raw}`;
         }
@@ -87,7 +106,11 @@ export class HoverProvider {
             const relatedSymbols = this.folder.symbolTable.getSymbolsById(symbol.relatedIds);
             parameters = relatedSymbols
                 .map((symbol) => {
-                    let property = `${this.getModifier(symbol.modifiers)}$${symbol.name}`;
+                    let property = `${this.getModifier(symbol.modifiers)}`;
+                    if (symbol.type.declared) {
+                        property += `${symbol.type.declared.name} `;
+                    }
+                    property += `$${symbol.name}`;
                     if (symbol.value) {
                         property += ` = ${symbol.value.raw}`;
                     }
@@ -96,12 +119,12 @@ export class HoverProvider {
                 .join(', ');
         }
 
-        return `${this.getModifier(symbol.modifiers)}function ${symbol.name}(${parameters})\n`;
+        return `${this.getModifier(symbol.modifiers)} function ${symbol.name}(${parameters})\n`;
     }
 
     private getMemberHover(symbol: PhpSymbol, member: string) {
         let value = `use ${symbol.scope};\n\n`;
-        value += `${member} ${symbol.name} \n`;
+        value += `${this.getModifier(symbol.modifiers)} ${member} ${symbol.name} \n`;
 
         return value;
     }
@@ -145,7 +168,7 @@ export class HoverProvider {
             }
         });
 
-        return value;
+        return value.trim();
     }
 
     private fqsen(symbol: PhpSymbol) {

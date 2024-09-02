@@ -17,16 +17,14 @@ import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
 
 export type Space = {
-    folder: WorkspaceFolder;
-    folderUri: FolderUri;
-    fileUri: RelativeUri;
     uri: DocumentUri;
+    fileUri: RelativeUri;
+    folderUri: FolderUri;
+    folder: WorkspaceFolder;
 };
 
-/**
- * A tagging type for string properties that are actually Folder URI.
- */
 export type FolderUri = string & { readonly FolderId: unique symbol };
+export type RelativeUri = string & { readonly PathId: unique symbol };
 
 export const enum FolderKind {
     User = 0,
@@ -38,8 +36,6 @@ export type FileEntry = {
     modified: number;
     size: number;
 };
-
-export type RelativeUri = string & { readonly PathId: unique symbol };
 
 export class WorkspaceFolder {
     public analyzer: Analyzer;
@@ -114,6 +110,10 @@ export class WorkspaceFolder {
 
     public documentUri(uri: string): DocumentUri {
         return join(this._uri, uri);
+    }
+
+    public documentPath(uri: string): string {
+        return uriToPath(join(this._uri, uri));
     }
 
     public async findFiles(): Promise<FileEntry[]> {
@@ -311,7 +311,6 @@ export class WorkspaceFolder {
             SymbolKind.ClassConstant
         )?.value;
         if (version) {
-            console.log(`Laravel found v${version}`);
             this._libraries.push(new Laravel(this, version.raw));
         }
     }

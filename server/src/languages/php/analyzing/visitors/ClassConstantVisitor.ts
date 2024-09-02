@@ -14,7 +14,7 @@ export class ClassConstantVisitor implements NodeVisitor {
             this.analyzer.addSymbol(
                 createSymbol(
                     constant.name,
-                    SymbolKind.Constant,
+                    SymbolKind.ClassConstant,
                     constant.loc,
                     this.analyzer.scope,
                     modifier({ isFinal: node.final, visibility: node.visibility }),

@@ -142,7 +142,7 @@ export function normalizeValue(value: string | number | boolean | Node | null | 
 
     const valueMap: Record<string, (node: any) => Value | undefined> = {
         number: (node: ParserNumber): Value | undefined => {
-            return { raw: node.raw, kind: ValueKind.Number };
+            return { raw: node.raw ?? `${node.value}`, kind: ValueKind.Number };
         },
         string: (node: ParserString): Value | undefined => {
             return { raw: node.raw, kind: ValueKind.String };

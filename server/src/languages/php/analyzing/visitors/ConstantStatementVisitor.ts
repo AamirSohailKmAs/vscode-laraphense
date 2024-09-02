@@ -12,7 +12,15 @@ export class ConstantStatementVisitor implements NodeVisitor {
         for (let i = 0; i < node.constants.length; i++) {
             const constant = node.constants[i];
             this.analyzer.addSymbol(
-                createSymbol(constant.name, SymbolKind.Constant, constant.loc, this.analyzer.scope, [], constant.value)
+                createSymbol(
+                    constant.name,
+                    SymbolKind.Constant,
+                    constant.loc,
+                    this.analyzer.scope,
+                    [],
+                    undefined,
+                    constant.value
+                )
             );
         }
         return false;

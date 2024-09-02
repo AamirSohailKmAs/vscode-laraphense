@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { Trie } from '../../../../support/searchTree';
 import { FQN } from '../../../../helpers/symbol';
 import { Position } from 'vscode-languageserver-textdocument';
+import { PhpType } from '../../../../helpers/type';
 
 interface CacheData {
     symbols: [number, PhpSymbol][];
@@ -64,9 +65,10 @@ export const enum ValueKind {
     Constant,
 }
 
-export type PhpType = {
-    name: string;
-    items?: PhpType[];
+export type PhpSymbolType = {
+    declared?: PhpType;
+    documented?: PhpType;
+    inferred?: PhpType;
 };
 
 export type Value = {
@@ -87,10 +89,12 @@ export type PhpSymbol = Symbol & {
     value?: Value;
     modifiers: SymbolModifier[];
     scope: string;
-    type?: PhpType;
 
-    referenceIds: number[];
+    type: PhpSymbolType;
+
+    throws: string[];
     relatedIds: number[];
+    referenceIds: number[];
 };
 export class SymbolTable {
     private index: number = 0;

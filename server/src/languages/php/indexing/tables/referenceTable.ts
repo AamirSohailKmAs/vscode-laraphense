@@ -4,11 +4,13 @@ import { RelativeUri } from '../../../../support/workspaceFolder';
 import * as fs from 'fs';
 import { Symbol } from './symbolTable';
 import { FQN } from '../../../../helpers/symbol';
+import { PhpType } from '../../../../helpers/type';
 
 export type PhpReference = Symbol & {
     fqn: FQN;
     definedIn: FQN;
     symbolId: number;
+    type?: PhpType;
 };
 
 export type ImportStatement = PhpReference & {

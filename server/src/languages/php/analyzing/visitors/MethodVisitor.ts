@@ -23,6 +23,7 @@ export class MethodVisitor implements NodeVisitor {
                 isNullable: methodNode.nullable,
                 visibility: methodNode.visibility,
             }),
+            methodNode.type,
             undefined
         );
         this.analyzer.setMember(method);
@@ -47,7 +48,7 @@ export class MethodVisitor implements NodeVisitor {
         });
 
         const arg = this.analyzer.addSymbol(
-            createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.value)
+            createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.type, param.value)
         );
 
         method.relatedIds.push(arg.id);

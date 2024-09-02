@@ -18,6 +18,7 @@ export class ClassConstantVisitor implements NodeVisitor {
                     constant.loc,
                     this.analyzer.scope,
                     modifier({ isFinal: node.final, visibility: node.visibility }),
+                    undefined,
                     constant.value
                 )
             );

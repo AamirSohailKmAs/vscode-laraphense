@@ -12,11 +12,16 @@ import {
     MODIFIER_PROTECTED,
     NullKeyword,
     Location,
+    TypeReference,
+    SelfReference,
+    Name,
+    UnionType,
 } from 'php-parser';
 import { PhpSymbol, SymbolKind, SymbolModifier, Value, ValueKind } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { ImportStatement, PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { FQN } from './symbol';
+import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
 
 export function createSymbol(
     name: string | Identifier,
@@ -24,9 +29,11 @@ export function createSymbol(
     loc: Location | null | undefined,
     scope: string,
     modifiers: SymbolModifier[] = [],
+    type?: Identifier | Identifier[] | null,
     value?: string | number | boolean | Node | null
 ): PhpSymbol {
     name = normalizeName(name).name;
+    const typeObject = normalizeTypes(type);
     const valueObject = normalizeValue(value);
 
     if (loc === null || loc === undefined) {
@@ -43,6 +50,8 @@ export function createSymbol(
         modifiers,
         value: valueObject,
         scope,
+        type: { declared: typeObject },
+        throws: [],
         referenceIds: [],
         relatedIds: [],
     };
@@ -170,6 +179,50 @@ export function normalizeValue(value: string | number | boolean | Node | null | 
     };
 
     return valueMap[value.kind]?.(value);
+}
+
+export function normalizeTypes(type: Identifier | Identifier[] | null | undefined): PhpType | undefined {
+    if (type === undefined || type === null) {
+        return undefined;
+    }
+
+    const valueMap: Record<string, (node: any) => PhpType> = {
+        name: (node: Name): PhpType => {
+            return createType(node.name);
+        },
+        typereference: (node: TypeReference): PhpType => {
+            return createType(node.name);
+        },
+        selfreference: (_node: SelfReference): PhpType => {
+            return createType(SELF_NAME);
+        },
+        uniontype: (node: UnionType): PhpType => {
+            const items: PhpType[] = [];
+            for (let i = 0; i < node.types.length; i++) {
+                const result = valueMap[node.types[i].kind]?.(node.types[i]);
+                if (result) {
+                    items.push(result);
+                } else {
+                    console.log(node.types[i]);
+                }
+            }
+            return createType(UNION_NAME_SYMBOL, items);
+        },
+    };
+
+    const items: PhpType[] = [];
+
+    if (Array.isArray(type)) {
+        for (let i = 0; i < type.length; i++) {
+            const result = valueMap[type[i].kind]?.(type[i]);
+            if (result) {
+                items.push(result);
+            }
+        }
+        return createType(UNION_NAME_SYMBOL, items);
+    }
+
+    return valueMap[type.kind]?.(type);
 }
 
 export type modifierFlag = {

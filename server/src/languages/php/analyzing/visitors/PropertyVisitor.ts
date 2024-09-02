@@ -25,6 +25,7 @@ export class PropertyVisitor implements NodeVisitor {
                         isNullable: prop.nullable,
                         visibility: node.visibility,
                     }),
+                    prop.type,
                     prop.value
                 )
             );

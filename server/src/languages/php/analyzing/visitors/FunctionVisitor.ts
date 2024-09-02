@@ -12,9 +12,8 @@ import {
     Statement,
 } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { PhpSymbol, SymbolKind } from '../../indexing/tables/symbolTable';
-import { createReference, createSymbol, modifier, normalizeName, parseFlag } from '../../../../helpers/analyze';
-import { PhpReference } from '../../indexing/tables/referenceTable';
+import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 
 export class FunctionVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -24,7 +23,7 @@ export class FunctionVisitor implements NodeVisitor {
 
         // todo: Attribute, type
         const scope = this.analyzer.resetMember();
-        this.analyzer.setMember(createSymbol(node.name, SymbolKind.Function, node.loc, scope));
+        this.analyzer.setMember(createSymbol(node.name, SymbolKind.Function, node.loc, scope, modifier(), node.type));
 
         return true;
     }

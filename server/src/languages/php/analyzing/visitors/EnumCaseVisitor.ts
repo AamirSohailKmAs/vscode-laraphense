@@ -10,7 +10,7 @@ export class EnumCaseVisitor implements NodeVisitor {
 
     visit(node: EnumCase): boolean {
         this.analyzer.addSymbol(
-            createSymbol(node.name, SymbolKind.EnumMember, node.loc, this.analyzer.scope, [], node.value)
+            createSymbol(node.name, SymbolKind.EnumMember, node.loc, this.analyzer.scope, [], undefined, node.value)
         );
 
         return false;

@@ -7,6 +7,10 @@ import { Library } from './baseLibrary';
 import { lte } from 'semver';
 import { WorkspaceFolder } from '../support/workspaceFolder';
 import { directives } from './laravel/directives';
+import { existsSync, lstatSync, readdirSync } from 'fs-extra';
+import { runSafe } from '../helpers/general';
+import { uriToPath } from '../helpers/uri';
+import { Fetcher } from '../support/fetcher';
 
 export type Snippet = {
     label: string;
@@ -16,7 +20,14 @@ export type Snippet = {
     snippet: string;
 };
 export class Laravel implements Library {
-    constructor(private _folder: WorkspaceFolder, private _version: string) {}
+    private envMap: Map<string, string> = new Map();
+    private envBackupMap: Map<string, string> = new Map();
+    private publicFiles: Array<string> = [];
+    private _fetcher: Fetcher;
+    constructor(private _folder: WorkspaceFolder, private _version: string) {
+        this._fetcher = new Fetcher();
+        this.index();
+    }
 
     public canComplete(languageId: DocLang): boolean {
         return [DocLang.php, DocLang.blade].includes(languageId);
@@ -43,9 +54,73 @@ export class Laravel implements Library {
     }
 
     public async index() {
-        console.log(this._folder.files);
-        // const entries = await folder.findFiles();
-        // console.log(entries);
+        // get blade files without running the code
+        // get config files without running the code
+        this.envMap = await this.getEnvMap('.env');
+        this.envBackupMap = await this.getEnvMap('.env.example');
+        // get middlewares without running the code
+        this.publicFiles = (await this.setPublicFiles('public')).map((path) => path.replace(/\/?public\/?/g, ''));
+        // get routes without running the code
+        // get translations without running the code
+        // get view files without running the code
+    }
+
+    private async setPublicFiles(scanPath: string, depth: number = 0) {
+        return await runSafe(
+            async () => {
+                if (depth > 10) {
+                    throw new Error('Maximum recursion depth exceeded');
+                }
+
+                const projectScanPath = this._folder.documentPath(scanPath);
+
+                if (!existsSync(uriToPath(projectScanPath))) {
+                    return [];
+                }
+
+                const files: string[] = [];
+
+                for (const filePath of readdirSync(projectScanPath)) {
+                    const fullFilePath = `${projectScanPath}/${filePath}`;
+
+                    const stat = lstatSync(fullFilePath);
+
+                    if (stat.isDirectory()) {
+                        files.push(...(await this.setPublicFiles(fullFilePath, depth + 1)));
+                    } else if (stat.isFile() && !filePath.startsWith('.') && !filePath.endsWith('.php')) {
+                        files.push(fullFilePath);
+                    }
+                }
+
+                return files;
+            },
+            [],
+            'Error while loading [.env] file data'
+        );
+    }
+
+    async getEnvMap(fileName: string) {
+        const envMap = new Map<string, string>();
+        return await runSafe(
+            () => {
+                const envFile = this._fetcher.getFileContent(this._folder.documentUri(fileName));
+                if (!envFile) {
+                    return envMap;
+                }
+
+                for (const line of envFile.split('\n')) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine && !trimmedLine.startsWith('#')) {
+                        const parts = trimmedLine.split('=');
+                        envMap.set(parts[0].trim(), parts.slice(1).join('=').trim());
+                    }
+                }
+
+                return envMap;
+            },
+            envMap,
+            'Error while loading [.env] file data'
+        );
     }
 
     private getSnippetsUpToVersion(allObjects: Snippet[], version: string): Snippet[] {

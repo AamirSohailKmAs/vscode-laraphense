@@ -58,7 +58,7 @@ async function setSettings() {
     });
 
     for (const [uri, folder] of workspace.folders) {
-        if (folder.kind !== FolderKind.Stub) {
+        if (!folder.isStubs) {
             items.push({
                 section: CONFIG_SECTION,
                 scopeUri: uri,

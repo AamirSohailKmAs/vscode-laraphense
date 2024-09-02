@@ -67,6 +67,16 @@ export class Laraphense {
             return result;
         }
 
+        const space = this._workspace.getProjectSpace(document.uri);
+        if (space) {
+            for (let i = 0; i < space.folder.libraries.length; i++) {
+                const library = space.folder.libraries[i];
+                if (library.doComplete && library.canComplete(lang.id)) {
+                    result = mergeCompletionItems(result, library.doComplete(document, position));
+                }
+            }
+        }
+
         if (!lang.doComplete) {
             return result;
         }

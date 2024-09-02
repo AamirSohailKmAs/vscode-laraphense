@@ -64,14 +64,8 @@ export class WorkspaceFolder {
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
-
-        // for (let i = 0; i < this._libraries.length; i++) {
-        //     const library = this._libraries[i];
-        //     if (library.doComplete && library.canComplete(lang.id)) {
-        //         result = mergeCompletionItems(result, library.doComplete(document, position));
-        //     }
-        // }
     }
+
     public get name(): string {
         return this._name;
     }
@@ -98,6 +92,10 @@ export class WorkspaceFolder {
 
     public get vendorUri() {
         return this._uri + '/vendor';
+    }
+
+    public get libraries() {
+        return this._libraries;
     }
 
     public isVendorFile(uri: string) {
@@ -297,7 +295,7 @@ export class WorkspaceFolder {
     }
 
     private initLibraries() {
-        if (this._kind === FolderKind.Stub) {
+        if (this.isStubs) {
             return;
         }
 

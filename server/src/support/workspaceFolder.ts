@@ -15,13 +15,7 @@ import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
-
-export type Space = {
-    uri: DocumentUri;
-    fileUri: RelativeUri;
-    folderUri: FolderUri;
-    folder: WorkspaceFolder;
-};
+import { NamespaceResolver } from '../languages/php/namespaceResolver';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -37,11 +31,20 @@ export type FileEntry = {
     size: number;
 };
 
+export type Space = {
+    uri: DocumentUri;
+    fileUri: RelativeUri;
+    folderUri: FolderUri;
+    folder: WorkspaceFolder;
+};
+
 export class WorkspaceFolder {
+    public fetcher: Fetcher;
     public analyzer: Analyzer;
     public files: FileEntry[] = [];
     public symbolTable: SymbolTable;
     public referenceTable: ReferenceTable;
+    public resolver: NamespaceResolver;
 
     private _libraries: Library[] = [];
 
@@ -54,9 +57,14 @@ export class WorkspaceFolder {
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
         private _excludeGlobs: string[] = DEFAULT_EXCLUDE
     ) {
+        this.fetcher = new Fetcher();
         this.symbolTable = new SymbolTable();
         this.referenceTable = new ReferenceTable();
         this.analyzer = new Analyzer(this.symbolTable, this.referenceTable);
+
+        this.resolver = new NamespaceResolver(
+            this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
+        );
 
         this._includeGlobs = _includeGlobs.map(this.uriToGlobPattern);
         this._excludeGlobs = this._excludeGlobs.map(this.uriToGlobPattern);
@@ -138,34 +146,11 @@ export class WorkspaceFolder {
         }
     }
 
-    public contains(uri: string) {
-        return folderContainsUri(this._uri, uri);
-    }
-
-    public absolutePath(path: string) {
-        if (isAbsolute(path)) {
-            return path;
-        }
-        let uri = URI.parse(this._uri).fsPath;
-        return join(uri, path);
-    }
-
-    public pathToUri(path: string) {
-        if (!path) {
-            return this._uri;
-        }
-        let uri = URI.file(this.absolutePath(path)).toString();
-        if (uri.slice(-1) === '/') {
-            uri = uri.slice(0, -1);
-        }
-        return uri;
-    }
-
     public addFiles(files: FileEntry[]) {
         this.files.push(...files);
     }
 
-    public async indexFiles(fetcher: Fetcher) {
+    public async indexFiles() {
         let count = 0;
         const missingFiles: Array<{ uri: string; reason: string }> = [];
 
@@ -204,7 +189,7 @@ export class WorkspaceFolder {
                     //     this.compiler.analyze(parsedData);
                     // }
 
-                    const compiled = this.indexFile(fetcher, entry);
+                    const compiled = this.indexFile(entry);
 
                     if (!compiled) {
                         missingFiles.push({ uri: entry.uri, reason: "can't compile" });
@@ -269,8 +254,8 @@ export class WorkspaceFolder {
         if (symbol) return symbol;
     }
 
-    private indexFile(fetcher: Fetcher, entry: FileEntry) {
-        const flatDoc = fetcher.loadUriIfLang(join(this._uri, entry.uri), [DocLang.php, DocLang.blade]);
+    private indexFile(entry: FileEntry) {
+        const flatDoc = this.fetcher.loadUriIfLang(join(this._uri, entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {
             return undefined;

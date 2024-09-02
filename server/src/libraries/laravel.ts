@@ -23,9 +23,7 @@ export class Laravel implements Library {
     private envMap: Map<string, string> = new Map();
     private envBackupMap: Map<string, string> = new Map();
     private publicFiles: Array<string> = [];
-    private _fetcher: Fetcher;
     constructor(private _folder: WorkspaceFolder, private _version: string) {
-        this._fetcher = new Fetcher();
         this.index();
     }
 
@@ -103,7 +101,7 @@ export class Laravel implements Library {
         const envMap = new Map<string, string>();
         return await runSafe(
             () => {
-                const envFile = this._fetcher.getFileContent(this._folder.documentUri(fileName));
+                const envFile = this._folder.fetcher.getFileContent(this._folder.documentUri(fileName));
                 if (!envFile) {
                     return envMap;
                 }

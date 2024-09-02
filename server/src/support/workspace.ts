@@ -9,10 +9,8 @@ import { folderContainsUri } from '../helpers/uri';
 import { join } from 'path';
 import { BladeParser } from '../bladeParser/parser';
 import { FileCache } from './cache';
-import { Fetcher } from './fetcher';
 
 export class Workspace {
-    private _fetcher: Fetcher;
     private _folderNames: string[] = [];
 
     private stubsSpace: WorkspaceFolder;
@@ -22,8 +20,6 @@ export class Workspace {
     private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
 
     constructor(private _config: laraphenseRc, public cache: FileCache | undefined, stubsUri: FolderUri) {
-        this._fetcher = new Fetcher();
-
         this.stubsSpace = new WorkspaceFolder(
             'stubs',
             stubsUri,
@@ -101,26 +97,6 @@ export class Workspace {
         return false;
     }
 
-    public splitUri(uri: string): { folderUri: FolderUri; fileUri: RelativeUri } | undefined {
-        const folderUri = this.findFolderUriContainingUri(uri);
-
-        if (!folderUri) return;
-
-        let fileUri = uri.substring(folderUri.length + 1) as RelativeUri;
-
-        return { folderUri, fileUri };
-    }
-
-    public findFolderContainingUri(uri: string): WorkspaceFolder | undefined {
-        for (const [_folderUri, folder] of this._folders) {
-            if (folder.contains(uri)) {
-                return folder;
-            }
-        }
-
-        return undefined;
-    }
-
     public findFolderUriContainingUri(uri: string): FolderUri | undefined {
         for (const folderUri of this._folders.keys()) {
             if (folderContainsUri(folderUri, uri)) {
@@ -162,18 +138,18 @@ export class Workspace {
             return;
         }
 
-        if (folder.kind === FolderKind.User) {
+        if (!folder.isStubs) {
             this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
         }
 
         folder.addFiles(files);
 
-        const { count, missingFiles } = await folder.indexFiles(this._fetcher);
+        const { count, missingFiles } = await folder.indexFiles();
 
         folder.linkPendingReferences();
         // console.log(folder.referenceTable.pendingReferences);
 
-        if (folder.kind === FolderKind.User) {
+        if (!folder.isStubs) {
             this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });
         }
 

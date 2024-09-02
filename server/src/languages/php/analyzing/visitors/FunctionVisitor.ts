@@ -32,67 +32,6 @@ export class FunctionVisitor implements NodeVisitor {
 // class MethodVisitor {
 //     constructor(private analyzer: Analyzer) {}
 
-//     private visitStatement(statement: Node): void {
-//         switch (statement.kind) {
-//             case 'throw':
-//                 this.visitThrowStatement(statement);
-//                 break;
-//             case 'try':
-//                 this.visitTryStatement(statement);
-//                 break;
-//             case 'return':
-//                 this.visitReturnStatement(statement);
-//                 break;
-//             case 'if':
-//                 this.visitIfStatement(statement);
-//                 break;
-//             case 'for':
-//             case 'foreach':
-//                 this.visitLoopStatement(statement);
-//                 break;
-//             case 'expressionstatement':
-//                 this.visitExpressionStatement(statement);
-//                 break;
-//             case 'variableDeclaration':
-//                 this.visitVariableDeclaration(statement);
-//                 break;
-//             // Add more statement types as needed
-//             default:
-//                 console.log(`Unhandled statement kind: ${statement.kind}`);
-//         }
-//     }
-
-//     private visitReturnStatement(statement: Return): void {
-//         if (statement.expr) {
-//             this.visitExpression(statement.expr);
-//         }
-//     }
-
-//     private visitIfStatement(statement: IfStatement): void {
-//         this.visitExpression(statement.test);
-//         this.visitBlock(statement.consequent);
-//         if (statement.alternate) {
-//             this.visitBlock(statement.alternate);
-//         }
-//     }
-
-//     private visitLoopStatement(statement: LoopStatement): void {
-//         // For or foreach loops
-//         if (statement.kind === 'for') {
-//             statement.init.forEach((init) => this.visitExpression(init));
-//             this.visitExpression(statement.test);
-//             statement.update.forEach((update) => this.visitExpression(update));
-//         } else if (statement.kind === 'foreach') {
-//             this.visitExpression(statement.source);
-//             this.visitExpression(statement.target);
-//         }
-//         this.visitBlock(statement.body);
-//     }
-
-//     private visitExpressionStatement(statement: ExpressionStatement): void {
-//         this.visitExpression(statement.expression);
-//     }
-
 //     private visitVariableDeclaration(statement: VariableDeclaration): void {
 //         statement.declarations.forEach((declaration) => {
 //             const varSymbol = createSymbol(declaration.id.name, declaration.loc, this.analyzer.member.name);
@@ -101,23 +40,6 @@ export class FunctionVisitor implements NodeVisitor {
 //                 this.visitExpression(declaration.init);
 //             }
 //         });
-//     }
-
-//     private visitExpression(expression: Expression): void {
-//         switch (expression.kind) {
-//             case 'callExpression':
-//                 this.visitCallExpression(expression);
-//                 break;
-//             case 'binaryExpression':
-//                 this.visitBinaryExpression(expression);
-//                 break;
-//             case 'memberExpression':
-//                 this.visitMemberExpression(expression);
-//                 break;
-//             // Add more expression types as needed
-//             default:
-//                 console.log(`Unhandled expression kind: ${expression.kind}`);
-//         }
 //     }
 
 //     private visitCallExpression(expression: CallExpression): void {
@@ -140,3 +62,4 @@ export class FunctionVisitor implements NodeVisitor {
 //         this.analyzer.addReference(reference);
 //     }
 // }
+

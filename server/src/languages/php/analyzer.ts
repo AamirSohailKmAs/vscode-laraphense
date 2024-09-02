@@ -123,6 +123,15 @@ export class Analyzer {
             unset: new UnsetVisitor(this), // todo:
             echo: new EchoVisitor(this), // todo:
 
+            // throw: new ThrowVisitor(this),
+            // try: new TryVisitor(this),
+            // expressionstatement: new ExpressionStatementVisitor(this),
+            // variableDeclaration: new VariableDeclarationVisitor(this),
+
+            // callExpression: new visitCallVisitor(this),
+            // binaryExpression: new visitBinaryVisitor(this),
+            // memberExpression: new visitMemberVisitor(this),
+
             // 'expressionstatement',
             // 'constantstatement',
 

@@ -14,10 +14,13 @@
         "laraphenserc",
         "nullkeyword",
         "propertystatement",
+        "selfreference",
         "Skippable",
         "skippables",
         "staticlookup",
         "traituse",
+        "typereference",
+        "uniontype",
         "usegroup",
         "whitespaces"
     ]

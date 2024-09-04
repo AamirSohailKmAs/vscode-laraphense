@@ -163,8 +163,18 @@ export class Analyzer {
         this.member = symbol;
     }
 
+    public setSubMember(symbol: PhpSymbol) {
+        this.addSymbol(symbol);
+        this.subMember = symbol;
+    }
+
     public resetMember(): string {
         this.member = undefined;
+        this.subMember = undefined;
+        return this.scope;
+    }
+
+    public resetSubMember(): string {
         this.subMember = undefined;
         return this.scope;
     }

@@ -11,11 +11,12 @@ export class MethodVisitor implements NodeVisitor {
     public visit(node: unknown): boolean {
         const methodNode = node as Method;
         // todo: Attribute, type, byref
+        const scope = this.analyzer.resetSubMember();
         const method = createSymbol(
             methodNode.name,
             PhpSymbolKind.Method,
             methodNode.loc,
-            this.analyzer.scope,
+            scope,
             modifier({
                 isAbstract: methodNode.isAbstract,
                 isFinal: methodNode.isFinal,
@@ -26,7 +27,7 @@ export class MethodVisitor implements NodeVisitor {
             methodNode.type,
             undefined
         );
-        this.analyzer.setMember(method);
+        this.analyzer.setSubMember(method);
 
         // Visit parameters
         if (methodNode.arguments) {

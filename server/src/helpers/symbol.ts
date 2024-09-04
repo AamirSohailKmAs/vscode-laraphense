@@ -2,7 +2,7 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { Location, Position } from '../bladeParser/bladeAst';
+import { Location, Position } from '../parsers/bladeParser/bladeAst';
 import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
 import { RelativeUri } from '../support/workspaceFolder';

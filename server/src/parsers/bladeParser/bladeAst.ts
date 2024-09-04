@@ -1,7 +1,7 @@
 'use strict';
 
 import { Program } from 'php-parser';
-import { DocLang } from '../support/document';
+import { DocLang } from '../../support/document';
 
 export type Position = { line: number; character: number; offset: number };
 

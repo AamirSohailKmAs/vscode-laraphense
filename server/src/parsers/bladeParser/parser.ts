@@ -14,9 +14,9 @@ import {
     Tree,
     newAstTree,
 } from './bladeAst';
-import { DocLang, FlatDocument } from '../support/document';
+import { DocLang, FlatDocument } from '../../support/document';
 import { BladeLexer } from './lexer';
-import { toDocLang } from '../helpers/uri';
+import { toDocLang } from '../../helpers/uri';
 
 type config = {
     parser: {

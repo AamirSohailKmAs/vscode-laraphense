@@ -1,6 +1,6 @@
 'use strict';
 
-import { Tree } from '../../bladeParser/bladeAst';
+import { Tree } from '../../parsers/bladeParser/bladeAst';
 
 import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';

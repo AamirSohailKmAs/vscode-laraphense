@@ -7,7 +7,7 @@ import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
 import { join } from 'path';
-import { BladeParser } from '../bladeParser/parser';
+import { BladeParser } from '../parsers/bladeParser/parser';
 import { FileCache } from './cache';
 
 export class Workspace {
@@ -23,7 +23,7 @@ export class Workspace {
         this.stubsSpace = new WorkspaceFolder(
             'stubs',
             stubsUri,
-            new BladeParser(),
+            new BladeParser(this._config.phpVersion),
             undefined,
             FolderKind.Stub,
             DEFAULT_STUBS

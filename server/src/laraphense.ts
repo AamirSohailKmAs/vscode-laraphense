@@ -24,7 +24,7 @@ import { Language, Settings } from './languages/baseLang';
 import { Js } from './languages/jsLang';
 import { Blade } from './languages/bladeLang';
 import { Php } from './languages/phpLang';
-import { BladeParser } from './bladeParser/parser';
+import { BladeParser } from './parsers/bladeParser/parser';
 
 export class Laraphense {
     private _parser: BladeParser;

@@ -4,7 +4,7 @@ import { DocumentUri, Position, Range, TextDocumentContentChangeEvent } from 'vs
 import { Debounce } from '../support/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { guessLangFromUri, toDocLang } from '../helpers/uri';
-import { EmbeddedLanguage, Tree, newAstTree } from '../bladeParser/bladeAst';
+import { EmbeddedLanguage, Tree, newAstTree } from '../parsers/bladeParser/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
 import { toLocation } from '../helpers/symbol';

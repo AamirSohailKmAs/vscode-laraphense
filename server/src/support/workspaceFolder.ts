@@ -4,7 +4,7 @@ import { uriToPath } from '../helpers/uri';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
 import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
-import { BladeParser } from '../bladeParser/parser';
+import { BladeParser } from '../parsers/bladeParser/parser';
 import { createBatches } from '../helpers/general';
 import { splitNamespace } from '../helpers/symbol';
 import { Analyzer } from '../languages/php/analyzer';

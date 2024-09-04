@@ -272,8 +272,8 @@ export class SymbolTable {
         };
     }
 
-    public loadFromFile(filePath: string) {
-        const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    public loadFromFile(cacheFileContent: string) {
+        const data: CacheData = JSON.parse(cacheFileContent); // todo:
         this.symbols = new Map(data.symbols);
         this.symbolsByUri = new Map(Object.entries(data.uriIndex));
         this.symbolsByScope = new Map(Object.entries(data.scopeIndex));

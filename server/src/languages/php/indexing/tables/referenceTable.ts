@@ -160,10 +160,9 @@ export class ReferenceTable {
         };
     }
 
-    // public loadFromFile(filePath: string) {
-    //     const data: CacheData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    //     this.references = new Map(data.references);
-    //     this.referencesByUri = new Map(Object.entries(data.uriIndex));
-    // }
+    public loadFromFile(cacheFileContent: string) {
+        const data: CacheData = JSON.parse(cacheFileContent);
+        this.references = new Map(data.references);
+    }
 }
 

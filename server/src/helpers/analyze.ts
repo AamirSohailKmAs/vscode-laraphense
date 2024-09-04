@@ -17,7 +17,13 @@ import {
     Name,
     UnionType,
 } from 'php-parser';
-import { PhpSymbol, SymbolKind, SymbolModifier, Value, ValueKind } from '../languages/php/indexing/tables/symbolTable';
+import {
+    PhpSymbol,
+    PhpSymbolKind,
+    SymbolModifier,
+    Value,
+    ValueKind,
+} from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { ImportStatement, PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { FQN } from './symbol';
@@ -25,7 +31,7 @@ import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
 
 export function createSymbol(
     name: string | Identifier,
-    kind: SymbolKind,
+    kind: PhpSymbolKind,
     loc: Location | null | undefined,
     scope: string,
     modifiers: SymbolModifier[] = [],
@@ -62,7 +68,7 @@ export function createSymbol(
 export function createImportStatement(
     name: string | Identifier,
     alias: string,
-    kind: SymbolKind,
+    kind: PhpSymbolKind,
     loc: Location | null | undefined,
     fqn: FQN = { scope: '', name: '' }
 ): ImportStatement {
@@ -90,7 +96,7 @@ export function createImportStatement(
 
 export function createReference(
     name: string | Identifier,
-    kind: SymbolKind,
+    kind: PhpSymbolKind,
     loc: Location | null | undefined,
     fqn: FQN = { scope: '', name: '' },
     definedIn: FQN = { scope: '', name: '' }

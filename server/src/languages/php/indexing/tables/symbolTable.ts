@@ -1,10 +1,8 @@
 'use strict';
 
-import { Location } from 'php-parser';
 import { RelativeUri } from '../../../../support/workspaceFolder';
-import * as fs from 'fs';
 import { Trie } from '../../../../support/searchTree';
-import { FQN } from '../../../../helpers/symbol';
+import { FQN, Symbol } from '../../../../helpers/symbol';
 import { Position } from 'vscode-languageserver-textdocument';
 import { PhpType } from '../../../../helpers/type';
 
@@ -30,7 +28,7 @@ export const enum SymbolModifier {
     Variadic,
 }
 
-export const enum SymbolKind {
+export const enum PhpSymbolKind {
     File,
     Namespace,
     Enum,
@@ -76,15 +74,8 @@ export type Value = {
     raw: string;
 };
 
-export type Symbol = {
-    id: number;
-    name: string;
-    kind: SymbolKind;
-    loc: Location;
-    uri: RelativeUri;
-};
-
 export type PhpSymbol = Symbol & {
+    kind: PhpSymbolKind;
     // namePosition: number;
     value?: Value;
     modifiers: SymbolModifier[];
@@ -294,7 +285,7 @@ export class SymbolTable {
         }
     }
 
-    public getSymbolNested(name: string, scope: string, kind: SymbolKind): PhpSymbol | undefined {
+    public getSymbolNested(name: string, scope: string, kind: PhpSymbolKind): PhpSymbol | undefined {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.kind === kind && symbol.name === name);
     }
 

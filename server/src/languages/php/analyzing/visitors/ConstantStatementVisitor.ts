@@ -3,7 +3,7 @@
 import { ConstantStatement } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol } from '../../../../helpers/analyze';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class ConstantStatementVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -14,7 +14,7 @@ export class ConstantStatementVisitor implements NodeVisitor {
             this.analyzer.addSymbol(
                 createSymbol(
                     constant.name,
-                    SymbolKind.Constant,
+                    PhpSymbolKind.Constant,
                     constant.loc,
                     this.analyzer.scope,
                     [],

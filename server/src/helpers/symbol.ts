@@ -3,8 +3,16 @@
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
 import { Location, Position } from '../bladeParser/bladeAst';
-import { SymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
+import { RelativeUri } from '../support/workspaceFolder';
+
+export type Symbol = {
+    id: number;
+    name: string;
+    loc: ParserLocation;
+    uri: RelativeUri;
+};
 
 export function toPosition(pos: ParserPosition): Position {
     return { offset: pos.offset, line: pos.line, character: pos.column + 1 };
@@ -22,12 +30,12 @@ export function toLSPPosition(position: ParserPosition) {
     return LSPPosition.create(position.line - 1, position.column);
 }
 
-export function toFqsen(kind: SymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
+export function toFqsen(kind: PhpSymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
     switch (kind) {
-        case SymbolKind.Class:
-        case SymbolKind.Interface:
-        case SymbolKind.Enum:
-        case SymbolKind.Trait:
+        case PhpSymbolKind.Class:
+        case PhpSymbolKind.Interface:
+        case PhpSymbolKind.Enum:
+        case PhpSymbolKind.Trait:
             return joinNamespace(containerName, name) as unknown as Fqsen;
         default:
             return `${containerName}${toSelector(kind, name)}` as Fqsen;
@@ -40,17 +48,17 @@ export function splitFqsen(fqsen: Fqsen): { fqcn: Fqcn; selector: Selector } {
     return { fqcn: keys[0] as Fqcn, selector: keys[1] as Selector };
 }
 
-export function toSelector(kind: SymbolKind, name: string): Selector {
+export function toSelector(kind: PhpSymbolKind, name: string): Selector {
     switch (kind) {
-        case SymbolKind.Function:
-        case SymbolKind.Method:
+        case PhpSymbolKind.Function:
+        case PhpSymbolKind.Method:
             return `:${name}()` as Selector;
-        case SymbolKind.Property:
-        case SymbolKind.Parameter:
+        case PhpSymbolKind.Property:
+        case PhpSymbolKind.Parameter:
             return `:$${name}` as Selector;
-        case SymbolKind.Constant:
-        case SymbolKind.ClassConstant:
-        case SymbolKind.EnumMember:
+        case PhpSymbolKind.Constant:
+        case PhpSymbolKind.ClassConstant:
+        case PhpSymbolKind.EnumMember:
             return `::${name}` as Selector;
         default:
             console.log(`default selector kind:${kind}, name:${name}`);
@@ -131,3 +139,4 @@ export function splitNamespace(fqn: string): FQN {
     const lastIndex = fqn.lastIndexOf('\\');
     return { scope: fqn.substring(0, lastIndex), name: fqn.substring(lastIndex + 1) };
 }
+

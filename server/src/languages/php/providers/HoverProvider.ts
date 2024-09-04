@@ -1,7 +1,7 @@
 'use strict';
 
 import { Position, Hover } from 'vscode-languageserver';
-import { PhpSymbol, SymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
 import { FlatDocument } from '../../../support/document';
 import { Location } from 'php-parser';
@@ -43,28 +43,28 @@ export class HoverProvider {
         value += ` \`\`\`php \n <?php \n`;
 
         switch (symbol.kind) {
-            case SymbolKind.Namespace:
+            case PhpSymbolKind.Namespace:
                 value += this.getMemberHover(symbol, 'namespace');
                 break;
-            case SymbolKind.Class:
+            case PhpSymbolKind.Class:
                 value += this.getMemberHover(symbol, 'class');
                 break;
-            case SymbolKind.Enum:
+            case PhpSymbolKind.Enum:
                 value += this.getMemberHover(symbol, 'enum');
                 break;
-            case SymbolKind.Interface:
+            case PhpSymbolKind.Interface:
                 value += this.getMemberHover(symbol, 'interface');
                 break;
-            case SymbolKind.Trait:
+            case PhpSymbolKind.Trait:
                 value += this.getMemberHover(symbol, 'trait');
                 break;
-            case SymbolKind.Method:
+            case PhpSymbolKind.Method:
                 value += this.getMethodHover(symbol);
                 break;
-            case SymbolKind.Property:
+            case PhpSymbolKind.Property:
                 value += this.getPropertyHover(symbol);
                 break;
-            case SymbolKind.ClassConstant:
+            case PhpSymbolKind.ClassConstant:
                 value += this.getClassConstantHover(symbol);
                 break;
             default:

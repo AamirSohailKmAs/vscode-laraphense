@@ -2,7 +2,7 @@
 
 import { Class } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class ClassVisitor implements NodeVisitor {
@@ -12,7 +12,7 @@ export class ClassVisitor implements NodeVisitor {
         const scope = this.analyzer.resetMember();
         const symbol = createSymbol(
             classNode.name,
-            SymbolKind.Class,
+            PhpSymbolKind.Class,
             classNode.loc,
             scope,
             modifier({
@@ -26,14 +26,14 @@ export class ClassVisitor implements NodeVisitor {
         this.analyzer.setMember(symbol);
 
         if (classNode.extends) {
-            this.analyzer.addReference(createReference(classNode.extends, SymbolKind.Class, classNode.extends.loc));
+            this.analyzer.addReference(createReference(classNode.extends, PhpSymbolKind.Class, classNode.extends.loc));
         }
 
         if (classNode.implements) {
             classNode.implements.forEach((interfaceNode) => {
                 // fixme: resolution, uqn,qf, rn
                 this.analyzer.addReference(
-                    createReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc)
+                    createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );
             });
         }

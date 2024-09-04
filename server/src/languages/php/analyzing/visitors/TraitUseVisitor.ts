@@ -2,7 +2,7 @@
 
 import { TraitAlias, TraitPrecedence, TraitUse } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference } from '../../../../helpers/analyze';
 
 /**
@@ -14,7 +14,7 @@ export class TraitUseVisitor implements NodeVisitor {
     public visit(node: TraitUse): boolean {
         node.traits.forEach((trait) => {
             // todo: alias, resolution
-            this.analyzer.addReference(createReference(trait.name, SymbolKind.Trait, trait.loc));
+            this.analyzer.addReference(createReference(trait.name, PhpSymbolKind.Trait, trait.loc));
         });
 
         if (node.adaptations) {
@@ -29,19 +29,19 @@ export class TraitUseVisitor implements NodeVisitor {
         return {
             traitprecedence: (node: TraitPrecedence): void => {
                 if (node.trait) {
-                    this.analyzer.addReference(createReference(node.trait, SymbolKind.Trait, node.trait.loc));
+                    this.analyzer.addReference(createReference(node.trait, PhpSymbolKind.Trait, node.trait.loc));
                 }
-                this.analyzer.addReference(createReference(node.method, SymbolKind.Method, node.loc));
+                this.analyzer.addReference(createReference(node.method, PhpSymbolKind.Method, node.loc));
 
                 node.instead.forEach((instead) => {
-                    this.analyzer.addReference(createReference(instead, SymbolKind.Trait, instead.loc));
+                    this.analyzer.addReference(createReference(instead, PhpSymbolKind.Trait, instead.loc));
                 });
             },
             traitalias: (node: TraitAlias): void => {
                 if (node.trait) {
-                    this.analyzer.addReference(createReference(node.trait, SymbolKind.Trait, node.trait.loc));
+                    this.analyzer.addReference(createReference(node.trait, PhpSymbolKind.Trait, node.trait.loc));
                 }
-                this.analyzer.addReference(createReference(node.method, SymbolKind.Method, node.loc));
+                this.analyzer.addReference(createReference(node.method, PhpSymbolKind.Method, node.loc));
             },
         };
     }

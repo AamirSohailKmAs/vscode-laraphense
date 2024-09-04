@@ -1,7 +1,7 @@
 'use strict';
 
 import { DocumentUri, SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
-import { PhpSymbol, SymbolKind } from '../indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind } from '../indexing/tables/symbolTable';
 import { toLSPRange } from '../../../helpers/symbol';
 import { FlatDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
@@ -49,46 +49,46 @@ export class DocumentSymbolProvider {
         return names[1].replace(/^[\(|\$]/, '');
     }
 
-    toLSPSymbolKind(kind: SymbolKind): LSPSymbolKind {
+    toLSPSymbolKind(kind: PhpSymbolKind): LSPSymbolKind {
         switch (kind) {
-            case SymbolKind.File:
+            case PhpSymbolKind.File:
                 return LSPSymbolKind.File;
-            case SymbolKind.Namespace:
+            case PhpSymbolKind.Namespace:
                 return LSPSymbolKind.Namespace;
-            case SymbolKind.Class:
+            case PhpSymbolKind.Class:
                 return LSPSymbolKind.Class;
-            case SymbolKind.Interface:
+            case PhpSymbolKind.Interface:
                 return LSPSymbolKind.Interface;
-            case SymbolKind.Enum:
+            case PhpSymbolKind.Enum:
                 return LSPSymbolKind.Enum;
-            case SymbolKind.Trait:
+            case PhpSymbolKind.Trait:
                 return LSPSymbolKind.Module;
-            case SymbolKind.Method:
+            case PhpSymbolKind.Method:
                 return LSPSymbolKind.Method;
-            case SymbolKind.Property:
-            case SymbolKind.PromotedProperty:
+            case PhpSymbolKind.Property:
+            case PhpSymbolKind.PromotedProperty:
                 return LSPSymbolKind.Property;
-            case SymbolKind.Constructor:
+            case PhpSymbolKind.Constructor:
                 return LSPSymbolKind.Constructor;
-            case SymbolKind.Function:
+            case PhpSymbolKind.Function:
                 return LSPSymbolKind.Function;
-            case SymbolKind.Variable:
-            case SymbolKind.Parameter:
+            case PhpSymbolKind.Variable:
+            case PhpSymbolKind.Parameter:
                 return LSPSymbolKind.Variable;
-            case SymbolKind.Constant:
-            case SymbolKind.ClassConstant:
+            case PhpSymbolKind.Constant:
+            case PhpSymbolKind.ClassConstant:
                 return LSPSymbolKind.Constant;
-            case SymbolKind.String:
+            case PhpSymbolKind.String:
                 return LSPSymbolKind.String;
-            case SymbolKind.Number:
+            case PhpSymbolKind.Number:
                 return LSPSymbolKind.Number;
-            case SymbolKind.Boolean:
+            case PhpSymbolKind.Boolean:
                 return LSPSymbolKind.Boolean;
-            case SymbolKind.Array:
+            case PhpSymbolKind.Array:
                 return LSPSymbolKind.Array;
-            case SymbolKind.Null:
+            case PhpSymbolKind.Null:
                 return LSPSymbolKind.Null;
-            case SymbolKind.EnumMember:
+            case PhpSymbolKind.EnumMember:
                 return LSPSymbolKind.EnumMember;
         }
     }

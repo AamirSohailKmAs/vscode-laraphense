@@ -10,7 +10,7 @@ import { createBatches } from '../helpers/general';
 import { splitNamespace } from '../helpers/symbol';
 import { Analyzer } from '../languages/php/analyzer';
 import { ReferenceTable, PhpReference } from '../languages/php/indexing/tables/referenceTable';
-import { SymbolTable, PhpSymbol, SymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { SymbolTable, PhpSymbol, PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
@@ -291,7 +291,7 @@ export class WorkspaceFolder {
         const version = this.symbolTable.getSymbolNested(
             'VERSION',
             'Illuminate\\Foundation\\Application',
-            SymbolKind.ClassConstant
+            PhpSymbolKind.ClassConstant
         )?.value;
         if (version) {
             this._libraries.push(new Laravel(this, version.raw));

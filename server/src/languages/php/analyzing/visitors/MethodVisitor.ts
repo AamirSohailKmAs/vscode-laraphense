@@ -3,7 +3,7 @@
 import { Method, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
-import { PhpSymbol, SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -13,7 +13,7 @@ export class MethodVisitor implements NodeVisitor {
         // todo: Attribute, type, byref
         const method = createSymbol(
             methodNode.name,
-            SymbolKind.Method,
+            PhpSymbolKind.Method,
             methodNode.loc,
             this.analyzer.scope,
             modifier({
@@ -38,13 +38,14 @@ export class MethodVisitor implements NodeVisitor {
     }
 
     private visitParameter(param: Parameter, method: PhpSymbol): void {
-        const kind = method.name === '__construct' && param.flags > 0 ? SymbolKind.Property : SymbolKind.Parameter;
+        const kind =
+            method.name === '__construct' && param.flags > 0 ? PhpSymbolKind.Property : PhpSymbolKind.Parameter;
 
         const modifiers = modifier({
             isReadonly: param.readonly,
             isNullable: param.nullable,
             isVariadic: param.variadic,
-            visibility: kind === SymbolKind.Property ? parseFlag(param.flags) : undefined,
+            visibility: kind === PhpSymbolKind.Property ? parseFlag(param.flags) : undefined,
         });
 
         const arg = this.analyzer.addSymbol(

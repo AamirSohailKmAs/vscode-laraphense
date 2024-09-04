@@ -3,7 +3,7 @@
 import { Tree } from '../../bladeParser/bladeAst';
 
 import { Block, Namespace, Program } from 'php-parser';
-import { PhpSymbol, SymbolKind, SymbolTable } from './indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { ImportStatement, PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri } from '../../support/workspaceFolder';
 import { FunctionVisitor } from './analyzing/visitors/FunctionVisitor';
@@ -64,7 +64,7 @@ export class NamespaceVisitor implements NodeVisitor {
     visit(node: Namespace): boolean {
         // todo: add namespace symbol for rename provider
         // todo: we need loc of namespace name instead of given loc
-        this.analyzer.setScope(createSymbol(node.name, SymbolKind.Namespace, node.loc, ''));
+        this.analyzer.setScope(createSymbol(node.name, PhpSymbolKind.Namespace, node.loc, ''));
         return true;
     }
 }

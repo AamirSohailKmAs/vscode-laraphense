@@ -1,12 +1,12 @@
 'use strict';
 
 import { RelativeUri } from '../../../../support/workspaceFolder';
-import * as fs from 'fs';
-import { Symbol } from './symbolTable';
-import { FQN } from '../../../../helpers/symbol';
+import { PhpSymbolKind } from './symbolTable';
+import { FQN, Symbol } from '../../../../helpers/symbol';
 import { PhpType } from '../../../../helpers/type';
 
 export type PhpReference = Symbol & {
+    kind: PhpSymbolKind;
     fqn: FQN;
     definedIn: FQN;
     symbolId: number;

@@ -2,7 +2,7 @@
 
 import { PropertyStatement } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class PropertyVisitor implements NodeVisitor {
@@ -16,7 +16,7 @@ export class PropertyVisitor implements NodeVisitor {
             this.analyzer.addSymbol(
                 createSymbol(
                     prop.name,
-                    SymbolKind.Property,
+                    PhpSymbolKind.Property,
                     node.loc,
                     this.analyzer.scope,
                     modifier({

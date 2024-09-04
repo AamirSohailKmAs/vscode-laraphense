@@ -2,7 +2,7 @@
 
 import { Enum } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class EnumVisitor implements NodeVisitor {
@@ -11,13 +11,13 @@ export class EnumVisitor implements NodeVisitor {
     visit(node: Enum): boolean {
         // todo: Attribute, type
         const scope = this.analyzer.resetMember();
-        this.analyzer.setMember(createSymbol(node.name, SymbolKind.Enum, node.loc, scope));
+        this.analyzer.setMember(createSymbol(node.name, PhpSymbolKind.Enum, node.loc, scope));
 
         if (node.implements) {
             node.implements.forEach((interfaceNode) => {
                 // fixme: resolution, uqn,qf, rn
                 this.analyzer.addReference(
-                    createReference(interfaceNode.name, SymbolKind.Interface, interfaceNode.loc)
+                    createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );
             });
         }

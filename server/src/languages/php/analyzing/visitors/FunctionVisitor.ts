@@ -12,7 +12,7 @@ import {
     Statement,
 } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 
 export class FunctionVisitor implements NodeVisitor {
@@ -23,7 +23,9 @@ export class FunctionVisitor implements NodeVisitor {
 
         // todo: Attribute, type
         const scope = this.analyzer.resetMember();
-        this.analyzer.setMember(createSymbol(node.name, SymbolKind.Function, node.loc, scope, modifier(), node.type));
+        this.analyzer.setMember(
+            createSymbol(node.name, PhpSymbolKind.Function, node.loc, scope, modifier(), node.type)
+        );
 
         return true;
     }

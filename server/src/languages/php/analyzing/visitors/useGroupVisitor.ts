@@ -2,7 +2,7 @@
 
 import { UseGroup } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { SymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createImportStatement, normalizeName } from '../../../../helpers/analyze';
 import { splitNamespace } from '../../../../helpers/symbol';
 
@@ -12,12 +12,12 @@ export class UseGroupVisitor implements NodeVisitor {
     visit(node: UseGroup): boolean {
         if (node.items) {
             node.items.forEach((use) => {
-                let type = SymbolKind.Class;
+                let type = PhpSymbolKind.Class;
 
                 if (use.type === 'function') {
-                    type = SymbolKind.Function;
+                    type = PhpSymbolKind.Function;
                 } else if (use.type === 'const') {
-                    type = SymbolKind.Constant;
+                    type = PhpSymbolKind.Constant;
                 }
 
                 this.analyzer.addImportStatement(

@@ -9,8 +9,7 @@ import { WorkspaceFolder } from '../support/workspaceFolder';
 import { directives } from './laravel/directives';
 import { existsSync, lstatSync, readdirSync } from 'fs-extra';
 import { runSafe } from '../helpers/general';
-import { uriToPath } from '../helpers/uri';
-import { Fetcher } from '../support/fetcher';
+import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 
 export type Snippet = {
     label: string;
@@ -27,13 +26,13 @@ export class Laravel implements Library {
         this.index();
     }
 
-    public canComplete(languageId: DocLang): boolean {
-        return [DocLang.php, DocLang.blade].includes(languageId);
-    }
-
-    public doComplete(document: TextDocument, position: Position): CompletionList {
+    public doComplete(languageId: DocLang, document: TextDocument, position: Position): CompletionList {
         const items: CompletionItem[] = [];
         let isIncomplete = false;
+
+        if (![DocLang.php, DocLang.blade].includes(languageId)) {
+            return CompletionList.create(items, isIncomplete);
+        }
 
         const snippets = this.getSnippetsUpToVersion(directives, this._version);
 
@@ -125,6 +124,18 @@ export class Laravel implements Library {
         return allObjects.filter((obj) => {
             return lte(obj.version, version);
         });
+    }
+
+    public static make(folder: WorkspaceFolder) {
+        const version = folder.symbolTable.getSymbolNested(
+            'VERSION',
+            'Illuminate\\Foundation\\Application',
+            PhpSymbolKind.ClassConstant
+        )?.value;
+        if (!version) {
+            return undefined;
+        }
+        return new Laravel(folder, version.raw);
     }
 }
 

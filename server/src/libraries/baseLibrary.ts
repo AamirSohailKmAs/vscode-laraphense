@@ -6,7 +6,6 @@ import { DocLang } from '../support/document';
 
 export type Library = {
     index: () => void;
-    canComplete: (languageId: DocLang) => boolean;
-    doComplete?: (document: TextDocument, position: Position) => CompletionList;
+    doComplete?: (languageId: DocLang, document: TextDocument, position: Position) => CompletionList;
 };
 

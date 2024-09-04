@@ -1,16 +1,15 @@
 'use strict';
 import { glob } from 'fast-glob';
-import { folderContainsUri, uriToPath } from '../helpers/uri';
+import { uriToPath } from '../helpers/uri';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
-import { URI } from 'vscode-uri';
-import { isAbsolute, join, sep } from 'path';
+import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
 import { BladeParser } from '../bladeParser/parser';
 import { createBatches } from '../helpers/general';
 import { splitNamespace } from '../helpers/symbol';
 import { Analyzer } from '../languages/php/analyzer';
 import { ReferenceTable, PhpReference } from '../languages/php/indexing/tables/referenceTable';
-import { SymbolTable, PhpSymbol, PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { SymbolTable, PhpSymbol } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
@@ -140,7 +139,7 @@ export class WorkspaceFolder {
 
     public uriToGlobPattern(name: string) {
         if (name.indexOf('/') === -1) {
-            return '**/' + name + '/*.{php,blade}'; // .php and .blade file, I know .blade isn't something for now
+            return '**/' + name + '/*'; // .php and .blade file, I know .blade isn't something for now
         } else {
             return name;
         }
@@ -284,18 +283,8 @@ export class WorkspaceFolder {
             return;
         }
 
-        this.setLaravel();
-    }
-
-    private setLaravel() {
-        const version = this.symbolTable.getSymbolNested(
-            'VERSION',
-            'Illuminate\\Foundation\\Application',
-            PhpSymbolKind.ClassConstant
-        )?.value;
-        if (version) {
-            this._libraries.push(new Laravel(this, version.raw));
-        }
+        const laravel = Laravel.make(this);
+        if (laravel) this._libraries.push(laravel);
     }
 }
 

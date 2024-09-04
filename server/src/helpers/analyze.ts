@@ -11,28 +11,23 @@ import {
     MODIFIER_PUBLIC,
     MODIFIER_PROTECTED,
     NullKeyword,
-    Location,
+    Location as ParserLocation,
     TypeReference,
     SelfReference,
     Name,
     UnionType,
 } from 'php-parser';
-import {
-    PhpSymbol,
-    PhpSymbolKind,
-    SymbolModifier,
-    Value,
-    ValueKind,
-} from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { ImportStatement, PhpReference } from '../languages/php/indexing/tables/referenceTable';
-import { FQN } from './symbol';
+import { FQN, Value, ValueKind } from './symbol';
 import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
+import { Location } from '../parsers/ast';
 
 export function createSymbol(
     name: string | Identifier,
     kind: PhpSymbolKind,
-    loc: Location | null | undefined,
+    loc: ParserLocation | null | undefined,
     scope: string,
     modifiers: SymbolModifier[] = [],
     type?: Identifier | Identifier[] | null,
@@ -43,7 +38,6 @@ export function createSymbol(
     const valueObject = normalizeValue(value);
 
     if (loc === null || loc === undefined) {
-        loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
     }
 
@@ -51,7 +45,7 @@ export function createSymbol(
         id: 0,
         name,
         kind,
-        loc,
+        loc: normalizeLocation(loc),
         uri: '' as RelativeUri,
         modifiers,
         value: valueObject,
@@ -69,13 +63,12 @@ export function createImportStatement(
     name: string | Identifier,
     alias: string,
     kind: PhpSymbolKind,
-    loc: Location | null | undefined,
+    loc: ParserLocation | null | undefined,
     fqn: FQN = { scope: '', name: '' }
 ): ImportStatement {
     name = normalizeName(name).name;
 
     if (loc === null || loc === undefined) {
-        loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
     }
 
@@ -85,7 +78,7 @@ export function createImportStatement(
         name,
         alias,
         kind,
-        loc,
+        loc: normalizeLocation(loc),
         fqn,
         definedIn: { scope: '', name: '' },
         uri: '' as RelativeUri,
@@ -97,14 +90,13 @@ export function createImportStatement(
 export function createReference(
     name: string | Identifier,
     kind: PhpSymbolKind,
-    loc: Location | null | undefined,
+    loc: ParserLocation | null | undefined,
     fqn: FQN = { scope: '', name: '' },
     definedIn: FQN = { scope: '', name: '' }
 ): PhpReference {
     name = normalizeName(name).name;
 
     if (loc === null || loc === undefined) {
-        loc = { source: null, start: { column: 0, line: 0, offset: 0 }, end: { column: 0, line: 0, offset: 0 } };
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
     }
 
@@ -113,13 +105,32 @@ export function createReference(
         symbolId: 0,
         name,
         kind,
-        loc,
+        loc: normalizeLocation(loc),
         fqn,
         definedIn,
         uri: '' as RelativeUri,
     };
 
     return reference;
+}
+
+export function normalizeLocation(loc: ParserLocation | null | undefined): Location {
+    if (loc === null || loc === undefined) {
+        return { start: { character: 0, line: 0, offset: 0 }, end: { character: 0, line: 0, offset: 0 } };
+    }
+
+    return {
+        start: {
+            character: loc.start.column ?? 0,
+            line: loc.start.line ?? 0,
+            offset: loc.start.offset ?? 0,
+        },
+        end: {
+            character: loc.end.column ?? 0,
+            line: loc.end.line ?? 0,
+            offset: loc.end.offset ?? 0,
+        },
+    };
 }
 
 export function normalizeName(name: string | Identifier): { name: string; offset: number } {

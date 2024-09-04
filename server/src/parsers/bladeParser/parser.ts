@@ -8,7 +8,6 @@ import {
     EmbeddedLanguage,
     ErrorNode,
     HtmlElement,
-    Location,
     Token,
     TokenKind,
     Tree,
@@ -17,6 +16,7 @@ import {
 import { DocLang, FlatDocument } from '../../support/document';
 import { BladeLexer } from './lexer';
 import { toDocLang } from '../../helpers/uri';
+import { Location } from '../ast';
 
 type config = {
     parser: {

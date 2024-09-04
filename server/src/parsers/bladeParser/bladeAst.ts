@@ -2,8 +2,7 @@
 
 import { Program } from 'php-parser';
 import { DocLang } from '../../support/document';
-
-export type Position = { line: number; character: number; offset: number };
+import { Location, Position } from '../ast';
 
 export enum TokenKind {
     EOF = 'end of file', // end of file
@@ -47,11 +46,6 @@ export type Token = {
     afterWhitespace: boolean;
     pos: Position;
     end?: Position;
-};
-
-export type Location = {
-    start: Position;
-    end: Position;
 };
 
 export interface Attribute extends AstNode {

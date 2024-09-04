@@ -2,17 +2,33 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { Location, Position } from '../parsers/bladeParser/bladeAst';
 import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
 import { RelativeUri } from '../support/workspaceFolder';
+import { Location, Position } from '../parsers/ast';
 
 export type Symbol = {
     id: number;
     name: string;
-    loc: ParserLocation;
+    loc: Location;
     uri: RelativeUri;
 };
+
+export type Value = {
+    kind: ValueKind;
+    raw: string;
+};
+
+export const enum ValueKind {
+    EnumMember,
+    ClassConstant,
+    Array,
+    Null,
+    String,
+    Number,
+    Boolean,
+    Constant,
+}
 
 export function toPosition(pos: ParserPosition): Position {
     return { offset: pos.offset, line: pos.line, character: pos.column + 1 };
@@ -22,12 +38,12 @@ export function toLocation(loc: ParserLocation): Location {
     return { start: toPosition(loc.start), end: toPosition(loc.end) };
 }
 
-export function toLSPRange(location: ParserLocation): Range {
+export function toLSPRange(location: Location): Range {
     return Range.create(toLSPPosition(location.start), toLSPPosition(location.end));
 }
 
-export function toLSPPosition(position: ParserPosition) {
-    return LSPPosition.create(position.line - 1, position.column);
+export function toLSPPosition(position: Position) {
+    return LSPPosition.create(position.line - 1, position.character);
 }
 
 export function toFqsen(kind: PhpSymbolKind, name: string, containerName: string | undefined = ''): Fqsen {

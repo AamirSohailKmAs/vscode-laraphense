@@ -1,6 +1,7 @@
 'use strict';
 
-import { Position, Token, TokenKind } from './bladeAst';
+import { Position } from '../ast';
+import { Token, TokenKind } from './bladeAst';
 
 enum State {
     Text,

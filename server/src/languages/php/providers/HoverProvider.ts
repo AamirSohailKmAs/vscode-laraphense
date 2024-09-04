@@ -4,9 +4,9 @@ import { Position, Hover } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
 import { FlatDocument } from '../../../support/document';
-import { Location } from 'php-parser';
 import { Workspace } from '../../../support/workspace';
 import { WorkspaceFolder } from '../../../support/workspaceFolder';
+import { Location } from '../../../parsers/ast';
 
 export class HoverProvider {
     folder: WorkspaceFolder | undefined;

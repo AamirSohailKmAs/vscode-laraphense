@@ -2,7 +2,7 @@
 
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import { Trie } from '../../../../support/searchTree';
-import { FQN, Symbol } from '../../../../helpers/symbol';
+import { FQN, Symbol, Value } from '../../../../helpers/symbol';
 import { Position } from 'vscode-languageserver-textdocument';
 import { PhpType } from '../../../../helpers/type';
 
@@ -52,26 +52,10 @@ export const enum PhpSymbolKind {
     Constant,
 }
 
-export const enum ValueKind {
-    EnumMember,
-    ClassConstant,
-    Array,
-    Null,
-    String,
-    Number,
-    Boolean,
-    Constant,
-}
-
 export type PhpSymbolType = {
     declared?: PhpType;
     documented?: PhpType;
     inferred?: PhpType;
-};
-
-export type Value = {
-    kind: ValueKind;
-    raw: string;
 };
 
 export type PhpSymbol = Symbol & {

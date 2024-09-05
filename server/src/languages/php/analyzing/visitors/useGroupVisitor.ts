@@ -1,13 +1,13 @@
 'use strict';
 
 import { UseGroup } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createImportStatement, normalizeName } from '../../../../helpers/analyze';
 import { splitNamespace } from '../../../../helpers/symbol';
 
 export class UseGroupVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(node: UseGroup): boolean {
         if (node.items) {

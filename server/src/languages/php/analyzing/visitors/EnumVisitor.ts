@@ -1,12 +1,12 @@
 'use strict';
 
 import { Enum } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class EnumVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(node: Enum): boolean {
         // todo: Attribute, type

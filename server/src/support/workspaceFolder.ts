@@ -61,7 +61,7 @@ export class WorkspaceFolder {
         this.fetcher = new Fetcher();
         this.symbolTable = new SymbolTable();
         this.referenceTable = new ReferenceTable();
-        this.analyzer = new Analyzer(this.symbolTable, this.referenceTable);
+        this.analyzer = new Analyzer(this.symbolTable, this.referenceTable, stubsFolder);
 
         this.resolver = new NamespaceResolver(
             this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
@@ -194,15 +194,7 @@ export class WorkspaceFolder {
                     //     this.compiler.analyze(parsedData);
                     // }
 
-                    const compiled = this.indexFile(entry);
-
-                    if (!compiled) {
-                        missingFiles.push({ uri: entry.uri, reason: "can't compile" });
-                        return;
-                    }
-                    this.symbolTable.addSymbols(compiled.symbols);
-                    this.referenceTable.addReferences(compiled.references);
-                    this.referenceTable.addImports(compiled.importStatements);
+                    await this.indexFile(entry);
 
                     count++;
                 })
@@ -259,7 +251,7 @@ export class WorkspaceFolder {
         if (symbol) return symbol;
     }
 
-    private indexFile(entry: FileEntry) {
+    private async indexFile(entry: FileEntry) {
         const flatDoc = this.fetcher.loadUriIfLang(join(this._uri, entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {
@@ -267,7 +259,10 @@ export class WorkspaceFolder {
         }
 
         const astTree = this.parser.parseFlatDoc(flatDoc);
-        const { symbols, references, importStatements } = this.analyzer.analyse(astTree, entry.uri as RelativeUri);
+        const { symbols, references, importStatements } = await this.analyzer.analyze(
+            astTree,
+            entry.uri as RelativeUri
+        );
         flatDoc.lastCompile = process.hrtime();
 
         // Link references to stubs if necessary
@@ -281,7 +276,9 @@ export class WorkspaceFolder {
             });
         }
 
-        return { astTree, symbols, references, importStatements };
+        this.symbolTable.addSymbols(symbols);
+        this.referenceTable.addReferences(references);
+        this.referenceTable.addImports(importStatements);
     }
 
     private initLibraries() {

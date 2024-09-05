@@ -1,10 +1,10 @@
 'use strict';
 
 import { If } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 
 export class IfVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(node: If): boolean {
         // this.visitExpression(node.test);

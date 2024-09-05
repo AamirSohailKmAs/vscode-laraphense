@@ -1,12 +1,12 @@
 'use strict';
 
 import { ConstantStatement } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 import { createSymbol } from '../../../../helpers/analyze';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class ConstantStatementVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(node: ConstantStatement): boolean {
         for (let i = 0; i < node.constants.length; i++) {

@@ -1,12 +1,12 @@
 'use strict';
 
 import { Method, Parameter } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     public visit(node: unknown): boolean {
         const methodNode = node as Method;

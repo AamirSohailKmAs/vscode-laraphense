@@ -5,7 +5,7 @@ import { Tree } from '../../parsers/bladeParser/bladeAst';
 import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { ImportStatement, PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
-import { RelativeUri } from '../../support/workspaceFolder';
+import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
 import { FunctionVisitor } from './analyzing/visitors/FunctionVisitor';
 import { InterfaceVisitor } from './analyzing/visitors/InterfaceVisitor';
 import { UseGroupVisitor } from './analyzing/visitors/UseGroupVisitor';
@@ -35,12 +35,39 @@ export type TreeLike = {
     body?: Array<any> | Block;
 };
 
+export type Fqcn = string & { readonly Fqcn: unique symbol };
+export type Fqsen = string & { readonly Fqsen: unique symbol };
+export type Selector = string & { readonly Selector: unique symbol };
+
 export interface NodeVisitor {
+    /**
+     * Hook that runs before the AST traversal starts.
+     * Can be used to initialize data or perform setup tasks.
+     *
+     * @param rootNode The root node of the AST.
+     */
+    beforeTraversal?: (rootNode: TreeLike) => Promise<void>;
+
+    /**
+     * Method that runs on each node during AST traversal.
+     * Used to perform the main processing logic for each stage.
+     *
+     * @param node The current node in the AST being visited.
+     */
+    // visit(node: TreeLike): Promise<boolean>;
     visit(node: TreeLike): boolean;
+
+    /**
+     * Hook that runs after the AST traversal is complete.
+     * Can be used for cleanup or final processing.
+     *
+     * @param rootNode The root node of the AST.
+     */
+    afterTraversal?: (rootNode: TreeLike) => Promise<void>;
 }
 
 export class TreeVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(_node: Tree): boolean {
         this.analyzer.resetState();
@@ -49,7 +76,7 @@ export class TreeVisitor implements NodeVisitor {
 }
 
 export class ProgramVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(_node: Program): boolean {
         // when parsing blade file we may get program, so fix scope
@@ -59,7 +86,7 @@ export class ProgramVisitor implements NodeVisitor {
 }
 
 export class NamespaceVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(node: Namespace): boolean {
         // todo: add namespace symbol for rename provider
@@ -70,14 +97,14 @@ export class NamespaceVisitor implements NodeVisitor {
 }
 
 export class BlockVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(_node: Block): boolean {
         return true;
     }
 }
 
-export class Analyzer {
+export class SymbolExtractor {
     private namespace: string = '';
     private member?: PhpSymbol = undefined;
     private subMember?: PhpSymbol = undefined;
@@ -188,7 +215,7 @@ export class Analyzer {
         this.uri = uri;
 
         this.resetState();
-        this.traverseAST(tree, this.visitor.bind(this), tree.kind);
+        this.traverseAST(tree, this.visitor.bind(this));
         this.resolvePendingReferences();
 
         return {
@@ -300,8 +327,8 @@ export class Analyzer {
         });
     }
 
-    private traverseAST(treeNode: TreeLike, visitor: (treeNode: TreeLike, parent: string) => boolean, parent: string) {
-        let shouldDescend = visitor(treeNode, parent);
+    private traverseAST(treeNode: TreeLike, visitor: (treeNode: TreeLike) => boolean) {
+        let shouldDescend = visitor(treeNode);
         let child = treeNode.children ?? treeNode.body;
 
         if (child && !Array.isArray(child)) {
@@ -311,7 +338,7 @@ export class Analyzer {
         if (child && shouldDescend) {
             // console.log('enter state', treeNode.kind);
             for (let i = 0, l = child.length; i < l; i++) {
-                this.traverseAST(child[i], visitor, treeNode.kind);
+                this.traverseAST(child[i], visitor);
             }
             if (treeNode.kind === 'namespace') {
                 if (this.stateStack.length !== 1) {
@@ -324,7 +351,7 @@ export class Analyzer {
         }
     }
 
-    private visitor(node: TreeLike, parent: string): boolean {
+    private visitor(node: TreeLike): boolean {
         const visitor = this.visitorMap[node.kind];
         // return visitor ? visitor.visit(node) : false;
 
@@ -350,18 +377,77 @@ export class Analyzer {
     }
 }
 
-/**
- * a tagging type which is fully Qualified Class Name
- */
+export class Analyzer {
+    private stages: NodeVisitor[];
+    symbolExtractor: SymbolExtractor;
 
-export type Fqcn = string & { readonly Fqcn: unique symbol };
-/**
- * a tagging type which is Structural Element Selector
- */
+    constructor(
+        private symbolTable: SymbolTable,
+        private referenceTable: ReferenceTable,
+        private stubsFolder?: WorkspaceFolder
+    ) {
+        this.symbolExtractor = new SymbolExtractor(symbolTable, referenceTable);
 
-export type Selector = string & { readonly Selector: unique symbol };
-/**
- * a tagging type which is fully Qualified Structural Element Name
- */
-export type Fqsen = string & { readonly Fqsen: unique symbol };
+        this.stages = [
+            // new ReferenceExtractionStage(this.analyzer),
+            // new SymbolReferenceLinkingStage(this.analyzer),
+            // new SemanticAnalysisStage(this.analyzer),
+            // new TypeAnalysisStage(this.analyzer),
+            // new ValidationStage(this.analyzer),
+        ];
+    }
+
+    public async analyze(ast: Tree, uri: RelativeUri, steps: number = 1) {
+        // Perform concurrent traversal with promises
+        await this.traverseAST(ast, this.stages);
+        return this.symbolExtractor.analyse(ast, uri);
+    }
+
+    private async traverseAST(astNode: TreeLike, stages: NodeVisitor[]): Promise<void> {
+        // Run `beforeTraversal` concurrently for all stages
+        await Promise.all(stages.map((stage) => stage.beforeTraversal && stage.beforeTraversal(astNode)));
+
+        // Traverse the AST and run `visit` concurrently for all stages
+        await this._traverseNode(astNode, stages);
+
+        // Run `afterTraversal` concurrently for all stages
+        await Promise.all(stages.map((stage) => stage.afterTraversal && stage.afterTraversal(astNode)));
+    }
+
+    private async _traverseNode(node: TreeLike, stages: NodeVisitor[]): Promise<void> {
+        // Concurrently visit the node with all stages
+        const results = await Promise.all(stages.map((stage) => stage.visit(node)));
+
+        // Determine if any stage wants to continue traversal
+        const shouldContinue = results.some((result) => result);
+
+        if (!shouldContinue) {
+            return; // If no stage wants to continue, stop further traversal
+        }
+
+        let children = node.children ?? node.body;
+
+        if (children && !Array.isArray(children)) {
+            children = [children];
+        }
+
+        if (children) {
+            await Promise.all(children.map((child) => this._traverseNode(child, stages)));
+        }
+    }
+}
+
+class SymbolExtractionStage implements NodeVisitor {
+    constructor(private analyzer: SymbolExtractor) {}
+
+    public visit(node: TreeLike): boolean {
+        console.log(this.analyzer);
+
+        if (node.kind === 'class' || node.kind === 'function' || node.kind === 'variable') {
+            // Extract symbols from node and add them to the context
+            // this.context.addSymbol(symbol);
+        }
+        return false;
+    }
+}
 

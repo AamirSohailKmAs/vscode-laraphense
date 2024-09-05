@@ -1,12 +1,12 @@
 'use strict';
 
 import { Interface } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class InterfaceVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(interfaceNode: Interface): boolean {
         // todo: Attribute

@@ -1,10 +1,10 @@
 'use strict';
 
 import { While } from 'php-parser';
-import { Analyzer, NodeVisitor } from '../../analyzer';
+import { SymbolExtractor, NodeVisitor } from '../../analyzer';
 
 export class WhileVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: SymbolExtractor) {}
 
     visit(whileNode: unknown): boolean {
         const node = whileNode as While;

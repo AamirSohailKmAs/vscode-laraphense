@@ -1,7 +1,7 @@
 'use strict';
 import { glob } from 'fast-glob';
 import { uriToPath } from '../helpers/uri';
-import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE } from '../support/defaults';
+import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE, DEFAULT_MAX_FILE_SIZE, DEFAULT_PHP_VERSION } from '../support/defaults';
 import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
 import { BladeParser } from '../parsers/bladeParser/parser';
@@ -15,6 +15,7 @@ import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
 import { NamespaceResolver } from '../languages/php/namespaceResolver';
+import { laraphenseRc, laraphenseSetting } from '../languages/baseLang';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -46,6 +47,7 @@ export class WorkspaceFolder {
     public resolver: NamespaceResolver;
 
     private _libraries: Library[] = [];
+    private _config: laraphenseSetting = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
 
     constructor(
         private _name: string,
@@ -71,6 +73,10 @@ export class WorkspaceFolder {
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
+    }
+
+    public set config(config: laraphenseSetting) {
+        this._config = config;
     }
 
     public get name(): string {
@@ -157,14 +163,14 @@ export class WorkspaceFolder {
         for (const batch of fileBatches) {
             await Promise.all(
                 batch.map(async (entry) => {
-                    // if (entry.size > this.config.maxFileSize) {
-                    //     console.warn(
-                    //         `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this.config.maxFileSize} bytes.`
-                    //     );
-                    //     count++;
-                    //     missingFiles.push({ uri: entry.uri, reason: 'large file size' });
-                    //     return; // maybe is shouldn't return
-                    // }
+                    if (entry.size > this._config.maxFileSize) {
+                        console.warn(
+                            `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
+                        );
+                        count++;
+                        missingFiles.push({ uri: entry.uri, reason: 'large file size' });
+                        return;
+                    }
 
                     // const filePath = join(folderPath, file);
                     // const documentUri = URI.file(filePath).toString();

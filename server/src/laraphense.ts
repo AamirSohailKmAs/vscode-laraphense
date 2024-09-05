@@ -8,6 +8,7 @@ import {
     CompletionContext,
     CompletionItem,
     CompletionList,
+    ConfigurationItem,
     DocumentLink,
     Position,
     SymbolInformation,
@@ -25,6 +26,7 @@ import { Js } from './languages/jsLang';
 import { Blade } from './languages/bladeLang';
 import { Php } from './languages/phpLang';
 import { BladeParser } from './parsers/bladeParser/parser';
+import { FolderUri } from './support/workspaceFolder';
 
 export class Laraphense {
     private _parser: BladeParser;
@@ -47,8 +49,22 @@ export class Laraphense {
         this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._openDocuments, this._settings));
     }
 
-    public set settings(settings: Settings) {
-        this._settings = settings;
+    public setSettings(items: ConfigurationItem[], settings: Settings) {
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.scopeUri) {
+                const folder = this._workspace.folders.get(item.scopeUri as FolderUri);
+                if (folder) {
+                    folder.config = settings[i];
+                }
+                continue;
+            }
+
+            if (item.section) {
+                this._settings[item.section] = settings[i];
+            }
+        }
+
         if (settings.laraphense) {
             this._workspace.config = settings.laraphense;
         }

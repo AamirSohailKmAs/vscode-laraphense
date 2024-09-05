@@ -154,7 +154,7 @@ export class Workspace {
         }
 
         if (missingFiles.length > 0) {
-            console.log('missingFiles', missingFiles);
+            // console.log('missingFiles', missingFiles);
         }
 
         this.cache?.writeJson(join(folder.name, 'symbols'), folder.symbolTable.saveForFile());

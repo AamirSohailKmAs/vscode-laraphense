@@ -91,6 +91,11 @@ export type laraphenseRc = {
     cachePath: string;
 };
 
+export type laraphenseSetting = {
+    phpVersion: number;
+    maxFileSize: number;
+};
+
 export type Settings = {
     html?: HtmlSetting;
     css?: CssSetting;
@@ -99,5 +104,6 @@ export type Settings = {
     'js/ts'?: {
         implicitProjectConfig?: { experimentalDecorators?: boolean; strictNullChecks: boolean };
     };
+    [key: string]: any;
 };
 

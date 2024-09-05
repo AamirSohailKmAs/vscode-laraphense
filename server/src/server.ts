@@ -67,7 +67,7 @@ async function setSettings() {
     }
 
     settings = await connection.workspace.getConfiguration(items);
-    laraphense.settings = Object.assign({}, settings[0]);
+    laraphense.setSettings(items, settings);
 }
 
 connection.onInitialize(async (params: InitializeParams) => {

@@ -38,3 +38,79 @@ export const NEVER_NAME = 'never';
 export const ARRAY_ACCESS_NAME = 'ArrayAccess';
 export const TRAVERSABLE_NAME = 'Traversable';
 
+const builtInTypes = new Set([
+    'self',
+    'static',
+    'parent',
+
+    'object',
+    'callable',
+
+    'array',
+    'iterable',
+
+    'float',
+    'int',
+    'string',
+
+    'never',
+    'void',
+    'mixed',
+
+    'null',
+
+    'bool',
+    'false',
+    'true',
+]);
+
+const softReservedNames = new Set(['resource', 'numeric', 'enum']);
+
+const keywords = new Set([
+    '$this',
+    'self',
+    'static',
+
+    'array',
+    'iterable',
+    'array-key',
+
+    'string',
+    'class-string',
+
+    'bool',
+    'false',
+    'true',
+
+    'callable',
+
+    'int',
+    'float',
+
+    'null',
+
+    'object',
+    'resource',
+
+    'mixed',
+    'never',
+    'void',
+    'unset',
+]);
+
+export function isKeyword(name: string) {
+    return keywords.has(name.toLowerCase());
+}
+
+export function isUnion(type: PhpType) {
+    return type.name === UNION_NAME_SYMBOL;
+}
+export function isIntersection(type: PhpType) {
+    return type.name === INTERSECTION_NAME_SYMBOL;
+}
+
+export function isAtomic(type: PhpType): boolean {
+    return type.name !== UNION_NAME_SYMBOL && type.name !== INTERSECTION_NAME_SYMBOL;
+}
+
+

@@ -1,6 +1,6 @@
 'use strict';
 
-import { DocumentUri, SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
+import { SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind } from '../indexing/tables/symbolTable';
 import { toLSPRange } from '../../../helpers/symbol';
 import { FlatDocument } from '../../../support/document';
@@ -90,6 +90,10 @@ export class DocumentSymbolProvider {
                 return LSPSymbolKind.Null;
             case PhpSymbolKind.EnumMember:
                 return LSPSymbolKind.EnumMember;
+            case PhpSymbolKind.Attribute:
+                return LSPSymbolKind.Module;
+            default:
+                throw new Error('Unknown Kind ' + kind);
         }
     }
 }

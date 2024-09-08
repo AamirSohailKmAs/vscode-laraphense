@@ -35,6 +35,8 @@ export const enum PhpSymbolKind {
     Trait,
     Class,
     Interface,
+    Attribute,
+
     Method,
     Property,
     PromotedProperty,

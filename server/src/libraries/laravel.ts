@@ -227,23 +227,14 @@ export class Laravel implements Library {
     public index() {
         // get blade files without running the code
         this.bladeFiles = this.setFiles((file) => file.uri.endsWith('.blade.php'));
-        console.log(
-            this._folder.symbolTable.findSymbolByFqn({
-                scope: 'Illuminate\\View\\Compilers\\BladeCompiler',
-                name: 'directive',
-            })
-        );
-        console.log(
-            this._folder.symbolTable.findSymbolByFqn({
-                scope: 'Illuminate\\Support\\Facades\\Blade',
-                name: 'directive',
-            })
-        );
-        console.log(
-            this._folder.symbolTable.findSymbolsByUri(
-                'vendor/laravel/framework/src/Illuminate/View/Compilers/BladeCompiler.php' as RelativeUri
-            )
-        );
+        // this._folder.symbolTable.findSymbolByFqn({
+        //     scope: 'Illuminate\\View\\Compilers\\BladeCompiler',
+        //     name: 'directive',
+        // });
+        // this._folder.symbolTable.findSymbolByFqn({
+        //     scope: 'Illuminate\\Support\\Facades\\Blade',
+        //     name: 'directive',
+        // });
 
         // get config path
         this.configFiles = this.setFiles((file) => file.uri.startsWith('config'));
@@ -289,7 +280,7 @@ export class Laravel implements Library {
         if (!version) {
             return undefined;
         }
-        return new Laravel(folder, version.raw);
+        return new Laravel(folder, version.raw.replace(/'|"/g, ''));
     }
 }
 

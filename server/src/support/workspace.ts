@@ -28,7 +28,6 @@ export class Workspace {
             FolderKind.Stub,
             DEFAULT_STUBS
         );
-        this._folders.set(stubsUri, this.stubsSpace);
         this.indexFolder(this.stubsSpace);
 
         this._folderIndexingStarted = new EventEmitter();
@@ -43,6 +42,9 @@ export class Workspace {
         this._config = config;
     }
 
+    /**
+     * Get folders excluding stubs folder
+     */
     public get folders() {
         return this._folders;
     }
@@ -145,9 +147,6 @@ export class Workspace {
         folder.addFiles(files);
 
         const { count, missingFiles } = await folder.indexFiles();
-
-        folder.linkPendingReferences();
-        // console.log(folder.referenceTable.pendingReferences);
 
         if (!folder.isStubs) {
             this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });

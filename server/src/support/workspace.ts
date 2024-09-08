@@ -6,7 +6,6 @@ import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, DEFAULT_STUBS } from './defaults';
 import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
-import { join } from 'path';
 import { BladeParser } from '../parsers/bladeParser/parser';
 import { FileCache } from './cache';
 
@@ -144,9 +143,7 @@ export class Workspace {
             this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
         }
 
-        folder.addFiles(files);
-
-        const { count, missingFiles } = await folder.indexFiles();
+        const { count, missingFiles } = await folder.indexFiles(files);
 
         if (!folder.isStubs) {
             this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });
@@ -156,9 +153,9 @@ export class Workspace {
             // console.log('missingFiles', missingFiles);
         }
 
-        this.cache?.writeJson(join(folder.name, 'symbols'), folder.symbolTable.saveForFile());
-        this.cache?.writeJson(join(folder.name, 'references'), folder.referenceTable.saveForFile());
-        this.cache?.writeJson(join(folder.name, 'filesEntries'), files);
+        if (this.cache) {
+            folder.writeToCache(this.cache);
+        }
     }
 }
 

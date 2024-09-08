@@ -16,6 +16,7 @@ import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
 import { NamespaceResolver } from '../languages/php/namespaceResolver';
 import { laraphenseRc, laraphenseSetting } from '../languages/baseLang';
+import { FileCache } from './cache';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -41,7 +42,7 @@ export type Space = {
 export class WorkspaceFolder {
     public fetcher: Fetcher;
     public analyzer: Analyzer;
-    public files: FileEntry[] = [];
+    private _files: Set<FileEntry> = new Set();
     public symbolTable: SymbolTable;
     public referenceTable: ReferenceTable;
     public resolver: NamespaceResolver;
@@ -77,6 +78,10 @@ export class WorkspaceFolder {
 
     public set config(config: laraphenseSetting) {
         this._config = config;
+    }
+
+    public get files() {
+        return Array.from(this._files.values());
     }
 
     public get name(): string {
@@ -151,15 +156,11 @@ export class WorkspaceFolder {
         }
     }
 
-    public addFiles(files: FileEntry[]) {
-        this.files.push(...files);
-    }
-
-    public async indexFiles() {
+    public async indexFiles(files: FileEntry[]) {
         let count = 0;
         const missingFiles: Array<{ uri: string; reason: string }> = [];
 
-        const fileBatches = createBatches(this.files, 10);
+        const fileBatches = createBatches(files, 10);
         for (const batch of fileBatches) {
             await Promise.all(
                 batch.map(async (entry) => {
@@ -206,6 +207,12 @@ export class WorkspaceFolder {
         return { count, missingFiles };
     }
 
+    writeToCache(cache: FileCache) {
+        cache.writeJson(join(this.name, 'symbols'), this.symbolTable.saveForFile());
+        cache.writeJson(join(this.name, 'references'), this.referenceTable.saveForFile());
+        cache.writeJson(join(this.name, 'filesEntries'), this.files);
+    }
+
     public linkPendingReferences() {
         const references = this.referenceTable.pendingReferences;
         const stillPending: PhpReference[] = [];
@@ -214,7 +221,6 @@ export class WorkspaceFolder {
                 stillPending.push(references[i]);
             }
         }
-
         this.referenceTable.pendingReferences = stillPending;
     }
 
@@ -252,6 +258,7 @@ export class WorkspaceFolder {
     }
 
     private async indexFile(entry: FileEntry) {
+        this._files.add(entry);
         const flatDoc = this.fetcher.loadUriIfLang(join(this._uri, entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {

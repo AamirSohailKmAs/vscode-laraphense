@@ -398,9 +398,23 @@ export class Analyzer {
     }
 
     public async analyze(ast: Tree, uri: RelativeUri, steps: number = 1) {
-        // Perform concurrent traversal with promises
-        await this.traverseAST(ast, this.stages);
-        return this.symbolExtractor.analyse(ast, uri);
+        await this.traverseAST(ast, this.stages.slice(0, steps - 1));
+        const { symbols, references, importStatements } = this.symbolExtractor.analyse(ast, uri);
+
+        this.symbolTable.addSymbols(symbols);
+        this.referenceTable.addReferences(references);
+        this.referenceTable.addImports(importStatements);
+
+        // Link references to stubs if necessary
+        if (this.stubsFolder) {
+            references.forEach((reference) => {
+                const symbol = this.stubsFolder!.symbolTable.findSymbolByScopeName('\\', reference.name);
+                if (symbol) {
+                    reference.symbolId = symbol.id;
+                    symbol.referenceIds.push(reference.id);
+                }
+            });
+        }
     }
 
     private async traverseAST(astNode: TreeLike, stages: NodeVisitor[]): Promise<void> {

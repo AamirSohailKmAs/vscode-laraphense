@@ -259,26 +259,8 @@ export class WorkspaceFolder {
         }
 
         const astTree = this.parser.parseFlatDoc(flatDoc);
-        const { symbols, references, importStatements } = await this.analyzer.analyze(
-            astTree,
-            entry.uri as RelativeUri
-        );
+        await this.analyzer.analyze(astTree, entry.uri as RelativeUri);
         flatDoc.lastCompile = process.hrtime();
-
-        // Link references to stubs if necessary
-        if (this.stubsFolder) {
-            references.forEach((reference) => {
-                const symbol = this.stubsFolder!.symbolTable.findSymbolByScopeName('\\', reference.name);
-                if (symbol) {
-                    reference.symbolId = symbol.id;
-                    symbol.referenceIds.push(reference.id);
-                }
-            });
-        }
-
-        this.symbolTable.addSymbols(symbols);
-        this.referenceTable.addReferences(references);
-        this.referenceTable.addImports(importStatements);
     }
 
     private initLibraries() {

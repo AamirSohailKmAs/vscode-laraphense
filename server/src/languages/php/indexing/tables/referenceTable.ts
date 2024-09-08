@@ -9,17 +9,16 @@ export type PhpReference = Symbol & {
     kind: PhpSymbolKind;
     fqn: FQN;
     definedIn: FQN;
-    symbolId: number;
+    isGlobal: boolean;
+    symbolId: number; // todo: distinguish between global and folder
     type?: PhpType;
-};
-
-export type ImportStatement = PhpReference & {
-    alias: string;
+    alias?: string;
 };
 
 interface CacheData {
     references: [number, PhpReference][];
     uriIndex: { [uri: string]: number[] };
+    importIndex: { [uri: string]: number[] };
 }
 
 export class ReferenceTable {

@@ -4,12 +4,12 @@ import { Tree } from '../../parsers/bladeParser/bladeAst';
 
 import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
-import { ImportStatement, PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
+import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
 import { FunctionVisitor } from './analyzing/visitors/FunctionVisitor';
 import { InterfaceVisitor } from './analyzing/visitors/InterfaceVisitor';
-import { UseGroupVisitor } from './analyzing/visitors/UseGroupVisitor';
-import { ClassVisitor } from './analyzing/visitors/ClassVisitor';
+import { UseGroupVisitor } from './analyzing/visitors/ImportGroupVisitor';
+import { ClassVisitor } from './analyzing/visitors/ClassDeclarationVisitor';
 import { TraitVisitor } from './analyzing/visitors/TraitVisitor';
 import { EnumVisitor } from './analyzing/visitors/EnumVisitor';
 import { TraitUseVisitor } from './analyzing/visitors/TraitUseVisitor';
@@ -112,7 +112,7 @@ export class SymbolExtractor {
     private symbols: PhpSymbol[] = [];
     private references: PhpReference[] = [];
     private uri: RelativeUri = '' as RelativeUri;
-    private importStatements: ImportStatement[] = [];
+    private importStatements: PhpReference[] = [];
     private visitorMap: Record<string, NodeVisitor>;
 
     private pendingReferences: Map<string, PhpReference[]> = new Map();
@@ -211,7 +211,7 @@ export class SymbolExtractor {
         this.resetMember();
     }
 
-    public analyse(tree: Tree, uri: RelativeUri) {
+    public extract(tree: Tree, uri: RelativeUri) {
         this.uri = uri;
 
         this.resetState();
@@ -244,7 +244,7 @@ export class SymbolExtractor {
         return symbol;
     }
 
-    public addImportStatement(importStatement: ImportStatement) {
+    public addImportStatement(importStatement: PhpReference) {
         this.importStatements.push(importStatement);
         importStatement.id = this.referenceTable.generateId();
         importStatement.uri = this.uri;
@@ -378,7 +378,7 @@ export class SymbolExtractor {
 }
 
 export class Analyzer {
-    private stages: NodeVisitor[];
+    // private stages: NodeVisitor[];
     symbolExtractor: SymbolExtractor;
 
     constructor(
@@ -388,18 +388,18 @@ export class Analyzer {
     ) {
         this.symbolExtractor = new SymbolExtractor(symbolTable, referenceTable);
 
-        this.stages = [
-            // new ReferenceExtractionStage(this.analyzer),
-            // new SymbolReferenceLinkingStage(this.analyzer),
-            // new SemanticAnalysisStage(this.analyzer),
-            // new TypeAnalysisStage(this.analyzer),
-            // new ValidationStage(this.analyzer),
-        ];
+        // this.stages = [
+        // new ReferenceExtractionStage(this.analyzer),
+        // new SymbolReferenceLinkingStage(this.analyzer),
+        // new SemanticAnalysisStage(this.analyzer),
+        // new TypeAnalysisStage(this.analyzer),
+        // new ValidationStage(this.analyzer),
+        // ];
     }
 
     public async analyze(ast: Tree, uri: RelativeUri, steps: number = 1) {
-        await this.traverseAST(ast, this.stages.slice(0, steps - 1));
-        const { symbols, references, importStatements } = this.symbolExtractor.analyse(ast, uri);
+        // await this.traverseAST(ast, this.stages.slice(0, steps - 1));
+        const { symbols, references, importStatements } = this.symbolExtractor.extract(ast, uri);
 
         this.symbolTable.addSymbols(symbols);
         this.referenceTable.addReferences(references);
@@ -448,20 +448,6 @@ export class Analyzer {
         if (children) {
             await Promise.all(children.map((child) => this._traverseNode(child, stages)));
         }
-    }
-}
-
-class SymbolExtractionStage implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
-
-    public visit(node: TreeLike): boolean {
-        console.log(this.analyzer);
-
-        if (node.kind === 'class' || node.kind === 'function' || node.kind === 'variable') {
-            // Extract symbols from node and add them to the context
-            // this.context.addSymbol(symbol);
-        }
-        return false;
     }
 }
 

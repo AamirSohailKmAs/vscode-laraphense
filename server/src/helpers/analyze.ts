@@ -19,7 +19,7 @@ import {
 } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
-import { ImportStatement, PhpReference } from '../languages/php/indexing/tables/referenceTable';
+import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { FQN, Value, ValueKind } from './symbol';
 import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
 import { Location } from '../parsers/ast';
@@ -59,40 +59,13 @@ export function createSymbol(
     return symbol;
 }
 
-export function createImportStatement(
-    name: string | Identifier,
-    alias: string,
-    kind: PhpSymbolKind,
-    loc: ParserLocation | null | undefined,
-    fqn: FQN = { scope: '', name: '' }
-): ImportStatement {
-    name = normalizeName(name).name;
-
-    if (loc === null || loc === undefined) {
-        console.log(`symbol ${name} of kind ${kind} does not have a location`);
-    }
-
-    const reference: ImportStatement = {
-        id: 0,
-        symbolId: 0,
-        name,
-        alias,
-        kind,
-        loc: normalizeLocation(loc),
-        fqn,
-        definedIn: { scope: '', name: '' },
-        uri: '' as RelativeUri,
-    };
-
-    return reference;
-}
-
 export function createReference(
     name: string | Identifier,
     kind: PhpSymbolKind,
     loc: ParserLocation | null | undefined,
     fqn: FQN = { scope: '', name: '' },
-    definedIn: FQN = { scope: '', name: '' }
+    definedIn: FQN = { scope: '', name: '' },
+    alias?: string
 ): PhpReference {
     name = normalizeName(name).name;
 
@@ -108,6 +81,8 @@ export function createReference(
         loc: normalizeLocation(loc),
         fqn,
         definedIn,
+        alias,
+        isGlobal: false,
         uri: '' as RelativeUri,
     };
 

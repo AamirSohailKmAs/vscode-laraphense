@@ -79,7 +79,11 @@ export class NamespaceVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
     visit(node: Namespace): boolean {
-        // todo: add namespace symbol for rename provider
+        if (Array.isArray(node.name)) {
+            this.analyzer.resetScope();
+            return true;
+        }
+
         // todo: we need loc of namespace name instead of given loc
         this.analyzer.setScope(createSymbol(node.name, PhpSymbolKind.Namespace, node.loc, ''));
         return true;

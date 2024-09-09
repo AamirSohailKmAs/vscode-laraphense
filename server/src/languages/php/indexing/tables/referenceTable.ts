@@ -2,23 +2,24 @@
 
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import { PhpSymbolKind } from './symbolTable';
-import { FQN, Symbol } from '../../../../helpers/symbol';
+import { Symbol } from '../../../../helpers/symbol';
 import { PhpType } from '../../../../helpers/type';
 
 export type PhpReference = Symbol & {
     kind: PhpSymbolKind;
-    fqn: FQN;
-    definedIn: FQN;
+    fqn: string;
     isGlobal: boolean;
-    symbolId: number; // todo: distinguish between global and folder
+    symbolId: number;
     type?: PhpType;
     alias?: string;
 };
 
 interface CacheData {
+    index: number;
     references: [number, PhpReference][];
-    uriIndex: { [uri: string]: number[] };
-    importIndex: { [uri: string]: number[] };
+    referencesByUri: { [uri: string]: number[] };
+    importsByUri: { [uri: string]: number[] };
+    pendingByFqn: { [fqn: string]: number[] };
 }
 
 export class ReferenceTable {
@@ -26,69 +27,44 @@ export class ReferenceTable {
     private references: Map<number, PhpReference> = new Map();
     private referencesByUri: Map<RelativeUri, number[]> = new Map();
     private importsByUri: Map<RelativeUri, number[]> = new Map();
-    public pendingReferences: PhpReference[] = [];
+    private pendingByFqn: Map<string, number[]> = new Map();
 
     public generateId(): number {
         return this.index++;
     }
 
-    public addReferences(references: PhpReference[]) {
-        for (let i = 0; i < references.length; i++) {
-            this.addReference(references[i]);
+    public addImports(uses: PhpReference[]) {
+        for (let i = 0; i < uses.length; i++) {
+            this.addImport(uses[i]);
         }
     }
 
-    public addImports(references: ImportStatement[]) {
-        for (let i = 0; i < references.length; i++) {
-            const ref = this.addReference(references[i]);
+    public addImport(use: PhpReference) {
+        if (!this.isIdValidate(use)) return;
 
-            if (!this.importsByUri.has(ref.uri)) {
-                this.importsByUri.set(ref.uri, []);
-            }
-            this.importsByUri.get(ref.uri)!.push(ref.id);
+        this.references.set(use.id, use);
+
+        if (use.symbolId === 0) {
+            this.mustAddToMap(this.pendingByFqn, use.fqn, use.id);
         }
+
+        this.mustAddToMap(this.importsByUri, use.uri, use.id);
     }
 
     public addReference(reference: PhpReference) {
-        if (reference.id === 0) {
-            reference.id = this.generateId();
-        }
+        if (!this.isIdValidate(reference)) return;
 
-        if (this.references.has(reference.id)) {
-            console.log(reference, ' already exists');
-
-            return reference;
-        }
+        this.references.set(reference.id, reference);
 
         if (reference.symbolId === 0) {
-            this.pendingReferences.push(reference);
-            return reference;
+            this.mustAddToMap(this.pendingByFqn, reference.fqn, reference.id);
         }
-        // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
-        // const oldSymbol = this._symbolMap.get(key);
 
-        const index = reference.id;
-        this.references.set(index, reference);
-
-        if (!this.referencesByUri.has(reference.uri)) {
-            this.referencesByUri.set(reference.uri, []);
-        }
-        this.referencesByUri.get(reference.uri)!.push(index);
-
-        return reference;
+        this.mustAddToMap(this.referencesByUri, reference.uri, reference.id);
     }
 
     public getReferenceByIds(referenceIds: number[]) {
-        const references: PhpReference[] = [];
-
-        for (let i = 0; i < referenceIds.length; i++) {
-            const ref = this.references.get(referenceIds[i]);
-            if (ref) {
-                references.push(ref);
-            }
-        }
-
-        return references;
+        return referenceIds.map((index) => this.references.get(index)!).filter((reference) => reference);
     }
 
     public getReferenceById(referenceId: number) {
@@ -96,10 +72,9 @@ export class ReferenceTable {
     }
 
     public findReferenceByOffsetInUri(uri: RelativeUri, offset: number): PhpReference | undefined {
-        const indices = this.referencesByUri.get(uri) || [];
+        const references = this.findReferencesByUri(uri);
 
-        for (const index of indices) {
-            const reference = this.references.get(index);
+        for (const reference of references) {
             if (reference && reference.loc.start.offset <= offset && reference.loc.end.offset >= offset) {
                 return reference;
             }
@@ -108,60 +83,96 @@ export class ReferenceTable {
     }
 
     public findReferencesByUri(uri: RelativeUri): PhpReference[] {
-        const indices = this.referencesByUri.get(uri) || [];
-        return indices.map((index) => this.references.get(index)!).filter((reference) => reference);
+        return this.getReferenceByIds(this.getReferenceIndicesByUri(uri));
+    }
+
+    findPendingByFqn(fqn: string) {
+        const refs = this.pendingByFqn.get(fqn) || [];
+        this.pendingByFqn.delete(fqn);
+        return this.getReferenceByIds(refs);
+    }
+
+    public findImportsByUri(uri: RelativeUri) {
+        const indices = this.importsByUri.get(uri) || [];
+        return this.getReferenceByIds(indices);
+    }
+
+    private getReferenceIndicesByUri(uri: RelativeUri) {
+        const imports = this.importsByUri.get(uri) || [];
+        const refs = this.referencesByUri.get(uri) || [];
+
+        return imports.concat(refs);
     }
 
     public updateReference(index: number, newReference: PhpReference) {
-        const oldReference = this.references.get(index);
-        if (oldReference) {
-            this.references.set(index, newReference);
-
-            // Update URI index
-            const uriIndices = this.referencesByUri.get(oldReference.uri)!;
-            const uriIndexPos = uriIndices.indexOf(index);
-            if (uriIndexPos > -1) {
-                uriIndices[uriIndexPos] = index;
-            }
+        const oldReference = this.getReferenceById(index);
+        if (!oldReference) {
+            return;
         }
+
+        this.references.set(index, newReference);
     }
 
     public deleteReference(index: number) {
-        const reference = this.references.get(index);
-        if (reference) {
-            this.references.delete(index);
+        const reference = this.getReferenceById(index);
+        if (!reference) {
+            return;
+        }
 
-            // Update URI index
-            const uriIndices = this.referencesByUri.get(reference.uri)!;
-            const uriIndexPos = uriIndices.indexOf(index);
-            if (uriIndexPos > -1) {
-                uriIndices.splice(uriIndexPos, 1);
-            }
+        this.references.delete(index);
+
+        // Update URI index
+        const uriIndices = this.getReferenceIndicesByUri(reference.uri)!;
+        const uriIndexPos = uriIndices.indexOf(index);
+        if (uriIndexPos > -1) {
+            uriIndices.splice(uriIndexPos, 1);
         }
     }
 
     public deleteReferencesByUri(uri: RelativeUri) {
-        const indices = this.referencesByUri.get(uri) || [];
-        for (const index of indices) {
-            const reference = this.references.get(index);
-            if (reference) {
-                this.references.delete(index);
-            }
+        const references = this.findReferencesByUri(uri);
+
+        for (const ref of references) {
+            this.references.delete(ref.id);
         }
 
+        this.importsByUri.delete(uri);
         this.referencesByUri.delete(uri);
     }
 
     public saveForFile(): CacheData {
         return {
+            index: this.index,
             references: Array.from(this.references.entries()),
-            uriIndex: Object.fromEntries(this.referencesByUri),
+            referencesByUri: Object.fromEntries(this.referencesByUri),
+            importsByUri: Object.fromEntries(this.importsByUri),
+            pendingByFqn: Object.fromEntries(this.pendingByFqn),
         };
     }
 
     public loadFromFile(cacheFileContent: string) {
         const data: CacheData = JSON.parse(cacheFileContent);
         this.references = new Map(data.references);
+    }
+
+    private isIdValidate(ref: PhpReference) {
+        if (ref.id === 0) {
+            ref.id = this.generateId();
+            return true;
+        }
+
+        if (this.references.has(ref.id)) {
+            console.log(ref, ' already exists');
+
+            return false;
+        }
+    }
+
+    private mustAddToMap<T>(map: Map<T, number[]>, key: T, index: number) {
+        if (!map.has(key)) {
+            map.set(key, []);
+        }
+        map.get(key)!.push(index);
     }
 }
 

@@ -1,12 +1,12 @@
 'use strict';
 
 import { EnumCase } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol } from '../../../../helpers/analyze';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class EnumCaseVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(node: EnumCase): boolean {
         this.analyzer.addSymbol(

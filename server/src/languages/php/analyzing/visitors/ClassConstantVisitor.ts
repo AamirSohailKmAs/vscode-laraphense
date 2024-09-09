@@ -1,12 +1,12 @@
 'use strict';
 
 import { ClassConstant } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol, modifier } from '../../../../helpers/analyze';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class ClassConstantVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     public visit(node: ClassConstant): boolean {
         //todo: Attribute

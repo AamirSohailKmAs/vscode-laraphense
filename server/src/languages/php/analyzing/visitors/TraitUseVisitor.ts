@@ -1,7 +1,7 @@
 'use strict';
 
 import { TraitAlias, TraitPrecedence, TraitUse } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference } from '../../../../helpers/analyze';
 
@@ -9,7 +9,7 @@ import { createReference } from '../../../../helpers/analyze';
  * @link https://www.php.net/manual/en/language.oop5.traits.php
  */
 export class TraitUseVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     public visit(node: TraitUse): boolean {
         node.traits.forEach((trait) => {

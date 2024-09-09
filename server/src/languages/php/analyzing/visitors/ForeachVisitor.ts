@@ -1,10 +1,10 @@
 'use strict';
 
 import { Foreach } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 
 export class ForeachVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(forNode: unknown): boolean {
         const node = forNode as Foreach;

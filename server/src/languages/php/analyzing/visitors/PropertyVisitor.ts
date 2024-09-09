@@ -1,12 +1,12 @@
 'use strict';
 
 import { PropertyStatement } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class PropertyVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     public visit(node: PropertyStatement): boolean {
         // todo: Attribute

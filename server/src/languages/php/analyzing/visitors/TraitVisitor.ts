@@ -1,12 +1,12 @@
 'use strict';
 
 import { Trait } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createSymbol } from '../../../../helpers/analyze';
 
 export class TraitVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(traitNode: Trait): boolean {
         // todo: how to set loc of name

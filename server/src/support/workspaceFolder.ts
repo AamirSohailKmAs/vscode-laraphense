@@ -6,16 +6,15 @@ import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
 import { BladeParser } from '../parsers/bladeParser/parser';
 import { createBatches } from '../helpers/general';
-import { splitNamespace } from '../helpers/symbol';
 import { Analyzer } from '../languages/php/analyzer';
-import { ReferenceTable, PhpReference } from '../languages/php/indexing/tables/referenceTable';
-import { SymbolTable, PhpSymbol } from '../languages/php/indexing/tables/symbolTable';
+import { ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
+import { SymbolTable } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
 import { NamespaceResolver } from '../languages/php/namespaceResolver';
-import { laraphenseRc, laraphenseSetting } from '../languages/baseLang';
+import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
@@ -40,6 +39,8 @@ export type Space = {
 };
 
 export class WorkspaceFolder {
+    private count = 0;
+    private missingFiles: Array<{ uri: string; reason: string }> = [];
     public fetcher: Fetcher;
     public analyzer: Analyzer;
     private _files: Set<FileEntry> = new Set();
@@ -150,61 +151,23 @@ export class WorkspaceFolder {
 
     public uriToGlobPattern(name: string) {
         if (name.indexOf('/') === -1) {
-            return '**/' + name + '/*'; // .php and .blade file, I know .blade isn't something for now
+            return '**/' + name + '/*';
         } else {
             return name;
         }
     }
 
     public async indexFiles(files: FileEntry[]) {
-        let count = 0;
-        const missingFiles: Array<{ uri: string; reason: string }> = [];
+        this.count = 0;
 
         const fileBatches = createBatches(files, 10);
         for (const batch of fileBatches) {
-            await Promise.all(
-                batch.map(async (entry) => {
-                    if (entry.size > this._config.maxFileSize) {
-                        console.warn(
-                            `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
-                        );
-                        count++;
-                        missingFiles.push({ uri: entry.uri, reason: 'large file size' });
-                        return;
-                    }
-
-                    // const filePath = join(folderPath, file);
-                    // const documentUri = URI.file(filePath).toString();
-                    // const flatDocument = await this.fetchDocument(documentUri);
-                    // const cachedData = await this.fileCache.readJson<CacheItem<any>>(documentUri);
-
-                    // if (
-                    //     cachedData &&
-                    //     cachedData.version === flatDocument.version &&
-                    //     !(await this.hasFileChanged(documentUri, cachedData.createdAt))
-                    // ) {
-                    //     // Use cached data
-                    //     this.compiler.analyze(cachedData.data);
-                    // } else {
-                    //     // Compile and cache data
-                    //     const parsedData = this.compiler.compile(flatDocument);
-                    //     await this.fileCache.writeJson(documentUri, {
-                    //         version: flatDocument.version,
-                    //         data: parsedData,
-                    //     });
-                    //     this.compiler.analyze(parsedData);
-                    // }
-
-                    await this.indexFile(entry);
-
-                    count++;
-                })
-            );
+            await Promise.all(batch.map(this.indexEntry.bind(this)));
         }
 
         this.initLibraries();
 
-        return { count, missingFiles };
+        return { count: this.count, missingFiles: this.missingFiles };
     }
 
     writeToCache(cache: FileCache) {
@@ -213,61 +176,54 @@ export class WorkspaceFolder {
         cache.writeJson(join(this.name, 'filesEntries'), this.files);
     }
 
-    public linkPendingReferences() {
-        const references = this.referenceTable.pendingReferences;
-        const stillPending: PhpReference[] = [];
-        for (let i = 0, l = references.length; i < l; i++) {
-            if (!this.linkReference(references[i])) {
-                stillPending.push(references[i]);
-            }
-        }
-        this.referenceTable.pendingReferences = stillPending;
-    }
-
-    private linkReference(reference: PhpReference) {
-        const symbol = this.findSymbolForReference(reference);
-
-        if (!symbol) return false;
-
-        reference.symbolId = symbol.id;
-        symbol.referenceIds.push(reference.id);
-        return true;
-    }
-
-    public findSymbolForReference(reference: PhpReference): PhpSymbol | undefined {
-        if (this.stubsFolder) {
-            let symbol = this.findReferenceFromTable(this.stubsFolder.symbolTable, reference);
-            if (symbol) return symbol;
-        }
-
-        let symbol = this.findReferenceFromTable(this.symbolTable, reference);
-        if (symbol) return symbol;
-
-        return undefined;
-    }
-
-    private findReferenceFromTable(table: SymbolTable, reference: PhpReference) {
-        let symbol = table.findSymbolByFqn(reference.fqn);
-        if (symbol) return symbol;
-        symbol = table.findSymbolByFqn(reference.definedIn);
-        if (symbol) return symbol;
-        symbol = table.findSymbolByFqn(splitNamespace(reference.name));
-        if (symbol) return symbol;
-        symbol = table.findSymbolByScopeName('', reference.name);
-        if (symbol) return symbol;
-    }
-
-    private async indexFile(entry: FileEntry) {
+    private async indexEntry(entry: FileEntry) {
         this._files.add(entry);
-        const flatDoc = this.fetcher.loadUriIfLang(join(this._uri, entry.uri), [DocLang.php, DocLang.blade]);
+
+        if (entry.size > this._config.maxFileSize) {
+            console.warn(
+                `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
+            );
+            this.missingFiles.push({ uri: entry.uri, reason: 'large file size' });
+            return;
+        }
+
+        // const documentUri = this.documentUri(entry.uri);
+        // const flatDocument = await this.fetchDocument(documentUri);
+        // const cachedData = await this.fileCache.readJson<CacheItem<any>>(documentUri);
+
+        // if (
+        //     cachedData &&
+        //     cachedData.version === flatDocument.version &&
+        //     !(await this.hasFileChanged(documentUri, cachedData.createdAt))
+        // ) {
+        //     // Use cached data
+        //     this.compiler.analyze(cachedData.data);
+        // } else {
+        //     // Compile and cache data
+        //     const parsedData = this.compiler.compile(flatDocument);
+        //     await this.fileCache.writeJson(documentUri, {
+        //         version: flatDocument.version,
+        //         data: parsedData,
+        //     });
+        //     this.compiler.analyze(parsedData);
+        // }
+
+        await this.indexFile(entry.uri);
+    }
+
+    private async indexFile(uri: string) {
+        const flatDoc = this.fetcher.loadUriIfLang(this.documentUri(uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {
+            this.missingFiles.push({ uri, reason: 'not found' });
             return undefined;
         }
 
         const astTree = this.parser.parseFlatDoc(flatDoc);
-        await this.analyzer.analyze(astTree, entry.uri as RelativeUri);
+        await this.analyzer.analyze(astTree, uri as RelativeUri);
         flatDoc.lastCompile = process.hrtime();
+
+        this.count++;
     }
 
     private initLibraries() {

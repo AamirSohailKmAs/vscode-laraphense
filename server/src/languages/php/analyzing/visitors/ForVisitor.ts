@@ -1,10 +1,10 @@
 'use strict';
 
 import { For } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 
 export class ForVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(forNode: unknown): boolean {
         const node = forNode as For;

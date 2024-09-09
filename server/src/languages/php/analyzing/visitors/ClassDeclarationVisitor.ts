@@ -1,12 +1,12 @@
 'use strict';
 
 import { Class } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createReference, createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class ClassVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(classNode: Class): boolean {
         const scope = this.analyzer.resetMember();

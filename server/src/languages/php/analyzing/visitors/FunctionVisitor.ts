@@ -11,12 +11,12 @@ import {
     Return,
     Statement,
 } from 'php-parser';
-import { SymbolExtractor, NodeVisitor } from '../../analyzer';
+import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 
 export class FunctionVisitor implements NodeVisitor {
-    constructor(private analyzer: SymbolExtractor) {}
+    constructor(private analyzer: Analyzer) {}
 
     visit(fnNode: unknown): boolean {
         const node = fnNode as Function;

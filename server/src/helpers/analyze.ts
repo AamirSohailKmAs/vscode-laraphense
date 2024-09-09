@@ -20,7 +20,7 @@ import {
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
 import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
-import { FQN, Value, ValueKind } from './symbol';
+import { Value, ValueKind } from './symbol';
 import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
 import { Location } from '../parsers/ast';
 
@@ -63,8 +63,7 @@ export function createReference(
     name: string | Identifier,
     kind: PhpSymbolKind,
     loc: ParserLocation | null | undefined,
-    fqn: FQN = { scope: '', name: '' },
-    definedIn: FQN = { scope: '', name: '' },
+    fqn: string = '',
     alias?: string
 ): PhpReference {
     name = normalizeName(name).name;
@@ -80,7 +79,6 @@ export function createReference(
         kind,
         loc: normalizeLocation(loc),
         fqn,
-        definedIn,
         alias,
         isGlobal: false,
         uri: '' as RelativeUri,
@@ -271,5 +269,23 @@ export function parseFlag(flag: MODIFIER_PUBLIC | MODIFIER_PROTECTED | MODIFIER_
         default:
             return 'public';
     }
+}
+
+export enum Resolution {
+    FullyQualified,
+    Qualified,
+    UnQualified,
+}
+
+export function getResolution(name: string) {
+    if (name.startsWith('\\')) {
+        return Resolution.FullyQualified;
+    }
+
+    if (name.includes('\\')) {
+        return Resolution.Qualified;
+    }
+
+    return Resolution.UnQualified;
 }
 

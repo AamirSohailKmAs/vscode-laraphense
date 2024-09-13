@@ -34,8 +34,6 @@ export function createSymbol(
     value?: string | number | boolean | Node | null
 ): PhpSymbol {
     name = normalizeName(name).name;
-    const typeObject = normalizeTypes(type);
-    const valueObject = normalizeValue(value);
 
     if (loc === null || loc === undefined) {
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
@@ -48,9 +46,9 @@ export function createSymbol(
         loc: normalizeLocation(loc),
         uri: '' as RelativeUri,
         modifiers,
-        value: valueObject,
+        value: normalizeValue(value),
         scope,
-        type: { declared: typeObject },
+        type: { declared: normalizeTypes(type) },
         throws: new Set(),
         referenceIds: new Set(),
         relatedIds: new Set(),

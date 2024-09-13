@@ -53,8 +53,8 @@ export interface NodeVisitor {
      *
      * @param node The current node in the AST being visited.
      */
-    // visit(node: TreeLike): Promise<boolean>;
-    visit(node: TreeLike): boolean;
+    visitSymbol(node: TreeLike): boolean;
+    visitReference(node: TreeLike): boolean;
 
     /**
      * Hook that runs after the AST traversal is complete.
@@ -68,9 +68,12 @@ export interface NodeVisitor {
 export class ProgramVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(_node: Program): boolean {
+    visitSymbol(_node: Program): boolean {
         // when parsing blade file we may get program, so fix scope
         this.analyzer.resetScope();
+        return true;
+    }
+    visitReference(_node: Program): boolean {
         return true;
     }
 }
@@ -78,7 +81,7 @@ export class ProgramVisitor implements NodeVisitor {
 export class NamespaceVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(node: Namespace): boolean {
+    visitSymbol(node: Namespace): boolean {
         if (Array.isArray(node.name)) {
             this.analyzer.resetScope();
             return true;
@@ -88,6 +91,10 @@ export class NamespaceVisitor implements NodeVisitor {
         this.analyzer.setScope(createSymbol(node.name, PhpSymbolKind.Namespace, node.loc, ''));
         return true;
     }
+
+    visitReference(_node: Program): boolean {
+        return true;
+    }
 }
 
 export class Analyzer {
@@ -95,20 +102,20 @@ export class Analyzer {
     private _member?: PhpSymbol = undefined;
     private _subMember?: PhpSymbol = undefined;
 
-    private uri: RelativeUri = '' as RelativeUri;
-    private visitorMap: Record<string, NodeVisitor>;
+    private _uri: RelativeUri = '' as RelativeUri;
+    private _visitorMap: Record<string, NodeVisitor>;
 
-    public stateStack: string[] = [];
-    private symbolReferenceLinker: SymbolReferenceLinker;
+    private _stateStack: string[] = [];
+    private _symbolReferenceLinker: SymbolReferenceLinker;
 
     constructor(
-        private symbolTable: SymbolTable,
-        private referenceTable: ReferenceTable,
-        private stubsFolder?: WorkspaceFolder
+        private _symbolTable: SymbolTable,
+        private _referenceTable: ReferenceTable,
+        private _stubsFolder?: WorkspaceFolder
     ) {
-        this.symbolReferenceLinker = new SymbolReferenceLinker(symbolTable, referenceTable, stubsFolder);
+        this._symbolReferenceLinker = new SymbolReferenceLinker(_symbolTable, _referenceTable, _stubsFolder);
 
-        this.visitorMap = {
+        this._visitorMap = {
             program: new ProgramVisitor(this),
             namespace: new NamespaceVisitor(this),
             usegroup: new UseGroupVisitor(this),
@@ -154,11 +161,11 @@ export class Analyzer {
     }
 
     public analyze(tree: Tree, uri: RelativeUri, steps: number = 1) {
-        this.uri = uri;
+        this._uri = uri;
 
         this.resetState();
         // await this.traverseAST(ast, this.stages.slice(0, steps - 1));
-        this.traverseAST(tree, this.visitor.bind(this));
+        this.traverseAST(tree);
     }
 
     public get scope(): string {
@@ -171,12 +178,12 @@ export class Analyzer {
     }
 
     public setScope(symbol: PhpSymbol) {
-        this.stateStack.push(symbol.name);
+        this._stateStack.push(symbol.name);
         // join if parent child, else set
         this._namespace = symbol.name;
         // this.namespace = this.isParent ? joinNamespace(this.namespace, symbol.name) : symbol.name;
-        symbol.uri = this.uri;
-        this.symbolTable.addSymbol(symbol);
+        symbol.uri = this._uri;
+        this._symbolTable.addSymbol(symbol);
         this.resetMember();
     }
 
@@ -224,45 +231,31 @@ export class Analyzer {
     }
 
     public addSymbol(symbol: PhpSymbol) {
-        symbol.uri = this.uri;
-        this.symbolTable.addSymbol(symbol);
+        symbol.uri = this._uri;
+        this._symbolTable.addSymbol(symbol);
 
-        this.symbolReferenceLinker.linkReferencesToSymbol(symbol);
+        this._symbolReferenceLinker.linkReferencesToSymbol(symbol);
 
         return symbol;
     }
 
     public addImportStatement(importStatement: PhpReference) {
-        importStatement.id = this.referenceTable.generateId();
-        importStatement.uri = this.uri;
-        this.symbolReferenceLinker.addImport(importStatement); // @note try to link so that it doesn't go to pending
-        this.referenceTable.addImport(importStatement);
+        importStatement.id = this._referenceTable.generateId();
+        importStatement.uri = this._uri;
+        this._symbolReferenceLinker.addImport(importStatement); // @note try to link so that it doesn't go to pending
+        this._referenceTable.addImport(importStatement);
     }
 
     public addReference(reference: PhpReference) {
-        reference.id = this.referenceTable.generateId();
-        reference.uri = this.uri;
+        reference.id = this._referenceTable.generateId();
+        reference.uri = this._uri;
         reference.fqn = joinNamespace(this._namespace, reference.name);
-        this.symbolReferenceLinker.linkReference(reference); // @note try to link so that it doesn't go to pending
-        this.referenceTable.addReference(reference);
+        this._symbolReferenceLinker.linkReference(reference); // @note try to link so that it doesn't go to pending
+        this._referenceTable.addReference(reference);
     }
 
-    // private async _traverseNode(node: TreeLike, stages: NodeVisitor[]): Promise<void> {
-    //     let children = node.children ?? node.body;
-
-    //     if (children && !Array.isArray(children)) {
-    //         children = [children];
-    //     }
-
-    //     if (children) {
-    //         await Promise.all(children.map((child) => this._traverseNode(child, stages)));
-    //     }
-    // }
-
-    private traverseAST(treeNode: TreeLike, visitor: (treeNode: TreeLike) => boolean) {
-        // const results = await Promise.all(stages.map((stage) => stage.visit(node)));
-        // const shouldDescend = results.some((result) => result);
-        let shouldDescend = visitor(treeNode);
+    private traverseAST(treeNode: TreeLike) {
+        let shouldDescend = this.visitor(treeNode);
 
         if (!shouldDescend) {
             return;
@@ -280,14 +273,14 @@ export class Analyzer {
 
         // console.log('enter state', treeNode.kind);
         for (let i = 0, l = child.length; i < l; i++) {
-            this.traverseAST(child[i], visitor);
+            this.traverseAST(child[i]);
         }
         if (treeNode.kind === 'namespace') {
-            if (this.stateStack.length !== 1) {
+            if (this._stateStack.length !== 1) {
                 // console.log(this.uri);
             }
 
-            this.stateStack.pop();
+            this._stateStack.pop();
         }
         // console.log('exit state', treeNode.kind);
     }
@@ -296,11 +289,14 @@ export class Analyzer {
         if (['tree', 'block'].includes(node.kind)) {
             return true;
         }
-        const visitor = this.visitorMap[node.kind];
-        // return visitor ? visitor.visit(node) : false;
+        const visitor = this._visitorMap[node.kind];
+        if (!visitor) {
+            return false;
+        }
 
         if (visitor) {
-            return visitor.visit(node);
+            const results = [visitor.visitSymbol(node), visitor.visitReference(node)];
+            return results.some((result) => result);
         }
 
         if (
@@ -346,27 +342,31 @@ class SymbolReferenceLinker {
     }
 
     public linkReference(reference: PhpReference, isImport: boolean = false) {
-        const symbol = this.findSymbolForReference(reference, isImport);
+        const result = this.findSymbolForReference(reference, isImport);
 
-        if (!symbol) return false;
+        if (!result) return false;
 
-        reference.symbolId = symbol.id;
-        symbol.referenceIds.add(reference.id);
+        reference.symbolId = result.symbol.id;
+        reference.isGlobal = result.isGlobal;
+        result.symbol.referenceIds.add(reference.id);
         return true;
     }
 
-    private findSymbolForReference(reference: PhpReference, isImport: boolean = true): PhpSymbol | undefined {
+    private findSymbolForReference(
+        reference: PhpReference,
+        isImport: boolean = true
+    ): { symbol: PhpSymbol; isGlobal: boolean } | undefined {
         if (!isImport) {
             this.resolveFromImport(reference);
         }
 
         if (this.stubsFolder) {
             let symbol = this.stubsFolder.symbolTable.findSymbolByFqn(splitNamespace(reference.fqn));
-            if (symbol) return symbol;
+            if (symbol) return { symbol, isGlobal: true };
         }
 
         let symbol = this.symbolTable.findSymbolByFqn(splitNamespace(reference.fqn));
-        if (symbol) return symbol;
+        if (symbol) return { symbol, isGlobal: false };
 
         return undefined;
     }

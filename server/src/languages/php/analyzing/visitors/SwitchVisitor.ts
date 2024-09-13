@@ -6,9 +6,13 @@ import { Analyzer, NodeVisitor } from '../../analyzer';
 export class SwitchVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(node: Switch): boolean {
+    visitSymbol(node: Switch): boolean {
         // this.visitExpression(node.test);
 
+        return false;
+    }
+
+    visitReference(node: Switch): boolean {
         return false;
     }
 }

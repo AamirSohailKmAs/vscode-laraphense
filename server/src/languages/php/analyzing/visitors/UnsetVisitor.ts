@@ -6,7 +6,11 @@ import { Analyzer, NodeVisitor } from '../../analyzer';
 export class UnsetVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(node: Unset): boolean {
+    visitSymbol(node: Unset): boolean {
+        return false;
+    }
+
+    visitReference(node: Unset): boolean {
         return false;
     }
 }

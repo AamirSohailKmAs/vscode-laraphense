@@ -8,8 +8,7 @@ import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 export class ClassConstantVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    public visit(node: ClassConstant): boolean {
-        //todo: Attribute
+    public visitSymbol(node: ClassConstant): boolean {
         for (const constant of node.constants) {
             this.analyzer.addSymbol(
                 createSymbol(
@@ -23,6 +22,11 @@ export class ClassConstantVisitor implements NodeVisitor {
                 )
             );
         }
+        return false;
+    }
+
+    visitReference(node: ClassConstant): boolean {
+        //todo: Attribute
         return false;
     }
 }

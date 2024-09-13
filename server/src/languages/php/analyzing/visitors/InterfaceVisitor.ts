@@ -8,14 +8,17 @@ import { createReference, createSymbol } from '../../../../helpers/analyze';
 export class InterfaceVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(interfaceNode: Interface): boolean {
-        // todo: Attribute
+    visitSymbol(interfaceNode: Interface): boolean {
         const scope = this.analyzer.resetMember();
         this.analyzer.setMember(createSymbol(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc, scope));
 
+        return true;
+    }
+
+    visitReference(interfaceNode: Interface): boolean {
+        // todo: Attribute
         if (interfaceNode.extends) {
             interfaceNode.extends.forEach((interfaceNode) => {
-                // fixme: resolution, uqn,qf, rn
                 this.analyzer.addReference(
                     createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );

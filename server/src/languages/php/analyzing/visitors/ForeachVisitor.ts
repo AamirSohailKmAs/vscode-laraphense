@@ -6,7 +6,7 @@ import { Analyzer, NodeVisitor } from '../../analyzer';
 export class ForeachVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(forNode: unknown): boolean {
+    visitSymbol(forNode: unknown): boolean {
         const node = forNode as Foreach;
 
         // this.visitExpression(node.source);
@@ -16,7 +16,11 @@ export class ForeachVisitor implements NodeVisitor {
         if (node.body) {
             return true;
         }
+        return false;
+    }
 
+    visitReference(foreachNode: unknown): boolean {
+        const node = foreachNode as Foreach;
         return false;
     }
 }

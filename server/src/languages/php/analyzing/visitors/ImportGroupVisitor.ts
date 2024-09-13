@@ -8,7 +8,11 @@ import { createReference, normalizeName } from '../../../../helpers/analyze';
 export class UseGroupVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(node: UseGroup): boolean {
+    visitSymbol(node: UseGroup): boolean {
+        return false;
+    }
+
+    visitReference(node: UseGroup): boolean {
         node.items.forEach((use) => {
             let type = PhpSymbolKind.Namespace;
 
@@ -22,7 +26,6 @@ export class UseGroupVisitor implements NodeVisitor {
                 createReference(use.name, type, use.loc, use.name, normalizeName(use.alias || '').name)
             );
         });
-
         return false;
     }
 }

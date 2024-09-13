@@ -8,7 +8,7 @@ import { createReference, createSymbol, modifier } from '../../../../helpers/ana
 export class ClassVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(classNode: Class): boolean {
+    visitSymbol(classNode: Class): boolean {
         const scope = this.analyzer.resetMember();
         const symbol = createSymbol(
             classNode.name,
@@ -22,22 +22,25 @@ export class ClassVisitor implements NodeVisitor {
                 isAnonymous: classNode.isAnonymous,
             })
         );
-        // todo: Attribute
+
         this.analyzer.setMember(symbol);
 
+        return true;
+    }
+
+    visitReference(classNode: Class): boolean {
+        // todo: Attribute
         if (classNode.extends) {
             this.analyzer.addReference(createReference(classNode.extends, PhpSymbolKind.Class, classNode.extends.loc));
         }
 
         if (classNode.implements) {
             classNode.implements.forEach((interfaceNode) => {
-                // fixme: resolution, uqn,qf, rn
                 this.analyzer.addReference(
                     createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );
             });
         }
-
         return true;
     }
 }

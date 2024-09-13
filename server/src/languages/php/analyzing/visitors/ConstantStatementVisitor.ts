@@ -8,9 +8,8 @@ import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 export class ConstantStatementVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(node: ConstantStatement): boolean {
-        for (let i = 0; i < node.constants.length; i++) {
-            const constant = node.constants[i];
+    visitSymbol(node: ConstantStatement): boolean {
+        node.constants.forEach((constant) => {
             this.analyzer.addSymbol(
                 createSymbol(
                     constant.name,
@@ -22,7 +21,12 @@ export class ConstantStatementVisitor implements NodeVisitor {
                     constant.value
                 )
             );
-        }
+        });
+
+        return false;
+    }
+
+    visitReference(node: ConstantStatement): boolean {
         return false;
     }
 }

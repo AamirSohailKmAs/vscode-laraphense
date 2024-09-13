@@ -8,11 +8,10 @@ import { createSymbol, modifier } from '../../../../helpers/analyze';
 export class PropertyVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    public visit(node: PropertyStatement): boolean {
+    public visitSymbol(node: PropertyStatement): boolean {
         // todo: Attribute
 
         node.properties.forEach((prop) => {
-            // todo: Attribute, type
             this.analyzer.addSymbol(
                 createSymbol(
                     prop.name,
@@ -30,6 +29,11 @@ export class PropertyVisitor implements NodeVisitor {
                 )
             );
         });
+        return false;
+    }
+
+    visitReference(node: PropertyStatement): boolean {
+        // todo: Attribute, type
         return false;
     }
 }

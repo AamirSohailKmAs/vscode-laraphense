@@ -8,7 +8,7 @@ import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
 export class MethodVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    public visit(node: unknown): boolean {
+    public visitSymbol(node: unknown): boolean {
         const methodNode = node as Method;
         // todo: Attribute, type, byref
         const scope = this.analyzer.resetSubMember();
@@ -36,6 +36,11 @@ export class MethodVisitor implements NodeVisitor {
         }
 
         return true;
+    }
+
+    visitReference(methodNode: unknown): boolean {
+        const node = methodNode as Method;
+        return false;
     }
 
     private visitParameter(param: Parameter, method: PhpSymbol): void {

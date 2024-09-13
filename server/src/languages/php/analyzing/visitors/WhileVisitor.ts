@@ -6,7 +6,7 @@ import { Analyzer, NodeVisitor } from '../../analyzer';
 export class WhileVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(whileNode: unknown): boolean {
+    visitSymbol(whileNode: unknown): boolean {
         const node = whileNode as While;
         // this.visitExpression(node.test);
 
@@ -14,6 +14,11 @@ export class WhileVisitor implements NodeVisitor {
             return true;
         }
 
+        return false;
+    }
+
+    visitReference(whileNode: unknown): boolean {
+        const node = whileNode as While;
         return false;
     }
 }

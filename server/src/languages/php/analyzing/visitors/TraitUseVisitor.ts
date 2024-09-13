@@ -11,7 +11,11 @@ import { createReference } from '../../../../helpers/analyze';
 export class TraitUseVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    public visit(node: TraitUse): boolean {
+    public visitSymbol(node: TraitUse): boolean {
+        return false;
+    }
+
+    visitReference(node: TraitUse): boolean {
         node.traits.forEach((trait) => {
             // todo: alias, resolution
             this.analyzer.addReference(createReference(trait.name, PhpSymbolKind.Trait, trait.loc));

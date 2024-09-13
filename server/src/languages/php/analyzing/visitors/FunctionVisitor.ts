@@ -18,16 +18,21 @@ import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 export class FunctionVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
-    visit(fnNode: unknown): boolean {
+    visitSymbol(fnNode: unknown): boolean {
         const node = fnNode as Function;
 
-        // todo: Attribute, type
         const scope = this.analyzer.resetMember();
         this.analyzer.setMember(
             createSymbol(node.name, PhpSymbolKind.Function, node.loc, scope, modifier(), node.type)
         );
 
         return true;
+    }
+
+    visitReference(fnNode: unknown): boolean {
+        // todo: Attribute, type
+        const node = fnNode as Function;
+        return false;
     }
 }
 

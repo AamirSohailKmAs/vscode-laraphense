@@ -26,7 +26,8 @@ import { SwitchVisitor } from './analyzing/visitors/SwitchVisitor';
 import { UnsetVisitor } from './analyzing/visitors/UnsetVisitor';
 import { EchoVisitor } from './analyzing/visitors/EchoVisitor';
 import { ConstantStatementVisitor } from './analyzing/visitors/ConstantStatementVisitor';
-import { Resolution, createSymbol, getResolution } from '../../helpers/analyze';
+import { createSymbol } from '../../helpers/analyze';
+import { NamespaceResolver } from './namespaceResolver';
 
 export type TreeLike = {
     kind: string;
@@ -111,9 +112,15 @@ export class Analyzer {
     constructor(
         private _symbolTable: SymbolTable,
         private _referenceTable: ReferenceTable,
-        private _stubsFolder?: WorkspaceFolder
+        namespaceResolver: NamespaceResolver,
+        stubsFolder?: WorkspaceFolder
     ) {
-        this._symbolReferenceLinker = new SymbolReferenceLinker(_symbolTable, _referenceTable, _stubsFolder);
+        this._symbolReferenceLinker = new SymbolReferenceLinker(
+            _symbolTable,
+            _referenceTable,
+            namespaceResolver,
+            stubsFolder
+        );
 
         this._visitorMap = {
             program: new ProgramVisitor(this),
@@ -317,16 +324,17 @@ export class Analyzer {
 }
 
 class SymbolReferenceLinker {
-    private imports: PhpReference[] = [];
-
     constructor(
         private symbolTable: SymbolTable,
         private referenceTable: ReferenceTable,
+        private resolver: NamespaceResolver,
         private stubsFolder?: WorkspaceFolder
-    ) {}
+    ) {
+        this.resolver.clearImports();
+    }
 
     public addImport(importStatement: PhpReference) {
-        this.imports.push(importStatement);
+        this.resolver.addImport(importStatement);
         this.linkReference(importStatement, true);
     }
 
@@ -357,7 +365,7 @@ class SymbolReferenceLinker {
         isImport: boolean = true
     ): { symbol: PhpSymbol; isGlobal: boolean } | undefined {
         if (!isImport) {
-            this.resolveFromImport(reference);
+            reference.fqn = this.resolver.resolveFromImport(reference);
         }
 
         if (this.stubsFolder) {
@@ -369,39 +377,6 @@ class SymbolReferenceLinker {
         if (symbol) return { symbol, isGlobal: false };
 
         return undefined;
-    }
-
-    private resolveFromImport(ref: PhpReference) {
-        const resolution = getResolution(ref.name);
-
-        switch (resolution) {
-            case Resolution.FullyQualified:
-                ref.fqn = ref.name;
-                break;
-            case Resolution.Qualified:
-                this.resolveQualified(ref);
-                break;
-
-            default:
-                this.resolveUnqualified(ref);
-                break;
-        }
-    }
-
-    private resolveQualified(ref: PhpReference) {
-        const relative = ref.name.substring(0, ref.name.indexOf('\\'));
-        const use = this.imports.find((use) => use.name.endsWith(relative));
-
-        if (!use) return undefined;
-
-        ref.fqn = joinNamespace(use.fqn, ref.name.substring(ref.name.indexOf('\\')));
-    }
-
-    private resolveUnqualified(ref: PhpReference) {
-        const use = this.imports.find((use) => use.alias === ref.name || use.name.endsWith(ref.name));
-        if (!use) return undefined;
-
-        ref.fqn = use.fqn;
     }
 }
 

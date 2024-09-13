@@ -63,11 +63,11 @@ export class WorkspaceFolder {
         this.fetcher = new Fetcher();
         this.symbolTable = new SymbolTable();
         this.referenceTable = new ReferenceTable();
-        this.analyzer = new Analyzer(this.symbolTable, this.referenceTable, stubsFolder);
-
         this.resolver = new NamespaceResolver(
             this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
         );
+
+        this.analyzer = new Analyzer(this.symbolTable, this.referenceTable, this.resolver, stubsFolder);
 
         this._includeGlobs = _includeGlobs.map(this.uriToGlobPattern);
         this._excludeGlobs = this._excludeGlobs.map(this.uriToGlobPattern);

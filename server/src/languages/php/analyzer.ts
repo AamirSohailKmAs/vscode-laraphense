@@ -340,7 +340,7 @@ class SymbolReferenceLinker {
         if (references) {
             references.forEach((reference) => {
                 reference.symbolId = symbol.id;
-                symbol.referenceIds.push(reference.id);
+                symbol.referenceIds.add(reference.id);
             });
         }
     }
@@ -351,7 +351,7 @@ class SymbolReferenceLinker {
         if (!symbol) return false;
 
         reference.symbolId = symbol.id;
-        symbol.referenceIds.push(reference.id);
+        symbol.referenceIds.add(reference.id);
         return true;
     }
 

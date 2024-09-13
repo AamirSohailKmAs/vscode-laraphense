@@ -51,9 +51,9 @@ export function createSymbol(
         value: valueObject,
         scope,
         type: { declared: typeObject },
-        throws: [],
-        referenceIds: [],
-        relatedIds: [],
+        throws: new Set(),
+        referenceIds: new Set(),
+        relatedIds: new Set(),
     };
 
     return symbol;

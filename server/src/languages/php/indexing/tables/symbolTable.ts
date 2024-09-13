@@ -69,9 +69,9 @@ export type PhpSymbol = Symbol & {
 
     type: PhpSymbolType;
 
-    throws: string[];
-    relatedIds: number[];
-    referenceIds: number[];
+    throws: Set<string>;
+    relatedIds: Set<number>;
+    referenceIds: Set<number>;
 };
 export class SymbolTable {
     private index: number = 0;
@@ -82,13 +82,6 @@ export class SymbolTable {
 
     public generateId(): number {
         return this.index++;
-    }
-
-    public addSymbols(symbols: PhpSymbol[]) {
-        for (let i = 0; i < symbols.length; i++) {
-            const symbol = symbols[i];
-            this.addSymbol(symbol);
-        }
     }
 
     public addSymbol(symbol: PhpSymbol) {
@@ -104,9 +97,6 @@ export class SymbolTable {
 
             return;
         }
-
-        // let key = toFqsen(symbol.kind, symbol.name, symbol.scope);
-        // const oldSymbol = this._symbolMap.get(key);
 
         const index = symbol.id;
         this.symbols.set(index, symbol);

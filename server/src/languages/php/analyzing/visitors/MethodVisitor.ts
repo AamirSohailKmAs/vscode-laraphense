@@ -53,7 +53,7 @@ export class MethodVisitor implements NodeVisitor {
             createSymbol(param.name, kind, param.loc, this.analyzer.scope, modifiers, param.type, param.value)
         );
 
-        method.relatedIds.push(arg.id);
+        method.relatedIds.add(arg.id);
 
         //todo: Attribute, type, byref
         // Handle any default values or type hints as references

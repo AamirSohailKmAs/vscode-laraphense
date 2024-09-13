@@ -103,7 +103,7 @@ export class HoverProvider {
         //todo: docblock, type, return type
         let parameters = '';
         if (this.folder) {
-            const relatedSymbols = this.folder.symbolTable.getSymbolsById(symbol.relatedIds);
+            const relatedSymbols = this.folder.symbolTable.getSymbolsById(Array.from(symbol.relatedIds.values()));
             parameters = relatedSymbols
                 .map((symbol) => {
                     let property = `${this.getModifier(symbol.modifiers)}`;

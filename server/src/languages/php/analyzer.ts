@@ -167,12 +167,11 @@ export class Analyzer {
         };
     }
 
-    public analyze(tree: Tree, uri: RelativeUri, steps: number = 1) {
+    public analyze(tree: Tree, uri: RelativeUri, steps: number) {
         this._uri = uri;
 
         this.resetState();
-        // await this.traverseAST(ast, this.stages.slice(0, steps - 1));
-        this.traverseAST(tree);
+        this.traverseAST(tree, steps);
     }
 
     public get scope(): string {
@@ -261,8 +260,8 @@ export class Analyzer {
         this._referenceTable.addReference(reference);
     }
 
-    private traverseAST(treeNode: TreeLike) {
-        let shouldDescend = this.visitor(treeNode);
+    private traverseAST(treeNode: TreeLike, steps: number) {
+        let shouldDescend = this.visitor(treeNode, steps);
 
         if (!shouldDescend) {
             return;
@@ -280,7 +279,7 @@ export class Analyzer {
 
         // console.log('enter state', treeNode.kind);
         for (let i = 0, l = child.length; i < l; i++) {
-            this.traverseAST(child[i]);
+            this.traverseAST(child[i], steps);
         }
         if (treeNode.kind === 'namespace') {
             if (this._stateStack.length !== 1) {
@@ -292,7 +291,7 @@ export class Analyzer {
         // console.log('exit state', treeNode.kind);
     }
 
-    private visitor(node: TreeLike): boolean {
+    private visitor(node: TreeLike, steps: number): boolean {
         if (['tree', 'block'].includes(node.kind)) {
             return true;
         }
@@ -302,7 +301,10 @@ export class Analyzer {
         }
 
         if (visitor) {
-            const results = [visitor.visitSymbol(node), visitor.visitReference(node)];
+            let results = [visitor.visitSymbol(node)];
+            if (steps > 1) {
+                results = results.concat(visitor.visitReference(node));
+            }
             return results.some((result) => result);
         }
 

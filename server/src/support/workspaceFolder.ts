@@ -220,7 +220,7 @@ export class WorkspaceFolder {
         }
 
         const astTree = this.parser.parseFlatDoc(flatDoc);
-        await this.analyzer.analyze(astTree, uri as RelativeUri);
+        await this.analyzer.analyze(astTree, uri as RelativeUri, this.isStubs ? 1 : 2);
         flatDoc.lastCompile = process.hrtime();
 
         this.count++;

@@ -1,6 +1,6 @@
 'use strict';
 
-import { Return } from 'php-parser';
+import { Array, Return } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 
 export class ReturnVisitor implements NodeVisitor {

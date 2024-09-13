@@ -5,29 +5,32 @@ import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
-import { FunctionVisitor } from './analyzing/visitors/FunctionVisitor';
-import { InterfaceVisitor } from './analyzing/visitors/InterfaceVisitor';
-import { UseGroupVisitor } from './analyzing/visitors/ImportGroupVisitor';
-import { ClassVisitor } from './analyzing/visitors/ClassDeclarationVisitor';
-import { TraitVisitor } from './analyzing/visitors/TraitVisitor';
-import { EnumVisitor } from './analyzing/visitors/EnumVisitor';
-import { TraitUseVisitor } from './analyzing/visitors/TraitUseVisitor';
-import { PropertyVisitor } from './analyzing/visitors/PropertyVisitor';
-import { ClassConstantVisitor } from './analyzing/visitors/ClassConstantVisitor';
-import { MethodVisitor } from './analyzing/visitors/MethodVisitor';
 import { joinNamespace, splitNamespace } from '../../helpers/symbol';
-import { IfVisitor } from './analyzing/visitors/IfVisitor';
-import { ForVisitor } from './analyzing/visitors/ForVisitor';
-import { ForeachVisitor } from './analyzing/visitors/ForeachVisitor';
-import { ReturnVisitor } from './analyzing/visitors/ReturnVisitor';
-import { EnumCaseVisitor } from './analyzing/visitors/EnumCaseVisitor';
-import { WhileVisitor } from './analyzing/visitors/WhileVisitor';
-import { SwitchVisitor } from './analyzing/visitors/SwitchVisitor';
-import { UnsetVisitor } from './analyzing/visitors/UnsetVisitor';
-import { EchoVisitor } from './analyzing/visitors/EchoVisitor';
-import { ConstantStatementVisitor } from './analyzing/visitors/ConstantStatementVisitor';
+import { FunctionVisitor } from './analyzing/statementVisitors/FunctionVisitor';
+import { InterfaceVisitor } from './analyzing/statementVisitors/InterfaceVisitor';
+import { UseGroupVisitor } from './analyzing/statementVisitors/ImportGroupVisitor';
+import { ClassVisitor } from './analyzing/statementVisitors/ClassDeclarationVisitor';
+import { TraitVisitor } from './analyzing/statementVisitors/TraitVisitor';
+import { EnumVisitor } from './analyzing/statementVisitors/EnumVisitor';
+import { TraitUseVisitor } from './analyzing/statementVisitors/TraitUseVisitor';
+import { PropertyVisitor } from './analyzing/statementVisitors/PropertyVisitor';
+import { ClassConstantVisitor } from './analyzing/statementVisitors/ClassConstantVisitor';
+import { MethodVisitor } from './analyzing/statementVisitors/MethodVisitor';
+import { IfVisitor } from './analyzing/statementVisitors/IfVisitor';
+import { ForVisitor } from './analyzing/statementVisitors/ForVisitor';
+import { ForeachVisitor } from './analyzing/statementVisitors/ForeachVisitor';
+import { ReturnVisitor } from './analyzing/statementVisitors/ReturnVisitor';
+import { EnumCaseVisitor } from './analyzing/statementVisitors/EnumCaseVisitor';
+import { WhileVisitor } from './analyzing/statementVisitors/WhileVisitor';
+import { SwitchVisitor } from './analyzing/statementVisitors/SwitchVisitor';
+import { UnsetVisitor } from './analyzing/statementVisitors/UnsetVisitor';
+import { EchoVisitor } from './analyzing/statementVisitors/EchoVisitor';
+import { ConstantStatementVisitor } from './analyzing/statementVisitors/ConstantStatementVisitor';
 import { createSymbol } from '../../helpers/analyze';
 import { NamespaceResolver } from './namespaceResolver';
+import { ExpressionStatementVisitor } from './analyzing/statementVisitors/ExpressionStatementVisitor';
+import { ThrowVisitor } from './analyzing/statementVisitors/ThrowVisitor';
+import { SymbolReferenceLinker } from './SymbolReferenceLinker';
 
 export type TreeLike = {
     kind: string;
@@ -105,9 +108,32 @@ export class Analyzer {
 
     private _uri: RelativeUri = '' as RelativeUri;
     private _visitorMap: Record<string, NodeVisitor>;
+    private ignoreNodes = [
+        'noop',
+        'declare',
+        'inline',
+        'element',
+        'language',
+
+        'assign',
+        'break',
+        'call',
+        'do',
+        'declare',
+        'continue',
+        'throw',
+        'try',
+        'static',
+        'goto',
+        'label',
+        'global',
+        'variable',
+        'yield',
+    ];
 
     private _stateStack: string[] = [];
     private _symbolReferenceLinker: SymbolReferenceLinker;
+    public debug: Map<string, TreeLike> = new Map();
 
     constructor(
         private _symbolTable: SymbolTable,
@@ -137,6 +163,7 @@ export class Analyzer {
             propertystatement: new PropertyVisitor(this),
             classconstant: new ClassConstantVisitor(this),
             method: new MethodVisitor(this),
+            // call: new CallVisitor(this), //@note important
 
             // define("FOO",     "something"); todo:
             constantstatement: new ConstantStatementVisitor(this),
@@ -150,17 +177,10 @@ export class Analyzer {
             unset: new UnsetVisitor(this), // todo:
             echo: new EchoVisitor(this), // todo:
 
-            // throw: new ThrowVisitor(this),
+            // continue: new ContinueVisitor(this),
+            throw: new ThrowVisitor(this),
             // try: new TryVisitor(this),
-            // expressionstatement: new ExpressionStatementVisitor(this),
-            // variableDeclaration: new VariableDeclarationVisitor(this),
-
-            // callExpression: new visitCallVisitor(this),
-            // binaryExpression: new visitBinaryVisitor(this),
-            // memberExpression: new visitMemberVisitor(this),
-
-            // 'expressionstatement',
-            // 'constantstatement',
+            expressionstatement: new ExpressionStatementVisitor(this),
 
             return: new ReturnVisitor(this), // todo:
             // Add other visitors here
@@ -170,8 +190,12 @@ export class Analyzer {
     public analyze(tree: Tree, uri: RelativeUri, steps: number) {
         this._uri = uri;
 
+        this.debug = new Map();
         this.resetState();
         this.traverseAST(tree, steps);
+        if (this.debug.size > 0) {
+            console.log(this.debug, uri);
+        }
     }
 
     public get scope(): string {
@@ -297,88 +321,18 @@ export class Analyzer {
         }
         const visitor = this._visitorMap[node.kind];
         if (!visitor) {
+            if (!this.ignoreNodes.includes(node.kind)) {
+                // this.debug.set(node.kind, node);
+                // console.log(node);
+            }
             return false;
         }
 
-        if (visitor) {
-            let results = [visitor.visitSymbol(node)];
-            if (steps > 1) {
-                results = results.concat(visitor.visitReference(node));
-            }
-            return results.some((result) => result);
+        let results = [visitor.visitSymbol(node)];
+        if (steps > 1) {
+            results = results.concat(visitor.visitReference(node));
         }
-
-        if (
-            ![
-                'noop', // ignore for now
-                'declare', // ignore for now
-                'inline', // ignore for now
-                'expressionstatement',
-                'element', // ignore for now
-                'language', // ignore for now
-            ].includes(node.kind)
-        ) {
-            // console.log(node);
-        }
-
-        return false;
-    }
-}
-
-class SymbolReferenceLinker {
-    constructor(
-        private symbolTable: SymbolTable,
-        private referenceTable: ReferenceTable,
-        private resolver: NamespaceResolver,
-        private stubsFolder?: WorkspaceFolder
-    ) {
-        this.resolver.clearImports();
-    }
-
-    public addImport(importStatement: PhpReference) {
-        this.resolver.addImport(importStatement);
-        this.linkReference(importStatement, true);
-    }
-
-    public linkReferencesToSymbol(symbol: PhpSymbol) {
-        const references = this.referenceTable.findPendingByFqn(joinNamespace(symbol.scope, symbol.name));
-
-        if (references) {
-            references.forEach((reference) => {
-                reference.symbolId = symbol.id;
-                symbol.referenceIds.add(reference.id);
-            });
-        }
-    }
-
-    public linkReference(reference: PhpReference, isImport: boolean = false) {
-        const result = this.findSymbolForReference(reference, isImport);
-
-        if (!result) return false;
-
-        reference.symbolId = result.symbol.id;
-        reference.isGlobal = result.isGlobal;
-        result.symbol.referenceIds.add(reference.id);
-        return true;
-    }
-
-    private findSymbolForReference(
-        reference: PhpReference,
-        isImport: boolean = true
-    ): { symbol: PhpSymbol; isGlobal: boolean } | undefined {
-        if (!isImport) {
-            reference.fqn = this.resolver.resolveFromImport(reference);
-        }
-
-        if (this.stubsFolder) {
-            let symbol = this.stubsFolder.symbolTable.findSymbolByFqn(splitNamespace(reference.fqn));
-            if (symbol) return { symbol, isGlobal: true };
-        }
-
-        let symbol = this.symbolTable.findSymbolByFqn(splitNamespace(reference.fqn));
-        if (symbol) return { symbol, isGlobal: false };
-
-        return undefined;
+        return results.some((result) => result);
     }
 }
 

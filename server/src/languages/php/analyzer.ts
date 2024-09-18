@@ -1,7 +1,7 @@
 'use strict';
 
 import { Tree } from '../../parsers/bladeParser/bladeAst';
-import { Block, Namespace, Program } from 'php-parser';
+import { AttrGroup, Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
@@ -31,6 +31,7 @@ import { NamespaceResolver } from './namespaceResolver';
 import { ExpressionStatementVisitor } from './analyzing/statementVisitors/ExpressionStatementVisitor';
 import { ThrowVisitor } from './analyzing/statementVisitors/ThrowVisitor';
 import { SymbolReferenceLinker } from './SymbolReferenceLinker';
+import { ExpressionVisitor } from './analyzing/expressionVisitors/ExpressionVisitor';
 
 export type TreeLike = {
     kind: string;
@@ -134,6 +135,7 @@ export class Analyzer {
     private _stateStack: string[] = [];
     private _symbolReferenceLinker: SymbolReferenceLinker;
     public debug: Map<string, TreeLike> = new Map();
+    private expressionVisitor: ExpressionVisitor;
 
     constructor(
         private _symbolTable: SymbolTable,
@@ -147,6 +149,8 @@ export class Analyzer {
             namespaceResolver,
             stubsFolder
         );
+
+        this.expressionVisitor = new ExpressionVisitor(this);
 
         this._visitorMap = {
             program: new ProgramVisitor(this),
@@ -178,9 +182,9 @@ export class Analyzer {
             echo: new EchoVisitor(this), // todo:
 
             // continue: new ContinueVisitor(this),
-            throw: new ThrowVisitor(this),
+            throw: new ThrowVisitor(this, this.expressionVisitor),
             // try: new TryVisitor(this),
-            expressionstatement: new ExpressionStatementVisitor(this),
+            expressionstatement: new ExpressionStatementVisitor(this, this.expressionVisitor),
 
             return: new ReturnVisitor(this), // todo:
             // Add other visitors here

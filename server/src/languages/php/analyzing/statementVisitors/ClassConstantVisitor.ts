@@ -2,7 +2,7 @@
 
 import { ClassConstant } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { createSymbol, modifier } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createSymbol, modifier } from '../../../../helpers/analyze';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class ClassConstantVisitor implements NodeVisitor {
@@ -26,7 +26,7 @@ export class ClassConstantVisitor implements NodeVisitor {
     }
 
     visitReference(node: ClassConstant): boolean {
-        //todo: Attribute
+        attrGroupsVisitor(node.attrGroups, this.analyzer);
         return false;
     }
 }

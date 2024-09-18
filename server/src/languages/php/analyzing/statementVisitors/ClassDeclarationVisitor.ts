@@ -3,7 +3,7 @@
 import { Class } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
-import { createReference, createSymbol, modifier } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createReference, createSymbol, modifier } from '../../../../helpers/analyze';
 
 export class ClassVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -29,7 +29,7 @@ export class ClassVisitor implements NodeVisitor {
     }
 
     visitReference(classNode: Class): boolean {
-        // todo: Attribute
+        attrGroupsVisitor(classNode.attrGroups, this.analyzer);
         if (classNode.extends) {
             this.analyzer.addReference(createReference(classNode.extends, PhpSymbolKind.Class, classNode.extends.loc));
         }

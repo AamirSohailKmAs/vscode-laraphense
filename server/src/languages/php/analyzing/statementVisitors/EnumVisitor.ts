@@ -3,7 +3,7 @@
 import { Enum } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
-import { createReference, createSymbol } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class EnumVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -15,7 +15,7 @@ export class EnumVisitor implements NodeVisitor {
     }
 
     visitReference(node: Enum): boolean {
-        // todo: Attribute, type
+        attrGroupsVisitor(node.attrGroups, this.analyzer);
         if (node.implements) {
             node.implements.forEach((interfaceNode) => {
                 this.analyzer.addReference(

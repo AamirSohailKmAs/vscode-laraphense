@@ -2,7 +2,7 @@
 
 import { Method, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
 
 export class MethodVisitor implements NodeVisitor {
@@ -10,7 +10,8 @@ export class MethodVisitor implements NodeVisitor {
 
     public visitSymbol(node: unknown): boolean {
         const methodNode = node as Method;
-        // todo: Attribute, type, byref
+        // todo: type, byref
+        attrGroupsVisitor(methodNode.attrGroups, this.analyzer);
         const scope = this.analyzer.resetSubMember();
         const method = createSymbol(
             methodNode.name,
@@ -31,7 +32,6 @@ export class MethodVisitor implements NodeVisitor {
 
         // Visit parameters
         if (methodNode.arguments) {
-            //todo: Attribute, type, byref
             methodNode.arguments.forEach((param) => this.visitParameter(param, method));
         }
 
@@ -44,6 +44,7 @@ export class MethodVisitor implements NodeVisitor {
     }
 
     private visitParameter(param: Parameter, method: PhpSymbol): void {
+        attrGroupsVisitor(param.attrGroups, this.analyzer);
         const kind =
             method.name === '__construct' && param.flags > 0 ? PhpSymbolKind.Property : PhpSymbolKind.Parameter;
 
@@ -60,7 +61,7 @@ export class MethodVisitor implements NodeVisitor {
 
         method.relatedIds.add(arg.id);
 
-        //todo: Attribute, type, byref
+        //todo: type, byref
         // Handle any default values or type hints as references
         if (param.value) {
             // console.log(param.value);

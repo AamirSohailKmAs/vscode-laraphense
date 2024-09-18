@@ -3,7 +3,7 @@
 import { Interface } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
-import { createReference, createSymbol } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createReference, createSymbol } from '../../../../helpers/analyze';
 
 export class InterfaceVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -16,7 +16,7 @@ export class InterfaceVisitor implements NodeVisitor {
     }
 
     visitReference(interfaceNode: Interface): boolean {
-        // todo: Attribute
+        attrGroupsVisitor(interfaceNode.attrGroups, this.analyzer);
         if (interfaceNode.extends) {
             interfaceNode.extends.forEach((interfaceNode) => {
                 this.analyzer.addReference(

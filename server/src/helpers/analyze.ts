@@ -16,6 +16,7 @@ import {
     SelfReference,
     Name,
     UnionType,
+    AttrGroup,
 } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
 import { RelativeUri } from '../support/workspaceFolder';
@@ -23,6 +24,7 @@ import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { Value, ValueKind } from './symbol';
 import { PhpType, SELF_NAME, UNION_NAME_SYMBOL, createType } from './type';
 import { Location } from '../parsers/ast';
+import { Analyzer } from '../languages/php/analyzer';
 
 export function createSymbol(
     name: string | Identifier,
@@ -287,3 +289,10 @@ export function getResolution(name: string) {
     return Resolution.UnQualified;
 }
 
+export function attrGroupsVisitor(attrGroups: AttrGroup[], analyzer: Analyzer) {
+    attrGroups.forEach((group) => {
+        group.attrs.forEach((attr) => {
+            analyzer.addReference(createReference(attr.name, PhpSymbolKind.Attribute, attr.loc));
+        });
+    });
+}

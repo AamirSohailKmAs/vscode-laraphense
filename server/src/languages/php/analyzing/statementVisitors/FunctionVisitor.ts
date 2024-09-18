@@ -13,7 +13,7 @@ import {
 } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
-import { createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
 
 export class FunctionVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -30,8 +30,9 @@ export class FunctionVisitor implements NodeVisitor {
     }
 
     visitReference(fnNode: unknown): boolean {
-        // todo: Attribute, type
+        // todo: type
         const node = fnNode as Function;
+        attrGroupsVisitor(node.attrGroups, this.analyzer);
         return false;
     }
 }

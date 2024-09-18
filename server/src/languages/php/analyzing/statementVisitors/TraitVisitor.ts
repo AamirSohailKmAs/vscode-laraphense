@@ -11,7 +11,6 @@ export class TraitVisitor implements NodeVisitor {
     visitSymbol(traitNode: Trait): boolean {
         // todo: how to set loc of name
         const scope = this.analyzer.resetMember();
-        // todo: Attribute
         this.analyzer.setMember(createSymbol(traitNode.name, PhpSymbolKind.Trait, traitNode.loc, scope));
         return true;
     }

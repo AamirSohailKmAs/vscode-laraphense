@@ -1,14 +1,14 @@
 'use strict';
 
-import { While } from 'php-parser';
+import { Do } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { ExpressionVisitor } from '../expressionVisitors/ExpressionVisitor';
 
-export class WhileVisitor implements NodeVisitor {
+export class DoVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer, private exprVisitor: ExpressionVisitor) {}
 
     visitSymbol(whileNode: unknown): boolean {
-        const node = whileNode as While;
+        const node = whileNode as Do;
         this.exprVisitor.visit(node.test);
 
         if (node.body) {
@@ -19,7 +19,7 @@ export class WhileVisitor implements NodeVisitor {
     }
 
     visitReference(whileNode: unknown): boolean {
-        const node = whileNode as While;
+        const node = whileNode as Do;
         return false;
     }
 }

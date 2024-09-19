@@ -2,16 +2,17 @@
 
 import { If } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
+import { ExpressionVisitor } from '../expressionVisitors/ExpressionVisitor';
 
 export class IfVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: Analyzer, private exprVisitor: ExpressionVisitor) {}
 
     visitSymbol(node: If): boolean {
+        this.exprVisitor.visit(node.test);
+        if (node.alternate) {
+            // this.exprVisitor.visit(node.alternate);
+        }
         return true;
-        // this.visitExpression(node.test);
-        //   if (node.alternate) {
-        //       this.visitBlock(node.alternate);
-        //   }
     }
 
     visitReference(node: If): boolean {

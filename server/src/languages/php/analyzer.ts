@@ -32,6 +32,8 @@ import { ExpressionStatementVisitor } from './analyzing/statementVisitors/Expres
 import { ThrowVisitor } from './analyzing/statementVisitors/ThrowVisitor';
 import { SymbolReferenceLinker } from './SymbolReferenceLinker';
 import { ExpressionVisitor } from './analyzing/expressionVisitors/ExpressionVisitor';
+import { TryVisitor } from './analyzing/statementVisitors/TryVisitor';
+import { DoVisitor } from './analyzing/statementVisitors/DoVisitor';
 
 export type TreeLike = {
     kind: string;
@@ -115,21 +117,13 @@ export class Analyzer {
         'inline',
         'element',
         'language',
-
-        'assign',
         'break',
-        'call',
-        'do',
-        'declare',
         'continue',
-        'throw',
-        'try',
+
         'static',
         'goto',
         'label',
         'global',
-        'variable',
-        'yield',
     ];
 
     private _stateStack: string[] = [];
@@ -167,27 +161,24 @@ export class Analyzer {
             propertystatement: new PropertyVisitor(this),
             classconstant: new ClassConstantVisitor(this),
             method: new MethodVisitor(this),
-            // call: new CallVisitor(this), //@note important
 
-            // define("FOO",     "something"); todo:
             constantstatement: new ConstantStatementVisitor(this),
             enumcase: new EnumCaseVisitor(this), // todo:
 
-            if: new IfVisitor(this), // todo:
-            for: new ForVisitor(this), // todo:
-            foreach: new ForeachVisitor(this), // todo:
-            while: new WhileVisitor(this), // todo:
-            switch: new SwitchVisitor(this), // todo:
+            if: new IfVisitor(this, this.expressionVisitor), // todo:
+            for: new ForVisitor(this, this.expressionVisitor), // todo:
+            foreach: new ForeachVisitor(this, this.expressionVisitor), // todo:
+            do: new DoVisitor(this, this.expressionVisitor), // todo:
+            while: new WhileVisitor(this, this.expressionVisitor), // todo:
+            switch: new SwitchVisitor(this, this.expressionVisitor), // todo:
             unset: new UnsetVisitor(this), // todo:
-            echo: new EchoVisitor(this), // todo:
+            echo: new EchoVisitor(this, this.expressionVisitor), // todo:
 
-            // continue: new ContinueVisitor(this),
             throw: new ThrowVisitor(this, this.expressionVisitor),
-            // try: new TryVisitor(this),
+            try: new TryVisitor(this),
             expressionstatement: new ExpressionStatementVisitor(this, this.expressionVisitor),
 
-            return: new ReturnVisitor(this), // todo:
-            // Add other visitors here
+            return: new ReturnVisitor(this, this.expressionVisitor), // todo:
         };
     }
 
@@ -326,7 +317,7 @@ export class Analyzer {
         const visitor = this._visitorMap[node.kind];
         if (!visitor) {
             if (!this.ignoreNodes.includes(node.kind)) {
-                // this.debug.set(node.kind, node);
+                this.debug.set(node.kind, node);
                 // console.log(node);
             }
             return false;

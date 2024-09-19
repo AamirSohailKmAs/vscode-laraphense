@@ -1,15 +1,16 @@
 'use strict';
 
-import { Array, Return } from 'php-parser';
+import { Return } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
+import { ExpressionVisitor } from '../expressionVisitors/ExpressionVisitor';
 
 export class ReturnVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: Analyzer, private exprVisitor: ExpressionVisitor) {}
 
     visitSymbol(node: Return): boolean {
-        //   if (node.expr) {
-        //       this.visitExpression(node.expr);
-        //   }
+        if (node.expr) {
+            this.exprVisitor.visit(node.expr);
+        }
 
         return false;
     }

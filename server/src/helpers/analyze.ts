@@ -78,7 +78,7 @@ export function createReference(
         name,
         kind,
         loc: normalizeLocation(loc),
-        fqn,
+        scope: fqn,
         alias,
         isGlobal: false,
         uri: '' as RelativeUri,
@@ -296,3 +296,4 @@ export function attrGroupsVisitor(attrGroups: AttrGroup[], analyzer: Analyzer) {
         });
     });
 }
+

@@ -1,13 +1,11 @@
 'use strict';
 
 import { RelativeUri } from '../../../../support/workspaceFolder';
-import { PhpSymbolKind } from './symbolTable';
-import { Symbol } from '../../../../helpers/symbol';
+import { Definition } from '../../../../helpers/symbol';
 import { PhpType } from '../../../../helpers/type';
+import { PhpSymbolKind } from './symbolTable';
 
-export type PhpReference = Symbol & {
-    kind: PhpSymbolKind;
-    fqn: string;
+export type PhpReference = Definition<PhpSymbolKind> & {
     isGlobal: boolean;
     symbolId: number;
     type?: PhpType;
@@ -45,7 +43,7 @@ export class ReferenceTable {
         this.references.set(use.id, use);
 
         if (use.symbolId === 0) {
-            this.mustAddToMap(this.pendingByFqn, use.fqn, use.id);
+            this.mustAddToMap(this.pendingByFqn, use.scope, use.id);
         }
 
         this.mustAddToMap(this.importsByUri, use.uri, use.id);
@@ -57,7 +55,7 @@ export class ReferenceTable {
         this.references.set(reference.id, reference);
 
         if (reference.symbolId === 0) {
-            this.mustAddToMap(this.pendingByFqn, reference.fqn, reference.id);
+            this.mustAddToMap(this.pendingByFqn, reference.scope, reference.id);
         }
 
         this.mustAddToMap(this.referencesByUri, reference.uri, reference.id);

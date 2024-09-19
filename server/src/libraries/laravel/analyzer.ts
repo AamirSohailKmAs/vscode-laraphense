@@ -6,6 +6,7 @@ import { Fetcher } from '../../support/fetcher';
 import { RelativeUri } from '../../support/workspaceFolder';
 import { SymbolTable } from '../laravel';
 import { EnvParser } from '../../parsers/envParser/parser';
+import { PhpSymbolKind } from '../../languages/php/indexing/tables/symbolTable';
 
 export class Analyzer {
     private envParser: EnvParser = new EnvParser();
@@ -26,7 +27,9 @@ export class Analyzer {
                 name: node.key,
                 uri: fileUri as RelativeUri,
                 loc: node.loc,
-                value: { kind: ValueKind.String, raw: node.value }, // todo:
+                value: { kind: ValueKind.String, raw: node.value },
+                scope: '',
+                kind: PhpSymbolKind.File,
             });
         }
     }

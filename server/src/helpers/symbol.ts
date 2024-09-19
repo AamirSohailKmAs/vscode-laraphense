@@ -7,11 +7,13 @@ import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
 import { RelativeUri } from '../support/workspaceFolder';
 import { Location, Position } from '../parsers/ast';
 
-export type Symbol = {
+export type Definition<T> = {
     id: number;
     name: string;
+    scope: string;
     loc: Location;
     uri: RelativeUri;
+    kind: T;
 };
 
 export type Value = {

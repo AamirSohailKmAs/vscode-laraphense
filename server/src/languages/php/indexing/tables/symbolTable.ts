@@ -2,12 +2,12 @@
 
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import { Trie } from '../../../../support/searchTree';
-import { FQN, Symbol, Value } from '../../../../helpers/symbol';
+import { FQN, Definition, Value } from '../../../../helpers/symbol';
 import { Position } from 'vscode-languageserver-textdocument';
 import { PhpType } from '../../../../helpers/type';
 
-interface CacheData {
-    symbols: [number, PhpSymbol][];
+interface CacheData<Kind, T extends Definition<Kind>> {
+    symbols: [number, T][];
     uriIndex: { [uri: string]: number[] };
     scopeIndex: { [scope: string]: number[] };
 }
@@ -60,12 +60,11 @@ export type PhpSymbolType = {
     inferred?: PhpType;
 };
 
-export type PhpSymbol = Symbol & {
-    kind: PhpSymbolKind;
+
+export type PhpSymbol = Definition<PhpSymbolKind> & {
     // namePosition: number;
     value?: Value;
     modifiers: SymbolModifier[];
-    scope: string;
 
     type: PhpSymbolType;
 
@@ -73,10 +72,10 @@ export type PhpSymbol = Symbol & {
     relatedIds: Set<number>;
     referenceIds: Set<number>;
 };
-export class SymbolTable {
+export class SymbolTable<Kind, T extends Definition<Kind>> {
     private index: number = 0;
     private trie: Trie = new Trie();
-    private symbols: Map<number, PhpSymbol> = new Map();
+    private symbols: Map<number, T> = new Map();
     private symbolsByUri: Map<string, number[]> = new Map();
     private symbolsByScope: Map<string, number[]> = new Map();
 
@@ -84,7 +83,7 @@ export class SymbolTable {
         return this.index++;
     }
 
-    public addSymbol(symbol: PhpSymbol) {
+    public addSymbol(symbol: T) {
         if (symbol.uri === '') {
             return;
         }
@@ -122,7 +121,7 @@ export class SymbolTable {
         return symbolIds.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
 
-    public findSymbolByNamePrefix(prefix: string): PhpSymbol[] {
+    public findSymbolByNamePrefix(prefix: string): T[] {
         const indices = this.trie.search(prefix);
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
@@ -135,8 +134,8 @@ export class SymbolTable {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.name === name);
     }
 
-    public findSymbolByPositionOffsetInUri(uri: RelativeUri, pos: Position, offset: number): PhpSymbol | undefined {
-        let closestSymbol: PhpSymbol | undefined;
+    public findSymbolByPositionOffsetInUri(uri: RelativeUri, pos: Position, offset: number): T | undefined {
+        let closestSymbol: T | undefined;
         let closestDistance = Number.MAX_VALUE;
 
         for (const symbol of this.findSymbolsByUri(uri)) {
@@ -159,17 +158,17 @@ export class SymbolTable {
         return closestSymbol;
     }
 
-    public findSymbolsByUri(uri: RelativeUri): PhpSymbol[] {
+    public findSymbolsByUri(uri: RelativeUri): T[] {
         const indices = this.symbolsByUri.get(uri) || [];
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
 
-    public findSymbolsByScope(scope: string): PhpSymbol[] {
+    public findSymbolsByScope(scope: string): T[] {
         const indices = this.symbolsByScope.get(scope) || [];
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
 
-    public updateSymbol(index: number, newSymbol: PhpSymbol) {
+    public updateSymbol(index: number, newSymbol: T) {
         const oldSymbol = this.symbols.get(index);
         if (oldSymbol) {
             this.symbols.set(index, newSymbol);
@@ -240,7 +239,7 @@ export class SymbolTable {
         this.symbolsByUri.delete(uri);
     }
 
-    public saveForFile(): CacheData {
+    public saveForFile(): CacheData<Kind, T> {
         return {
             symbols: Array.from(this.symbols.entries()),
             uriIndex: Object.fromEntries(this.symbolsByUri),
@@ -249,7 +248,7 @@ export class SymbolTable {
     }
 
     public loadFromFile(cacheFileContent: string) {
-        const data: CacheData = JSON.parse(cacheFileContent); // todo:
+        const data: CacheData<Kind, T> = JSON.parse(cacheFileContent); // todo:
         this.symbols = new Map(data.symbols);
         this.symbolsByUri = new Map(Object.entries(data.uriIndex));
         this.symbolsByScope = new Map(Object.entries(data.scopeIndex));
@@ -261,11 +260,11 @@ export class SymbolTable {
         }
     }
 
-    public getSymbolNested(name: string, scope: string, kind: PhpSymbolKind): PhpSymbol | undefined {
+    public getSymbolNested(name: string, scope: string, kind: PhpSymbolKind): T | undefined {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.kind === kind && symbol.name === name);
     }
 
-    public getAllSymbols(): PhpSymbol[] {
+    public getAllSymbols(): T[] {
         return Array.from(this.symbols.values());
     }
 }

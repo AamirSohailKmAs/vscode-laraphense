@@ -7,7 +7,7 @@ import { Library } from './baseLibrary';
 import { lte } from 'semver';
 import { FileEntry, RelativeUri, WorkspaceFolder } from '../support/workspaceFolder';
 import { directives } from './laravel/directives';
-import { Symbol, Value } from '../helpers/symbol';
+import { Definition, Value } from '../helpers/symbol';
 import { Trie } from '../support/searchTree';
 import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Analyzer } from './laravel/analyzer';
@@ -20,7 +20,7 @@ export type Snippet = {
     snippet: string;
 };
 
-type LaravelSymbol = Symbol & {
+type LaravelSymbol = Definition<PhpSymbolKind> & {
     value?: Value;
 };
 

@@ -105,7 +105,7 @@ export class HoverProvider {
         if (this.folder) {
             const relatedSymbols = this.folder.symbolTable.getSymbolsById(Array.from(symbol.relatedIds.values()));
             parameters = relatedSymbols
-                .map((symbol) => {
+                .map((symbol: PhpSymbol) => {
                     let property = `${this.getModifier(symbol.modifiers)}`;
                     if (symbol.type.declared) {
                         property += `${symbol.type.declared.name} `;

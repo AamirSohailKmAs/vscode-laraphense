@@ -138,7 +138,7 @@ export class Analyzer {
     private expressionVisitor: ExpressionVisitor;
 
     constructor(
-        private _symbolTable: SymbolTable,
+        private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private _referenceTable: ReferenceTable,
         namespaceResolver: NamespaceResolver,
         stubsFolder?: WorkspaceFolder
@@ -283,7 +283,7 @@ export class Analyzer {
     public addReference(reference: PhpReference) {
         reference.id = this._referenceTable.generateId();
         reference.uri = this._uri;
-        reference.fqn = joinNamespace(this._namespace, reference.name);
+        reference.scope = joinNamespace(this._namespace, reference.name);
         this._symbolReferenceLinker.linkReference(reference); // @note try to link so that it doesn't go to pending
         this._referenceTable.addReference(reference);
     }

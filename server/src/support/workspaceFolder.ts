@@ -8,7 +8,7 @@ import { BladeParser } from '../parsers/bladeParser/parser';
 import { createBatches } from '../helpers/general';
 import { Analyzer } from '../languages/php/analyzer';
 import { ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
-import { SymbolTable } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind, SymbolTable } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
@@ -44,7 +44,7 @@ export class WorkspaceFolder {
     public fetcher: Fetcher;
     public analyzer: Analyzer;
     private _files: Set<FileEntry> = new Set();
-    public symbolTable: SymbolTable;
+    public symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>;
     public referenceTable: ReferenceTable;
     public resolver: NamespaceResolver;
 

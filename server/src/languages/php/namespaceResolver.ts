@@ -86,16 +86,16 @@ export class NamespaceResolver {
         const relative = ref.name.substring(0, ref.name.indexOf('\\'));
         const use = this.getImports(ref.kind).find((use) => use.name.endsWith(relative));
 
-        if (!use) return ref.fqn;
+        if (!use) return ref.scope;
 
-        return joinNamespace(use.fqn, ref.name.substring(ref.name.indexOf('\\')));
+        return joinNamespace(use.scope, ref.name.substring(ref.name.indexOf('\\')));
     }
 
     private resolveUnqualified(ref: PhpReference) {
         const use = this.getImports(ref.kind).find((use) => use.alias === ref.name || use.name.endsWith(ref.name));
-        if (!use) return ref.fqn;
+        if (!use) return ref.scope;
 
-        return use.fqn;
+        return use.scope;
     }
 
 }

@@ -4,7 +4,6 @@ import { uriToPath } from '../helpers/uri';
 import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE, DEFAULT_MAX_FILE_SIZE, DEFAULT_PHP_VERSION } from '../support/defaults';
 import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
-import { BladeParser } from '../parsers/bladeParser/parser';
 import { createBatches } from '../helpers/general';
 import { Analyzer } from '../languages/php/analyzer';
 import { PhpReference, ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
@@ -16,6 +15,8 @@ import { Laravel } from '../libraries/laravel';
 import { NamespaceResolver } from '../languages/php/namespaceResolver';
 import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
+import { BladeParser } from '@porifa/blade-parser';
+import { parseFlatDoc } from '../laraphense';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -219,7 +220,7 @@ export class WorkspaceFolder {
             return undefined;
         }
 
-        const astTree = this.parser.parseFlatDoc(flatDoc);
+        const astTree = parseFlatDoc(this.parser, flatDoc);
         await this.analyzer.analyze(astTree, uri as RelativeUri, this.isStubs ? 1 : 2);
         flatDoc.lastCompile = process.hrtime();
 

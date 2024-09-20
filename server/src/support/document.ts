@@ -4,12 +4,12 @@ import { DocumentUri, Position, Range, TextDocumentContentChangeEvent } from 'vs
 import { Debounce } from '../support/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { guessLangFromUri, toDocLang } from '../helpers/uri';
-import { EmbeddedLanguage, Tree, newAstTree } from '../parsers/bladeParser/bladeAst';
 import { Program } from 'php-parser';
 import { CSS_STYLE_RULE } from '../languages/cssLang';
 import { toLocation } from '../helpers/symbol';
 import { substituteWithWhitespace } from '../helpers/general';
 import { BinarySearch } from './searchTree';
+import { EmbeddedLanguage, Tree, newAstTree } from '@porifa/blade-parser';
 
 export enum DocLang {
     html = 'html',
@@ -357,7 +357,7 @@ export class Regions {
             }
 
             if (offset <= region.loc.end.offset) {
-                return region.name;
+                return toDocLang(region.name);
             }
         }
 
@@ -367,10 +367,10 @@ export class Regions {
     public docLangsInDocument(maxLanguages: number = 3): DocLang[] {
         const result = [this._defaultLang];
         for (const region of this._regions) {
-            if (result.indexOf(region.name) !== -1) {
+            if (result.indexOf(toDocLang(region.name)) !== -1) {
                 continue;
             }
-            result.push(region.name);
+            result.push(toDocLang(region.name));
             if (result.length === maxLanguages) {
                 return result;
             }

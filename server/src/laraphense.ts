@@ -25,8 +25,8 @@ import { Language, Settings } from './languages/baseLang';
 import { Js } from './languages/jsLang';
 import { Blade } from './languages/bladeLang';
 import { Php } from './languages/phpLang';
-import { BladeParser } from './parsers/bladeParser/parser';
 import { FolderUri } from './support/workspaceFolder';
+import { BladeParser, Tree, newAstTree } from '@porifa/blade-parser';
 
 export class Laraphense {
     private _parser: BladeParser;
@@ -255,7 +255,7 @@ export class Laraphense {
     }
 
     public getRegions(doc: FlatDocument) {
-        return new Regions(doc.uri).parse(this._parser.parseFlatDoc(doc));
+        return new Regions(doc.uri).parse(parseFlatDoc(this._parser, doc));
     }
 }
 
@@ -264,5 +264,17 @@ function mergeCompletionItems(list1: CompletionList, list2: CompletionList) {
     pushAll(items, list2.items);
     list1.items = items;
     return list1;
+}
+
+export function parseFlatDoc(parser: BladeParser, flatDoc: FlatDocument): Tree {
+    if (DocLang.php !== flatDoc.languageId && DocLang.blade !== flatDoc.languageId) {
+        return newAstTree();
+    }
+
+    try {
+        return parser.parse(flatDoc.getText(), flatDoc.languageId);
+    } catch (error) {
+        return newAstTree();
+    }
 }
 

@@ -6,8 +6,8 @@ import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, DEFAULT_STUBS } from './defaults';
 import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
-import { BladeParser } from '../parsers/bladeParser/parser';
 import { FileCache } from './cache';
+import { BladeParser } from '@porifa/blade-parser';
 
 export class Workspace {
     private _folderNames: string[] = [];

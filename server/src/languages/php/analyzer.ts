@@ -1,6 +1,5 @@
 'use strict';
 
-import { Tree } from '../../parsers/bladeParser/bladeAst';
 import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
@@ -34,6 +33,7 @@ import { SymbolReferenceLinker } from './SymbolReferenceLinker';
 import { ExpressionVisitor } from './analyzing/expressionVisitors/ExpressionVisitor';
 import { TryVisitor } from './analyzing/statementVisitors/TryVisitor';
 import { DoVisitor } from './analyzing/statementVisitors/DoVisitor';
+import { Tree } from '@porifa/blade-parser';
 
 export type TreeLike = {
     kind: string;

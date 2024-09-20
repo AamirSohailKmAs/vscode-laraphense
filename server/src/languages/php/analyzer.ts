@@ -1,11 +1,11 @@
 'use strict';
 
 import { Tree } from '../../parsers/bladeParser/bladeAst';
-import { AttrGroup, Block, Namespace, Program } from 'php-parser';
+import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
 import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
-import { joinNamespace, splitNamespace } from '../../helpers/symbol';
+import { joinNamespace } from '../../helpers/symbol';
 import { FunctionVisitor } from './analyzing/statementVisitors/FunctionVisitor';
 import { InterfaceVisitor } from './analyzing/statementVisitors/InterfaceVisitor';
 import { UseGroupVisitor } from './analyzing/statementVisitors/ImportGroupVisitor';

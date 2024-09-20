@@ -30,7 +30,6 @@ export class MethodVisitor implements NodeVisitor {
         );
         this.analyzer.setSubMember(method);
 
-        // Visit parameters
         if (methodNode.arguments) {
             methodNode.arguments.forEach((param) => this.visitParameter(param, method));
         }

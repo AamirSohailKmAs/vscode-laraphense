@@ -5,24 +5,27 @@ import { Definition } from '../../../../helpers/symbol';
 import { PhpType } from '../../../../helpers/type';
 import { PhpSymbolKind } from './symbolTable';
 
-export type PhpReference = Definition<PhpSymbolKind> & {
-    isGlobal: boolean;
+export type Reference<T> = Definition<T> & {
     symbolId: number;
+};
+
+export type PhpReference = Reference<PhpSymbolKind> & {
+    isGlobal: boolean;
     type?: PhpType;
     alias?: string;
 };
 
-interface CacheData {
+interface CacheData<Kind, T extends Definition<Kind>> {
     index: number;
-    references: [number, PhpReference][];
+    references: [number, T][];
     referencesByUri: { [uri: string]: number[] };
     importsByUri: { [uri: string]: number[] };
     pendingByFqn: { [fqn: string]: number[] };
 }
 
-export class ReferenceTable {
+export class ReferenceTable<Kind, T extends Reference<Kind>> {
     private index: number = 0;
-    private references: Map<number, PhpReference> = new Map();
+    private references: Map<number, T> = new Map();
     private referencesByUri: Map<RelativeUri, number[]> = new Map();
     private importsByUri: Map<RelativeUri, number[]> = new Map();
     private pendingByFqn: Map<string, number[]> = new Map();
@@ -31,13 +34,13 @@ export class ReferenceTable {
         return this.index++;
     }
 
-    public addImports(uses: PhpReference[]) {
+    public addImports(uses: T[]) {
         for (let i = 0; i < uses.length; i++) {
             this.addImport(uses[i]);
         }
     }
 
-    public addImport(use: PhpReference) {
+    public addImport(use: T) {
         if (!this.isIdValidate(use)) return;
 
         this.references.set(use.id, use);
@@ -49,7 +52,7 @@ export class ReferenceTable {
         this.mustAddToMap(this.importsByUri, use.uri, use.id);
     }
 
-    public addReference(reference: PhpReference) {
+    public addReference(reference: T) {
         if (!this.isIdValidate(reference)) return;
 
         this.references.set(reference.id, reference);
@@ -69,7 +72,7 @@ export class ReferenceTable {
         return this.references.get(referenceId);
     }
 
-    public findReferenceByOffsetInUri(uri: RelativeUri, offset: number): PhpReference | undefined {
+    public findReferenceByOffsetInUri(uri: RelativeUri, offset: number): T | undefined {
         const references = this.findReferencesByUri(uri);
 
         for (const reference of references) {
@@ -80,7 +83,7 @@ export class ReferenceTable {
         return undefined;
     }
 
-    public findReferencesByUri(uri: RelativeUri): PhpReference[] {
+    public findReferencesByUri(uri: RelativeUri): T[] {
         return this.getReferenceByIds(this.getReferenceIndicesByUri(uri));
     }
 
@@ -102,7 +105,7 @@ export class ReferenceTable {
         return imports.concat(refs);
     }
 
-    public updateReference(index: number, newReference: PhpReference) {
+    public updateReference(index: number, newReference: T) {
         const oldReference = this.getReferenceById(index);
         if (!oldReference) {
             return;
@@ -138,7 +141,7 @@ export class ReferenceTable {
         this.referencesByUri.delete(uri);
     }
 
-    public saveForFile(): CacheData {
+    public saveForFile(): CacheData<Kind, T> {
         return {
             index: this.index,
             references: Array.from(this.references.entries()),
@@ -149,11 +152,11 @@ export class ReferenceTable {
     }
 
     public loadFromFile(cacheFileContent: string) {
-        const data: CacheData = JSON.parse(cacheFileContent);
+        const data: CacheData<Kind, T> = JSON.parse(cacheFileContent);
         this.references = new Map(data.references);
     }
 
-    private isIdValidate(ref: PhpReference) {
+    private isIdValidate(ref: T) {
         if (ref.id === 0) {
             ref.id = this.generateId();
             return true;

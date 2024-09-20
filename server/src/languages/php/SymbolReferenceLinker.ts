@@ -9,7 +9,7 @@ import { NamespaceResolver } from './namespaceResolver';
 export class SymbolReferenceLinker {
     constructor(
         private symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
-        private referenceTable: ReferenceTable,
+        private referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
         private resolver: NamespaceResolver,
         private stubsFolder?: WorkspaceFolder
     ) {

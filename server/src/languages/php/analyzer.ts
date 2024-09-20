@@ -133,7 +133,7 @@ export class Analyzer {
 
     constructor(
         private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
-        private _referenceTable: ReferenceTable,
+        private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
         namespaceResolver: NamespaceResolver,
         stubsFolder?: WorkspaceFolder
     ) {

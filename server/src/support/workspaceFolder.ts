@@ -7,7 +7,7 @@ import { DocumentUri } from 'vscode-languageserver';
 import { BladeParser } from '../parsers/bladeParser/parser';
 import { createBatches } from '../helpers/general';
 import { Analyzer } from '../languages/php/analyzer';
-import { ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
+import { PhpReference, ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
@@ -45,7 +45,7 @@ export class WorkspaceFolder {
     public analyzer: Analyzer;
     private _files: Set<FileEntry> = new Set();
     public symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>;
-    public referenceTable: ReferenceTable;
+    public referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>;
     public resolver: NamespaceResolver;
 
     private _libraries: Library[] = [];

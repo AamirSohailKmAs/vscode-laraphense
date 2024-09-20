@@ -2,6 +2,7 @@
 
 import { Expression } from 'php-parser';
 import { Analyzer, TreeLike } from '../../analyzer';
+import { AssignVisitor } from './AssignVisitor';
 
 export interface ExpressionNodeVisitor {
     /**
@@ -18,7 +19,7 @@ export class ExpressionVisitor implements ExpressionNodeVisitor {
     private ignoreNodes = [
         'array',
         'arrowfunc',
-        'assign',
+        // 'assign',
         'assignref',
         'bin',
         'boolean',
@@ -48,6 +49,8 @@ export class ExpressionVisitor implements ExpressionNodeVisitor {
         'silent',
         'staticlookup',
         'string',
+        'typereference',
+        'uniontype',
         'unary',
         'variable',
         'yield',
@@ -56,6 +59,7 @@ export class ExpressionVisitor implements ExpressionNodeVisitor {
 
     constructor(private analyzer: Analyzer) {
         this._visitorMap = {
+            assign: new AssignVisitor(this),
             // 'variable': new VariableVisitor(this.analyzer),
             // 'scalar_declaration': new ScalarDeclarationVisitor(this.analyzer),
             // 'new': new NewVisitor(this.analyzer),
@@ -70,11 +74,18 @@ export class ExpressionVisitor implements ExpressionNodeVisitor {
     }
 
     public visit(expr: Expression) {
-        if (!this.ignoreNodes.includes(expr.kind)) {
-            console.log(expr.kind);
-            // console.log(expr.kind, this.analyzer.scope);
+        if (!expr) return false;
+
+        const visitor = this._visitorMap[expr.kind];
+        if (!visitor) {
+            if (!this.ignoreNodes.includes(expr.kind)) {
+                console.log(expr.kind);
+                // console.log(expr.kind, this.analyzer.scope);
+            }
+            return false;
         }
-        return this._visitorMap[expr.kind]?.visit(expr) ?? false;
+
+        return visitor.visit(expr);
     }
 }
 

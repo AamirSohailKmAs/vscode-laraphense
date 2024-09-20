@@ -3,10 +3,11 @@
 import { Function, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
-import { attrGroupsVisitor, createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
+import { attrGroupsVisitor, createSymbol, modifier } from '../../../../helpers/analyze';
+import { ExpressionVisitor } from '../expressionVisitors/ExpressionVisitor';
 
 export class FunctionVisitor implements NodeVisitor {
-    constructor(private analyzer: Analyzer) {}
+    constructor(private analyzer: Analyzer, private expr: ExpressionVisitor) {}
 
     visitSymbol(fnNode: unknown): boolean {
         const node = fnNode as Function;
@@ -26,6 +27,7 @@ export class FunctionVisitor implements NodeVisitor {
         // todo: type
         const node = fnNode as Function;
         attrGroupsVisitor(node.attrGroups, this.analyzer);
+        // this.expr.visit(node.type);
         return false;
     }
 
@@ -33,7 +35,6 @@ export class FunctionVisitor implements NodeVisitor {
         attrGroupsVisitor(param.attrGroups, this.analyzer);
 
         const modifiers = modifier({
-            isReadonly: param.readonly,
             isNullable: param.nullable,
             isVariadic: param.variadic,
         });

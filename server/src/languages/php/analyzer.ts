@@ -150,7 +150,7 @@ export class Analyzer {
             program: new ProgramVisitor(this),
             namespace: new NamespaceVisitor(this),
             usegroup: new UseGroupVisitor(this),
-            function: new FunctionVisitor(this),
+            function: new FunctionVisitor(this, this.expressionVisitor),
             class: new ClassVisitor(this),
             interface: new InterfaceVisitor(this),
             trait: new TraitVisitor(this),

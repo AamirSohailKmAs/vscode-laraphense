@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es6",
+        "declaration": true, // Generates the .d.ts file
+        "outDir": "out", // Output directory for compiled code and typings
+        "strict": true, // Optional: Enables strict type-checking options
+        "esModuleInterop": true // Enables better interoperability with CommonJS
+    },
+    "include": [
+        "src/**/*.ts" // Adjust according to your file structure
+    ],
+    "exclude": ["node_modules"]
+}
+

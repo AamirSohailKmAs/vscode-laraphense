@@ -1,0 +1,17 @@
+{
+    "name": "@porifa/blade-parser",
+    "version": "1.0.0",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "compile": "tsc -b"
+    },
+    "author": "Aamir Sohail KmAs",
+    "license": "MIT",
+    "description": "",
+    "dependencies": {
+        "php-parser": "^3.1.5"
+    }
+}
+

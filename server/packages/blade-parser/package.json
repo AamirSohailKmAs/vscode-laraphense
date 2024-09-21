@@ -7,7 +7,11 @@
         "build": "tsc",
         "compile": "tsc -b"
     },
-    "author": "Aamir Sohail KmAs",
+    "author": {
+        "name": "Aamir Sohail KmAs",
+        "email": "AamirSohailKmaAs@gmail.com",
+        "url": "https://github.com/porifa/blade-parser"
+    },
     "license": "MIT",
     "description": "",
     "dependencies": {

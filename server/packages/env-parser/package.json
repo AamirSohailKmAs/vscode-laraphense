@@ -1,0 +1,18 @@
+{
+    "name": "@porifa/env-parser",
+    "version": "1.0.0",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "compile": "tsc -b"
+    },
+    "author": {
+        "name": "Aamir Sohail KmAs",
+        "email": "AamirSohailKmaAs@gmail.com",
+        "url": "https://github.com/porifa/env-parser"
+    },
+    "license": "MIT",
+    "description": ""
+}
+

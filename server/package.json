@@ -9,6 +9,7 @@
         "fs-extra": "^11.2.0",
         "lru-cache": "^10.2.0",
         "@porifa/blade-parser": "workspace:*",
+        "@porifa/env-parser": "workspace:*",
         "vscode-css-languageservice": "^6.2.12",
         "vscode-html-languageservice": "^5.1.2",
         "vscode-languageserver": "^9.0.2-next.1",
@@ -20,3 +21,4 @@
         "packages/*"
     ]
 }
+

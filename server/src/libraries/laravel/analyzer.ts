@@ -5,8 +5,8 @@ import { ValueKind } from '../../helpers/symbol';
 import { Fetcher } from '../../support/fetcher';
 import { RelativeUri } from '../../support/workspaceFolder';
 import { SymbolTable } from '../laravel';
-import { EnvParser } from '../../parsers/envParser/parser';
 import { PhpSymbolKind } from '../../languages/php/indexing/tables/symbolTable';
+import { EnvParser, determineValueType } from '@porifa/env-parser';
 
 export class Analyzer {
     private envParser: EnvParser = new EnvParser();
@@ -18,20 +18,30 @@ export class Analyzer {
         if (!envFile) return;
 
         const ast = this.envParser.parse(envFile);
-        if (ast.kind === 'errorNode' || !ast.children) return;
 
-        for (let i = 0; i < ast.children.length; i++) {
-            const node = ast.children[i];
+        ast.children.forEach((node) => {
             this.symbolTable.addSymbol({
                 id: this.symbolTable.generateId(),
-                name: node.key,
+                name: node.key.text,
                 uri: fileUri as RelativeUri,
-                loc: node.loc,
-                value: { kind: ValueKind.String, raw: node.value },
+                loc: node.key.loc,
+                value: { kind: toValueKind(node.value.text), raw: node.key.text },
                 scope: '',
                 kind: PhpSymbolKind.File,
             });
-        }
+        });
+    }
+}
+
+function toValueKind(text: string) {
+    switch (determineValueType(text)) {
+        case 'Boolean':
+            return ValueKind.Boolean;
+        case 'Number':
+            return ValueKind.Number;
+
+        default:
+            return ValueKind.String;
     }
 }
 

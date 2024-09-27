@@ -1,0 +1,15 @@
+{
+    "name": "@porifa/doc-parser",
+    "version": "0.0.1",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "scripts": {
+        "build": "tsc -b",
+        "watch": "tsc -b -w"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "MIT",
+    "description": ""
+}
+

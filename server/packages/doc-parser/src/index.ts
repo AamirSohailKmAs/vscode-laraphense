@@ -1,0 +1,2 @@
+export { PHPDocParser } from './parser';
+

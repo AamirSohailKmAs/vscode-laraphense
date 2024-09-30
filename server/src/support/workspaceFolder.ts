@@ -56,13 +56,21 @@ export class WorkspaceFolder {
         private _name: string,
         private _uri: string,
         private parser: BladeParser,
+        private cache: FileCache,
         private stubsFolder?: WorkspaceFolder,
         private _kind: FolderKind = FolderKind.User,
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
         private _excludeGlobs: string[] = DEFAULT_EXCLUDE
     ) {
         this.fetcher = new Fetcher();
-        this.symbolTable = new SymbolTable();
+        this.symbolTable = new SymbolTable((symbol: any) => {
+            return {
+                ...symbol,
+                throws: new Set(Object.entries(symbol.throws)),
+                relatedIds: new Set(Object.entries(symbol.relatedIds)),
+                referenceIds: new Set(Object.entries(symbol.referenceIds)),
+            };
+        });
         this.referenceTable = new ReferenceTable();
         this.resolver = new NamespaceResolver(
             this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
@@ -161,6 +169,10 @@ export class WorkspaceFolder {
     public async indexFiles(files: FileEntry[]) {
         this.count = 0;
 
+        if (await this.readFromCache(files)) {
+            return { count: files.length, missingFiles: [] };
+        }
+
         const fileBatches = createBatches(files, 10);
         for (const batch of fileBatches) {
             await Promise.all(batch.map(this.indexEntry.bind(this)));
@@ -168,13 +180,36 @@ export class WorkspaceFolder {
 
         this.initLibraries();
 
+        this.writeToCache();
+
         return { count: this.count, missingFiles: this.missingFiles };
     }
 
-    writeToCache(cache: FileCache) {
-        cache.writeJson(join(this.name, 'symbols'), this.symbolTable.saveForFile());
-        cache.writeJson(join(this.name, 'references'), this.referenceTable.saveForFile());
-        cache.writeJson(join(this.name, 'filesEntries'), this.files);
+    public async readFromCache(files: FileEntry[]) {
+        const symbols = await this.cache.readJson<string>(join(this.name, 'symbols'));
+        const references = await this.cache.readJson<string>(join(this.name, 'references'));
+        const filesEntries = await this.cache.readJson<FileEntry[]>(join(this.name, 'filesEntries'));
+
+        if (!filesEntries || !symbols || !references || files.length !== filesEntries.length) {
+            return false;
+        }
+
+        // @todo check for files and their version
+
+        if (!this.symbolTable.loadFromFile(symbols)) {
+            return false;
+        }
+        if (!this.referenceTable.loadFromFile(references)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public writeToCache() {
+        this.cache.writeJson(join(this.name, 'symbols'), this.symbolTable.saveForFile());
+        this.cache.writeJson(join(this.name, 'references'), this.referenceTable.saveForFile());
+        this.cache.writeJson(join(this.name, 'filesEntries'), this.files);
     }
 
     private async indexEntry(entry: FileEntry) {

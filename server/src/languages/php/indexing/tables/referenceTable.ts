@@ -18,8 +18,8 @@ export type PhpReference = Reference<PhpSymbolKind> & {
 interface CacheData<Kind, T extends Definition<Kind>> {
     index: number;
     references: [number, T][];
-    referencesByUri: { [uri: string]: number[] };
-    importsByUri: { [uri: string]: number[] };
+    referencesByUri: { [uri: RelativeUri]: number[] };
+    importsByUri: { [uri: RelativeUri]: number[] };
     pendingByFqn: { [fqn: string]: number[] };
 }
 
@@ -151,9 +151,22 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         };
     }
 
-    public loadFromFile(cacheFileContent: string) {
-        const data: CacheData<Kind, T> = JSON.parse(cacheFileContent);
+    public loadFromFile(data: any): boolean {
+        if (!this.validateCacheData(data)) {
+            return false;
+        }
+
+        this.index = data.index;
         this.references = new Map(data.references);
+        this.referencesByUri = new Map(
+            Object.entries(data.referencesByUri).map(([key, value]) => [key as RelativeUri, value as number[]])
+        );
+        this.importsByUri = new Map(
+            Object.entries(data.importsByUri).map(([key, value]) => [key as RelativeUri, value as number[]])
+        );
+        this.pendingByFqn = new Map(Object.entries(data.pendingByFqn));
+
+        return true;
     }
 
     private isIdValidate(ref: T) {
@@ -174,6 +187,62 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
             map.set(key, []);
         }
         map.get(key)!.push(index);
+    }
+
+    private validateCacheData(data: CacheData<Kind, T>): boolean {
+        // Validate the structure and types of CacheData
+        if (
+            typeof data.index !== 'number' ||
+            typeof data.references !== 'object' ||
+            typeof data.referencesByUri !== 'object' ||
+            typeof data.importsByUri !== 'object' ||
+            typeof data.pendingByFqn !== 'object'
+        ) {
+            return false;
+        }
+        if (
+            !Array.isArray(data.references) ||
+            Array.isArray(data.referencesByUri) ||
+            Array.isArray(data.importsByUri) ||
+            Array.isArray(data.pendingByFqn)
+        ) {
+            return false;
+        }
+        if (
+            !data.references.every(
+                (item: any) =>
+                    Array.isArray(item) &&
+                    item.length === 2 &&
+                    typeof item[0] === 'number' &&
+                    typeof item[1] === 'object'
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            !Object.entries(data.referencesByUri).every(
+                (item: any) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string'
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            !Object.entries(data.importsByUri).every(
+                (item: any) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string'
+            )
+        ) {
+            return false;
+        }
+        if (
+            !Object.entries(data.pendingByFqn).every(
+                (item: any) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string'
+            )
+        ) {
+            return false;
+        }
+        return true;
     }
 }
 

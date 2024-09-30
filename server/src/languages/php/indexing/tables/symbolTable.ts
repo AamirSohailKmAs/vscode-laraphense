@@ -7,6 +7,7 @@ import { Position } from 'vscode-languageserver-textdocument';
 import { PhpType } from '../../../../helpers/type';
 
 interface CacheData<Kind, T extends Definition<Kind>> {
+    index: number;
     symbols: [number, T][];
     uriIndex: { [uri: string]: number[] };
     scopeIndex: { [scope: string]: number[] };
@@ -78,6 +79,8 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
     private symbols: Map<number, T> = new Map();
     private symbolsByUri: Map<string, number[]> = new Map();
     private symbolsByScope: Map<string, number[]> = new Map();
+
+    constructor(private transformer: (symbol: any) => T) {}
 
     public generateId(): number {
         return this.index++;
@@ -241,15 +244,19 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
 
     public saveForFile(): CacheData<Kind, T> {
         return {
+            index: this.index,
             symbols: Array.from(this.symbols.entries()),
             uriIndex: Object.fromEntries(this.symbolsByUri),
             scopeIndex: Object.fromEntries(this.symbolsByScope),
         };
     }
 
-    public loadFromFile(cacheFileContent: string) {
-        const data: CacheData<Kind, T> = JSON.parse(cacheFileContent); // todo:
-        this.symbols = new Map(data.symbols);
+    public loadFromFile(data: any): boolean {
+        if (!this.validateCacheData(data)) {
+            return false;
+        }
+        this.index = data.index;
+        this.symbols = new Map(data.symbols.map(([id, symbol]: [number, any]) => [id, this.transformer(symbol)]));
         this.symbolsByUri = new Map(Object.entries(data.uriIndex));
         this.symbolsByScope = new Map(Object.entries(data.scopeIndex));
 
@@ -258,6 +265,8 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         for (const [index, symbol] of this.symbols) {
             this.trie.insert(symbol.name, index);
         }
+
+        return true;
     }
 
     public getSymbolNested(name: string, scope: string, kind: PhpSymbolKind): T | undefined {
@@ -266,6 +275,49 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
 
     public getAllSymbols(): T[] {
         return Array.from(this.symbols.values());
+    }
+
+    private validateCacheData(data: CacheData<Kind, T>): boolean {
+        // Validate the structure and types of CacheData
+        if (
+            typeof data.index !== 'number' ||
+            typeof data.symbols !== 'object' ||
+            typeof data.uriIndex !== 'object' ||
+            typeof data.scopeIndex !== 'object'
+        ) {
+            return false;
+        }
+        if (!Array.isArray(data.symbols) || Array.isArray(data.uriIndex) || Array.isArray(data.scopeIndex)) {
+            return false;
+        }
+        if (
+            !data.symbols.every(
+                (item: any) =>
+                    Array.isArray(item) &&
+                    item.length === 2 &&
+                    typeof item[0] === 'number' &&
+                    typeof item[1] === 'object'
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            !Object.entries(data.uriIndex).every(
+                (item: any) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string'
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            !Object.entries(data.scopeIndex).every(
+                (item: any) => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string'
+            )
+        ) {
+            return false;
+        }
+        return true;
     }
 }
 

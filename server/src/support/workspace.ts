@@ -18,11 +18,12 @@ export class Workspace {
     private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
     private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
 
-    constructor(private _config: laraphenseRc, public cache: FileCache | undefined, stubsUri: FolderUri) {
+    constructor(private _config: laraphenseRc, public cache: FileCache, stubsUri: FolderUri) {
         this.stubsSpace = new WorkspaceFolder(
             'stubs',
             stubsUri,
             new BladeParser(this._config.phpVersion),
+            cache,
             undefined,
             FolderKind.Stub,
             DEFAULT_STUBS
@@ -73,6 +74,7 @@ export class Workspace {
             name,
             folderUri,
             new BladeParser(this._config.phpVersion),
+            this.cache,
             this.stubsSpace,
             _kind,
             _includeGlobs,
@@ -151,10 +153,6 @@ export class Workspace {
 
         if (missingFiles.length > 0) {
             // console.log('missingFiles', missingFiles);
-        }
-
-        if (this.cache) {
-            folder.writeToCache(this.cache);
         }
     }
 }

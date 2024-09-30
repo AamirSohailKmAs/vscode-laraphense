@@ -34,7 +34,7 @@ const connection = createConnection();
 
 let settings: any;
 let workspace: Workspace;
-let laraphense: Laraphense;
+let laraphense: Laraphense | undefined;
 let startTime: [number, number];
 let InitializeParams: InitializeParams;
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -48,7 +48,7 @@ function hasCapability<T>(key: string, defaultValue: T) {
 }
 
 async function setSettings() {
-    if (!hasCapability('workspace.configuration', false)) {
+    if (!hasCapability('workspace.configuration', false) || !laraphense) {
         return;
     }
 
@@ -82,8 +82,12 @@ connection.onInitialize(async (params: InitializeParams) => {
 
     let storageCache = await FileCache.create(cachePath);
 
-    if (clearCache && storageCache) {
-        storageCache = await storageCache.clear();
+    if (!storageCache) {
+        return { capabilities: {} };
+    }
+
+    if (clearCache) {
+        await storageCache.clear();
     }
 
     workspace = new Workspace(config, storageCache, pathToUri(join(__dirname, '../stubs')) as FolderUri);
@@ -155,20 +159,32 @@ connection.onDidChangeConfiguration(async () => {
 });
 
 connection.onShutdown(() => {
+    if (!laraphense) {
+        return;
+    }
     laraphense.shutdown();
 });
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent((change) => {
+    if (!laraphense) {
+        return;
+    }
     laraphense.documentChanged(FlatDocument.fromTextDocument(change.document));
 });
 
 documents.onDidOpen((_param) => {
+    if (!laraphense) {
+        return;
+    }
     laraphense.documentOpened(documents.all());
 });
 
 documents.onDidClose((param) => {
+    if (!laraphense) {
+        return;
+    }
     connection.sendDiagnostics({ uri: param.document.uri, diagnostics: [] });
     laraphense.documentClosed(FlatDocument.fromTextDocument(param.document));
 });
@@ -201,6 +217,9 @@ connection.onCompletion(async (textDocumentPosition, token) => {
     }
     return runSafe(
         () => {
+            if (!laraphense) {
+                return;
+            }
             const document = documents.get(textDocumentPosition.textDocument.uri);
             if (!document) {
                 return EMPTY_COMPLETION_LIST;
@@ -223,7 +242,7 @@ connection.onCompletionResolve((item, token) => {
     return runSafe(
         () => {
             let data = item.data;
-            if (!data || !data.uri) {
+            if (!data || !data.uri || !laraphense) {
                 return item;
             }
 
@@ -245,7 +264,7 @@ connection.onHover((textDocumentPosition, token) => {
     return runSafe(
         () => {
             let document = documents.get(textDocumentPosition.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return null;
             }
             return laraphense.provideHover(FlatDocument.fromTextDocument(document), textDocumentPosition.position);
@@ -262,7 +281,7 @@ connection.onDocumentHighlight((documentHighlightParams, token) => {
     return runSafe(
         () => {
             let document = documents.get(documentHighlightParams.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return [];
             }
             return laraphense.provideDocumentHighlight(
@@ -282,7 +301,7 @@ connection.onDefinition((definitionParams, token) => {
     return runSafe(
         () => {
             let document = documents.get(definitionParams.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return [];
             }
             return laraphense.provideDefinition(FlatDocument.fromTextDocument(document), definitionParams.position);
@@ -299,7 +318,7 @@ connection.onReferences((referenceParams, token) => {
     return runSafe(
         () => {
             let document = documents.get(referenceParams.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return [];
             }
             return laraphense.provideReferences(FlatDocument.fromTextDocument(document), referenceParams.position);
@@ -316,7 +335,7 @@ connection.onSignatureHelp((signatureHelpParams, token) => {
     return runSafe(
         () => {
             let document = documents.get(signatureHelpParams.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return null;
             }
             return laraphense.provideSignatureHelp(
@@ -336,7 +355,7 @@ connection.onDocumentLinks((documentLinkParam, token) => {
     return runSafe(
         () => {
             let document = documents.get(documentLinkParam.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return [];
             }
             return laraphense.provideDocumentLinks(FlatDocument.fromTextDocument(document));
@@ -353,7 +372,7 @@ connection.onDocumentSymbol((documentSymbolParams, token) => {
     return runSafe(
         () => {
             let document = documents.get(documentSymbolParams.textDocument.uri);
-            if (!document) {
+            if (!document || !laraphense) {
                 return [];
             }
             return laraphense.provideDocumentSymbol(FlatDocument.fromTextDocument(document));

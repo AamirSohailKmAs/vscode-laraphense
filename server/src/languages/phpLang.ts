@@ -17,22 +17,28 @@ import {
 import { Workspace } from '../support/workspace';
 import { DocumentSymbolProvider } from './php/providers/documentSymbolProvider';
 import { HoverProvider } from './php/providers/HoverProvider';
+import { DefinitionProvider } from './php/providers/DefinitionProvider';
+import { ReferenceProvider } from './php/providers/ReferenceProvider';
 
 export class Php implements Language {
     public id: DocLang = DocLang.php;
     private _providers: {
         documentSymbol: DocumentSymbolProvider;
         hover: HoverProvider;
+        definition: DefinitionProvider;
+        reference: ReferenceProvider;
     };
 
     constructor(private _workspace: Workspace) {
         this._providers = {
             documentSymbol: new DocumentSymbolProvider(this._workspace),
             hover: new HoverProvider(this._workspace),
+            definition: new DefinitionProvider(this._workspace),
+            reference: new ReferenceProvider(this._workspace),
         };
     }
 
-    findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
+    public findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
         return this._providers.documentSymbol.provide(document);
     }
 
@@ -48,7 +54,7 @@ export class Php implements Language {
         return item;
     }
 
-    doHover(document: FlatDocument, position: Position): Hover | null {
+    public doHover(document: FlatDocument, position: Position): Hover | null {
         return this._providers.hover.provide(document, position);
     }
 
@@ -60,12 +66,12 @@ export class Php implements Language {
         return [];
     }
 
-    findReferences(document: FlatDocument, position: Position): Location[] {
-        return [];
+    public findReferences(document: FlatDocument, position: Position): Location[] {
+        return this._providers.reference.provide(document, position);
     }
 
-    findDefinition(document: FlatDocument, position: Position): Definition | null {
-        return null;
+    public findDefinition(document: FlatDocument, position: Position): Definition | null {
+        return this._providers.definition.provide(document, position);
     }
 
     findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {

@@ -2,7 +2,7 @@
 
 import { DocumentUri, TextDocument } from 'vscode-languageserver-textdocument';
 import { DEFAULT_MAX_OPEN_FILES } from './defaults';
-import { writeFile, readFile, unlink, emptyDir, ensureDir, ensureFile } from 'fs-extra';
+import { writeFile, readFile, unlink, emptyDir, ensureDir, ensureFile, existsSync } from 'fs-extra';
 import { join } from 'path';
 import { runSafe } from '../helpers/general';
 import { FlatDocument } from './document';
@@ -107,6 +107,9 @@ export class FileCache {
     public async readJson<T>(key: string): Promise<T | undefined> {
         return runSafe(
             async () => {
+                const exists = existsSync(this.fullPath(key));
+                if (!exists) return undefined;
+
                 const data = await this.read(`${key}.json`);
                 return JSON.parse(data);
             },

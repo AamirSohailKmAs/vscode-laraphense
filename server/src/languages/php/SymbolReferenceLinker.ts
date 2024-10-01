@@ -51,12 +51,14 @@ export class SymbolReferenceLinker {
             reference.scope = this.resolver.resolveFromImport(reference);
         }
 
+        const fqn = splitNamespace(reference.scope);
+
         if (this.stubsFolder) {
-            let symbol = this.stubsFolder.symbolTable.findSymbolByFqn(splitNamespace(reference.scope));
+            let symbol = this.stubsFolder.symbolTable.findSymbolByFqn(fqn);
             if (symbol) return { symbol, isGlobal: true };
         }
 
-        let symbol = this.symbolTable.findSymbolByFqn(splitNamespace(reference.scope));
+        let symbol = this.symbolTable.findSymbolByFqn(fqn);
         if (symbol) return { symbol, isGlobal: false };
 
         return undefined;

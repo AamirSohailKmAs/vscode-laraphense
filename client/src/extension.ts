@@ -4,12 +4,20 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { ExtensionContext, workspace } from 'vscode';
+import { ExtensionContext, window, workspace } from 'vscode';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
+import {
+    LanguageClient,
+    LanguageClientOptions,
+    NotificationType,
+    ServerOptions,
+    TransportKind,
+} from 'vscode-languageclient';
 
 let client: LanguageClient;
 const version = '0.1.0';
+const INDEXING_STARTED_NOTIFICATION = new NotificationType('indexingStarted');
+const INDEXING_ENDED_NOTIFICATION = new NotificationType('indexingEnded');
 export function activate(context: ExtensionContext) {
     const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
 
@@ -36,6 +44,26 @@ export function activate(context: ExtensionContext) {
 
     client.start();
 
+    client.onReady().then(() => {
+        client.onNotification(INDEXING_STARTED_NOTIFICATION.method, (params) => {
+            window.setStatusBarMessage(
+                '$(sync~spin) Laraphense indexing ...',
+                new Promise<void>((resolve, reject) => {
+                    resolveIndexing = () => {
+                        resolve();
+                    };
+                })
+            );
+        });
+
+        client.onNotification(INDEXING_ENDED_NOTIFICATION.method, (params) => {
+            if (resolveIndexing) {
+                resolveIndexing();
+            }
+            resolveIndexing = undefined;
+        });
+    });
+
     context.globalState.update('version', version);
 }
 
@@ -45,4 +73,6 @@ export function deactivate(): Thenable<void> | undefined {
     }
     return client.stop();
 }
+
+let resolveIndexing: () => void;
 

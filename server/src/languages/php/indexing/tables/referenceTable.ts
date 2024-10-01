@@ -180,6 +180,8 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
 
             return false;
         }
+
+        return true;
     }
 
     private mustAddToMap<T>(map: Map<T, number[]>, key: T, index: number) {

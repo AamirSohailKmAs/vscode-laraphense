@@ -92,10 +92,23 @@ export class NamespaceResolver {
     }
 
     private resolveUnqualified(ref: PhpReference) {
-        const use = this.getImports(ref.kind).find((use) => use.alias === ref.name || use.name.endsWith(ref.name));
+        const use = this.getImports(ref.kind).find(
+            (use) => use.alias === ref.name || this.isLastPartMatches(use.name, ref.name)
+        );
+
         if (!use) return ref.scope;
 
         return use.scope;
+    }
+
+    private isLastPartMatches(useName: string, refName: string): boolean {
+        const parts = useName.split('\\');
+        const lastPart = parts[parts.length - 1];
+
+        if (lastPart === refName) {
+            return true;
+        }
+        return false;
     }
 
 }

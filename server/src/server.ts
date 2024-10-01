@@ -113,12 +113,24 @@ connection.onInitialize(async (params: InitializeParams) => {
                 triggerCharacters: [...emmetTriggerCharacters, '@', '.', ':', '<', '"', '=', '/'],
             },
             hoverProvider: true,
-            documentHighlightProvider: true,
-            documentRangeFormattingProvider: false,
+
+            // documentHighlightProvider: true,
             documentSymbolProvider: true,
+            // workspaceSymbolProvider: true,
+
             definitionProvider: true,
-            signatureHelpProvider: { triggerCharacters: ['('] },
             referencesProvider: true,
+
+            // implementationProvider: true,
+            // declarationProvider: true,
+
+            // typeDefinitionProvider: true,
+
+            // renameProvider: {prepareProvider: true },
+
+            // signatureHelpProvider: { triggerCharacters: ['(', ',', ':'] },
+
+            workspace: { workspaceFolders: { supported: true, changeNotifications: true } },
         },
     };
 });
@@ -174,19 +186,21 @@ documents.onDidChangeContent((change) => {
     laraphense.documentChanged(FlatDocument.fromTextDocument(change.document));
 });
 
-documents.onDidOpen((_param) => {
+documents.onDidOpen((change) => {
     if (!laraphense) {
         return;
     }
+
     laraphense.documentOpened(documents.all());
 });
 
-documents.onDidClose((param) => {
+documents.onDidClose((change) => {
     if (!laraphense) {
         return;
     }
-    connection.sendDiagnostics({ uri: param.document.uri, diagnostics: [] });
-    laraphense.documentClosed(FlatDocument.fromTextDocument(param.document));
+
+    connection.sendDiagnostics({ uri: change.document.uri, diagnostics: [] });
+    laraphense.documentClosed(FlatDocument.fromTextDocument(change.document));
 });
 
 // Handle watched files changes

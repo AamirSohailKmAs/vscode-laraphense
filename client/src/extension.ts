@@ -32,11 +32,11 @@ export function activate(context: ExtensionContext) {
 
     const clientOptions: LanguageClientOptions = {
         documentSelector: ['blade', 'php'],
-        synchronize: { fileEvents: workspace.createFileSystemWatcher('{composer,package}.json') },
+        synchronize: { fileEvents: workspace.createFileSystemWatcher('**') },
         initializationOptions: {
             storagePath: context.storagePath,
             clearCache: context.globalState.get<string>('version') !== version,
-            workspaceName: workspace.name ?? 'workspace',
+            workspaceName: workspace.name ?? 'porifa',
         },
     };
 

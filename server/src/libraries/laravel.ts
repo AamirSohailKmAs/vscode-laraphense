@@ -1,6 +1,6 @@
 'use strict';
 
-import { Position, CompletionList, CompletionItem } from 'vscode-languageserver';
+import { Position, CompletionList, CompletionItem, InsertTextFormat } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocLang } from '../support/document';
 import { Library } from './baseLibrary';
@@ -215,6 +215,7 @@ export class Laravel implements Library {
             const item: CompletionItem = {
                 label: snippet.label,
                 insertText: snippet.snippet,
+                insertTextFormat: InsertTextFormat.Snippet,
                 documentation: { kind: 'markdown', value: doc },
             };
 

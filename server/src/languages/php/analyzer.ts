@@ -134,7 +134,7 @@ export class Analyzer {
     constructor(
         private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
-        namespaceResolver: NamespaceResolver,
+        private namespaceResolver: NamespaceResolver,
         stubsFolder?: WorkspaceFolder
     ) {
         this._symbolReferenceLinker = new SymbolReferenceLinker(
@@ -186,6 +186,7 @@ export class Analyzer {
         this._uri = uri;
 
         this.debug = new Map();
+        this.namespaceResolver.clearImports();
         this.resetState();
         this.traverseAST(tree, steps);
         if (this.debug.size > 0) {

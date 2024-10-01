@@ -9,7 +9,7 @@ import { WorkspaceFolder } from '../../../support/workspaceFolder';
 import { Location } from '../../../parsers/ast';
 
 export class HoverProvider {
-    folder: WorkspaceFolder | undefined;
+    private folder: WorkspaceFolder | undefined;
     constructor(private workspace: Workspace) {}
 
     provide(doc: FlatDocument, pos: Position): Hover | null {

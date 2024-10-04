@@ -5,7 +5,7 @@ import { DEFAULT_MAX_OPEN_FILES } from './defaults';
 import { writeFile, readFile, unlink, emptyDir, ensureDir, ensureFile, existsSync } from 'fs-extra';
 import { join } from 'path';
 import { runSafe } from '../helpers/general';
-import { FlatDocument } from './document';
+import { ASTDocument } from './document';
 
 export type CacheItem<T> = { version: number; languageId: string; createdAt: number; data: T };
 
@@ -14,7 +14,7 @@ export class MemoryCache<T> {
     private _itemsMap: Map<DocumentUri, CacheItem<T>> = new Map();
 
     constructor(
-        private parse: (doc: FlatDocument) => T,
+        private parse: (doc: ASTDocument) => T,
         private maxEntries: number = DEFAULT_MAX_OPEN_FILES,
         ttl?: number
     ) {
@@ -30,7 +30,7 @@ export class MemoryCache<T> {
         }
     }
 
-    get(document: FlatDocument): T {
+    get(document: ASTDocument): T {
         const itemInfo = this._itemsMap.get(document.uri);
         if (itemInfo && itemInfo.version === document.version && itemInfo.languageId === document.languageId) {
             itemInfo.createdAt = Date.now();
@@ -42,12 +42,12 @@ export class MemoryCache<T> {
     setOpenUris(openDoc: TextDocument[]) {
         openDoc.forEach((doc) => {
             if (!this._itemsMap.has(doc.uri)) {
-                this.set(FlatDocument.fromTextDocument(doc));
+                this.set(ASTDocument.fromTextDocument(doc));
             }
         });
     }
 
-    set(document: FlatDocument) {
+    set(document: ASTDocument) {
         const data = this.parse(document);
         this._itemsMap.set(document.uri, {
             data: data,

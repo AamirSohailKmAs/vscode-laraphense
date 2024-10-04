@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { guessLangFromUri, uriToPath } from '../helpers/uri';
 import { DocumentUri } from 'vscode-languageserver-textdocument';
-import { DocLang, FlatDocument } from './document';
+import { DocLang, ASTDocument } from './document';
 
 export class Fetcher {
     public loadUriIfLang(uri: DocumentUri, allowedLanguage: DocLang[]) {
@@ -23,7 +23,7 @@ export class Fetcher {
             return undefined;
         }
 
-        return new FlatDocument(uri, lang, 1, content);
+        return new ASTDocument(uri, lang, 1, content);
     }
 
     public getFileContent(uri: string) {

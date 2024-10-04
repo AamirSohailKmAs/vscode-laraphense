@@ -2,13 +2,13 @@
 
 import { Position, Location } from 'vscode-languageserver';
 import { toLSPRange } from '../../../helpers/symbol';
-import { FlatDocument } from '../../../support/document';
+import { ASTDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
 
 export class ReferenceProvider {
     constructor(private workspace: Workspace) {}
 
-    provide(doc: FlatDocument, pos: Position): Location[] {
+    provide(doc: ASTDocument, pos: Position): Location[] {
         const items: Location[] = [];
 
         let space = this.workspace.getProjectSpace(doc.uri);

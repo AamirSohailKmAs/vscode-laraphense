@@ -3,7 +3,7 @@
 import { Position, Hover } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
-import { FlatDocument } from '../../../support/document';
+import { ASTDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
 import { WorkspaceFolder } from '../../../support/workspaceFolder';
 import { Location } from '../../../parsers/ast';
@@ -12,7 +12,7 @@ export class HoverProvider {
     private folder: WorkspaceFolder | undefined;
     constructor(private workspace: Workspace) {}
 
-    provide(doc: FlatDocument, pos: Position): Hover | null {
+    provide(doc: ASTDocument, pos: Position): Hover | null {
         let space = this.workspace.getProjectSpace(doc.uri);
 
         if (!space) return null;

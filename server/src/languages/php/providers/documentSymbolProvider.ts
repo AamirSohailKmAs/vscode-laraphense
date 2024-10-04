@@ -3,13 +3,13 @@
 import { SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind } from '../indexing/tables/symbolTable';
 import { toLSPRange } from '../../../helpers/symbol';
-import { FlatDocument } from '../../../support/document';
+import { ASTDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
 
 export class DocumentSymbolProvider {
     constructor(private workspace: Workspace) {}
 
-    provide(doc: FlatDocument): SymbolInformation[] {
+    provide(doc: ASTDocument): SymbolInformation[] {
         const symbolsInfo: SymbolInformation[] = [];
 
         let space = this.workspace.getProjectSpace(doc.uri);

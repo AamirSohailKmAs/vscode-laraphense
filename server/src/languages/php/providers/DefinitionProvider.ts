@@ -2,13 +2,13 @@
 
 import { Position, Definition } from 'vscode-languageserver';
 import { toLSPRange } from '../../../helpers/symbol';
-import { FlatDocument } from '../../../support/document';
+import { ASTDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
 
 export class DefinitionProvider {
     constructor(private workspace: Workspace) {}
 
-    provide(doc: FlatDocument, pos: Position): Definition | null {
+    provide(doc: ASTDocument, pos: Position): Definition | null {
         // @todo we can have multiple symbols for a reference but we are only have one symbolId
 
         const space = this.workspace.getProjectSpace(doc.uri);

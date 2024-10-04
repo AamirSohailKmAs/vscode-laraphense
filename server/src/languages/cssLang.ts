@@ -5,7 +5,7 @@
 'use strict';
 import { DocumentContext, LanguageService, Stylesheet } from 'vscode-css-languageservice';
 import { Language, Settings } from './baseLang';
-import { DocLang, FlatDocument, Regions } from '../support/document';
+import { DocLang, ASTDocument, Regions } from '../support/document';
 import { MemoryCache } from '../support/cache';
 import { Color, CompletionList, Diagnostic, Position, Range } from 'vscode-languageserver';
 
@@ -15,7 +15,7 @@ export class Css implements Language {
     id: DocLang = DocLang.css;
     emmetSyntax?: 'html' | 'css' = 'css';
     cssStylesheets: MemoryCache<Stylesheet>;
-    embeddedCSSDocuments: MemoryCache<FlatDocument>;
+    embeddedCSSDocuments: MemoryCache<ASTDocument>;
     constructor(
         private service: LanguageService,
         private documentRegions: MemoryCache<Regions>,
@@ -27,7 +27,7 @@ export class Css implements Language {
         this.cssStylesheets = new MemoryCache((document) => service.parseStylesheet(document.doc));
     }
 
-    async doValidation(document: FlatDocument) {
+    async doValidation(document: ASTDocument) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.doValidation(
             embedded.doc,
@@ -36,7 +36,7 @@ export class Css implements Language {
         ) as Diagnostic[];
     }
 
-    async doComplete(document: FlatDocument, position: Position, documentContext: DocumentContext) {
+    async doComplete(document: ASTDocument, position: Position, documentContext: DocumentContext) {
         const embedded = this.embeddedCSSDocuments.get(document);
         const stylesheet = this.cssStylesheets.get(embedded);
         return (
@@ -49,7 +49,7 @@ export class Css implements Language {
             ) || CompletionList.create()
         );
     }
-    doHover(document: FlatDocument, position: Position) {
+    doHover(document: ASTDocument, position: Position) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.doHover(
             embedded.doc,
@@ -58,41 +58,41 @@ export class Css implements Language {
             this.settings?.css?.hover
         );
     }
-    findDocumentHighlight(document: FlatDocument, position: Position) {
+    findDocumentHighlight(document: ASTDocument, position: Position) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.findDocumentHighlights(embedded.doc, position, this.cssStylesheets.get(embedded));
     }
-    findDocumentSymbols(document: FlatDocument) {
+    findDocumentSymbols(document: ASTDocument) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service
             .findDocumentSymbols(embedded.doc, this.cssStylesheets.get(embedded))
             .filter((s) => s.name !== CSS_STYLE_RULE);
     }
-    findDefinition(document: FlatDocument, position: Position) {
+    findDefinition(document: ASTDocument, position: Position) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.findDefinition(embedded.doc, position, this.cssStylesheets.get(embedded));
     }
-    findReferences(document: FlatDocument, position: Position) {
+    findReferences(document: ASTDocument, position: Position) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.findReferences(embedded.doc, position, this.cssStylesheets.get(embedded));
     }
-    findDocumentColors(document: FlatDocument) {
+    findDocumentColors(document: ASTDocument) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.findDocumentColors(embedded.doc, this.cssStylesheets.get(embedded));
     }
-    getColorPresentations(document: FlatDocument, color: Color, range: Range) {
+    getColorPresentations(document: ASTDocument, color: Color, range: Range) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.getColorPresentations(embedded.doc, this.cssStylesheets.get(embedded), color, range);
     }
-    getFoldingRanges(document: FlatDocument) {
+    getFoldingRanges(document: ASTDocument) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.getFoldingRanges(embedded.doc, {});
     }
-    getSelectionRange(document: FlatDocument, position: Position) {
+    getSelectionRange(document: ASTDocument, position: Position) {
         const embedded = this.embeddedCSSDocuments.get(document);
         return this.service.getSelectionRanges(embedded.doc, [position], this.cssStylesheets.get(embedded))[0];
     }
-    onDocumentRemoved(document: FlatDocument) {
+    onDocumentRemoved(document: ASTDocument) {
         this.embeddedCSSDocuments.delete(document.uri);
         this.cssStylesheets.delete(document.uri);
     }

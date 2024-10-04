@@ -3,7 +3,7 @@
 export class Debounce<T, K> {
     private _eventParams: T[] = [];
     private _timer: undefined | NodeJS.Timeout;
-    constructor(private _handler: (eventParams: T[]) => K, public waitInMilliseconds: number) {
+    constructor(private _handler: (eventParams: T[]) => K, private waitInMilliseconds: number) {
         this._eventParams = [];
     }
     handle(eventParam?: T) {

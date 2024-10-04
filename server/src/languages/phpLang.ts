@@ -1,6 +1,6 @@
 'use strict';
 import { DocContext, Language } from './baseLang';
-import { DocLang, FlatDocument } from '../support/document';
+import { DocLang, ASTDocument } from '../support/document';
 import {
     CompletionItem,
     CompletionList,
@@ -38,51 +38,51 @@ export class Php implements Language {
         };
     }
 
-    public findDocumentSymbols(document: FlatDocument): SymbolInformation[] {
+    public findDocumentSymbols(document: ASTDocument): SymbolInformation[] {
         return this._providers.documentSymbol.provide(document);
     }
 
     doComplete(
-        document: FlatDocument,
+        document: ASTDocument,
         position: Position,
         context: DocContext
     ): CompletionList | Promise<CompletionList> {
         return CompletionList.create();
     }
 
-    doResolve(document: FlatDocument, item: CompletionItem): CompletionItem {
+    doResolve(document: ASTDocument, item: CompletionItem): CompletionItem {
         return item;
     }
 
-    public doHover(document: FlatDocument, position: Position): Hover | null {
+    public doHover(document: ASTDocument, position: Position): Hover | null {
         return this._providers.hover.provide(document, position);
     }
 
-    doSignatureHelp(document: FlatDocument, position: Position): SignatureHelp | null {
+    doSignatureHelp(document: ASTDocument, position: Position): SignatureHelp | null {
         return null;
     }
 
-    doValidation(document: FlatDocument): Diagnostic[] | Promise<Diagnostic[]> {
+    doValidation(document: ASTDocument): Diagnostic[] | Promise<Diagnostic[]> {
         return [];
     }
 
-    public findReferences(document: FlatDocument, position: Position): Location[] {
+    public findReferences(document: ASTDocument, position: Position): Location[] {
         return this._providers.reference.provide(document, position);
     }
 
-    public findDefinition(document: FlatDocument, position: Position): Definition | null {
+    public findDefinition(document: ASTDocument, position: Position): Definition | null {
         return this._providers.definition.provide(document, position);
     }
 
-    findDocumentHighlight(document: FlatDocument, position: Position): DocumentHighlight[] {
+    findDocumentHighlight(document: ASTDocument, position: Position): DocumentHighlight[] {
         return [];
     }
 
-    findDocumentLinks(document: FlatDocument, documentContext: DocContext): DocumentLink[] {
+    findDocumentLinks(document: ASTDocument, documentContext: DocContext): DocumentLink[] {
         return [];
     }
 
-    onDocumentRemoved(document: FlatDocument) {}
+    onDocumentRemoved(document: ASTDocument) {}
 
     dispose() {}
 }

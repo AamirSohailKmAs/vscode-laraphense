@@ -22,12 +22,11 @@ export enum DocLang {
     unknown = 'unknown',
 }
 
-export class FlatDocument {
-    static fromTextDocument(doc: TextDocument): FlatDocument {
-        return new FlatDocument(doc.uri, toDocLang(doc.languageId), doc.version, doc.getText());
+export class ASTDocument {
+    static fromTextDocument(doc: TextDocument): ASTDocument {
+        return new ASTDocument(doc.uri, toDocLang(doc.languageId), doc.version, doc.getText());
     }
 
-    public createdAt: number;
     public lastCompile: [number, number] = [0, 0];
     public compileDebounce?: Debounce<unknown, unknown>;
     public diagnoseDebounce?: Debounce<unknown, unknown>;
@@ -35,36 +34,43 @@ export class FlatDocument {
     private WORD_REGEX: string | RegExp = /[\w\d\-_\.\:\\\/@]+$/;
     private _search: BinarySearch;
     private _doc: TextDocument;
+
+    public isOpened: boolean;
+
     constructor(
-        private _uri: DocumentUri,
-        private _languageId: DocLang,
-        private _version: number,
-        private _content: string,
-        public isOpened: boolean = false,
+        uri: DocumentUri,
+        languageId: DocLang,
+        version: number,
+        content: string,
+        isOpened: boolean = false,
         createdAt?: number
     ) {
-        this.createdAt = createdAt ?? Date.now();
+        this.isOpened = isOpened;
         this.lastCompile = process.hrtime();
-        this._doc = TextDocument.create(this._uri, this._languageId, this._version, this._content);
+        this._doc = TextDocument.create(uri, languageId, version, content);
 
-        this._lineLengths = this.lineLengths(_content, true);
+        this._lineLengths = this.lineLengths(content);
         this._search = new BinarySearch(this._lineLengths);
     }
 
     public get doc() {
-        return this._doc;
+        return TextDocument.create(this._doc.uri, this._doc.languageId, this._doc.version, this._doc.getText());
     }
 
     public get uri() {
-        return this._uri;
+        return this._doc.uri;
     }
 
     public get version() {
-        return this._version;
+        return this._doc.version;
     }
 
-    public get languageId() {
-        return this._languageId;
+    public get languageId(): DocLang {
+        return this._doc.languageId as DocLang;
+    }
+
+    public get content() {
+        return this._doc.getText();
     }
 
     get lineOffsets() {
@@ -72,44 +78,15 @@ export class FlatDocument {
     }
 
     positionAt(offset: number) {
-        offset = Math.max(Math.min(offset, this._content.length), 0);
-        let lineOffsets = this.lineOffsets;
-        let low = 0,
-            high = lineOffsets.length;
-        if (high === 0) {
-            return { line: 0, character: offset };
-        }
-        while (low < high) {
-            let mid = Math.floor((low + high) / 2);
-            if (lineOffsets[mid] > offset) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-        // low is the least x for which the line offset is larger than the current offset
-        // or array.length if no line offset is larger than the current offset
-        let line = low - 1;
-        return { line, character: offset - lineOffsets[line] };
+        return this._doc.positionAt(offset);
     }
 
     get lineCount() {
-        return this.lineOffsets.length;
+        return this._doc.lineCount;
     }
 
     public offsetAt(position: Position): number {
         return this._doc.offsetAt(position);
-        let lineOffsets = this.lineOffsets;
-
-        if (position.line >= lineOffsets.length) {
-            return this._content.length;
-        } else if (position.line < 0) {
-            return 0;
-        }
-        let lineOffset = lineOffsets[position.line];
-        let nextLineOffset =
-            position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
     }
 
     /**
@@ -127,17 +104,12 @@ export class FlatDocument {
      *         range is provided.
      */
     public getText(range?: Range): string {
-        if (range) {
-            const start = this.offsetAt(range.start);
-            const end = this.offsetAt(range.end);
-            return this._content.substring(start, end);
-        }
-        return this._content;
+        return this._doc.getText(range);
     }
 
     public getWordAtPosition(position: Position, regex?: string | RegExp) {
-        const offset = this.doc.offsetAt(position);
-        let match = this.doc
+        const offset = this._doc.offsetAt(position);
+        let match = this._doc
             .getText()
             .slice(this._lineLengths[position.line], offset)
             .match(regex || this.WORD_REGEX);
@@ -149,58 +121,7 @@ export class FlatDocument {
     }
 
     update(changes: TextDocumentContentChangeEvent[], version: number) {
-        for (let i = 0, l = changes.length; i < l; ++i) {
-            const change = changes[i];
-            if ('range' in change) {
-                this.applyChange(change.range.start, change.range.end, change.text);
-            } else {
-                this._content = change.text;
-                this._lineLengths = this.lineLengths(change.text, true, 0);
-            }
-        }
-
-        this._version = version;
-    }
-
-    applyChange(start: Position, end: Position, text: string) {
-        // update content
-        const startOffset = this.positionToOffset(start);
-        const endOffset = this.positionToOffset(end);
-        this._content = this._content.slice(0, startOffset) + text + this._content.slice(endOffset);
-
-        // update the offsets
-        let lineOffsets = this._lineLengths;
-        const addedLineOffsets = this.lineLengths(text, false, startOffset);
-        if (end.line - start.line === addedLineOffsets.length) {
-            for (let i = 0, len = addedLineOffsets.length; i < len; i++) {
-                lineOffsets[i + start.line + 1] = addedLineOffsets[i];
-            }
-        } else {
-            if (addedLineOffsets.length < 10000) {
-                lineOffsets.splice(start.line + 1, end.line - start.line, ...addedLineOffsets);
-            } else {
-                // avoid too many arguments for splice
-                this._lineLengths = lineOffsets = lineOffsets
-                    .slice(0, start.line + 1)
-                    .concat(addedLineOffsets, lineOffsets.slice(end.line + 1));
-            }
-        }
-        const diff = text.length - (endOffset - startOffset);
-        if (diff !== 0) {
-            for (let i = start.line + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
-                lineOffsets[i] = lineOffsets[i] + diff;
-            }
-        }
-
-        let chunkFirst = this._lineLengths.slice(0, start.line + 1);
-        let length = text.length - (endOffset - startOffset);
-        Array.prototype.push.apply(chunkFirst, this.lineLengths(text, false, startOffset).slice(1));
-        let chunkLast = this._lineLengths.slice(end.line + 1);
-        for (let e = 0, t = chunkLast.length; e < t; ++e) {
-            chunkFirst.push(chunkLast[e] + length);
-        }
-        this._lineLengths = chunkFirst;
-        this._search.sortedArray = this._lineLengths;
+        TextDocument.update(this._doc, changes, version);
     }
 
     lineOffset(line: number): number {
@@ -214,20 +135,20 @@ export class FlatDocument {
     }
     positionToOffset(position: Position) {
         const offset = this.lineOffset(position.line) + position.character;
-        return Math.max(0, Math.min(offset, this._content.length));
+        return Math.max(0, Math.min(offset, this.content.length));
     }
 
     textToLeftOfOffset(end: number, start: number) {
         const begin = Math.max(end - start, 0);
-        return this._content.slice(begin, end);
+        return this.content.slice(begin, end);
     }
     lineText(offset: number) {
         const line = this.offsetLine(offset);
-        return this._content.slice(this._lineLengths[line], offset);
+        return this.content.slice(this._lineLengths[line], offset);
     }
     wordToLeftOfOffset(offset: number, regex?: string | RegExp) {
         const line = this.offsetLine(offset);
-        let match = this._content.slice(this._lineLengths[line], offset).match(regex || this.WORD_REGEX);
+        let match = this.content.slice(this._lineLengths[line], offset).match(regex || this.WORD_REGEX);
         if (match) {
             return match[0];
         } else {
@@ -236,7 +157,7 @@ export class FlatDocument {
     }
 
     textToRightOfOffset(from: number, length: number) {
-        return this._content.substr(from, length);
+        return this.content.substr(from, length);
     }
     offsetToPosition(offset: number): Position {
         const line = this.offsetLine(offset);
@@ -256,47 +177,26 @@ export class FlatDocument {
     getRangeText(range: Range) {
         let start = this.positionToOffset(range.start);
         let end = this.positionToOffset(range.end);
-        return this._content.slice(start, end);
+        return this.content.slice(start, end);
     }
     lineLength(line: number) {
         let length = this._lineLengths[line];
         if (length === undefined) {
             return 0;
         }
-        let fullLength = this._lineLengths[line + 1] || this._content.length;
+        let fullLength = this._lineLengths[line + 1] || this.content.length;
         return Math.max(0, fullLength - length);
     }
 
-    protected lineLengths(text: string, isAtLineStart: boolean = true, textOffset = 0) {
+    protected lineLengths(text: string) {
         const lines = text.split('\n');
         return lines.map((line) => line.length);
-
-        const offsets: Array<number> = isAtLineStart ? [textOffset] : [];
-
-        let newLine = false;
-
-        for (let i = 0, l = text.length; i < l; i++) {
-            const char = text[i];
-            if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-                i++;
-            }
-
-            if (char === '\n') newLine = true;
-
-            if (newLine) {
-                this._lineLengths.push(i);
-                newLine = false;
-            }
-        }
-
-        return offsets;
     }
 }
 
 export class Regions {
     private _regions: EmbeddedLanguage[] = [];
     private _defaultLang: DocLang;
-    private _tree: Tree;
 
     constructor(uri: DocumentUri) {
         switch (guessLangFromUri(uri)) {
@@ -310,8 +210,6 @@ export class Regions {
                 this._defaultLang = DocLang.unknown;
                 break;
         }
-
-        this._tree = newAstTree();
     }
 
     private dispatchMap: Record<string, (node: any) => void> = {
@@ -341,7 +239,6 @@ export class Regions {
     };
 
     public parse(tree: Tree) {
-        this._tree = tree;
         this._regions = [];
         tree.children.forEach((child) => {
             this.dispatchMap[child.kind]?.(child);
@@ -380,10 +277,10 @@ export class Regions {
     }
 
     public getEmbeddedDocument(
-        document: FlatDocument,
+        document: ASTDocument,
         languageId: DocLang,
         ignoreAttributeValues: boolean = false
-    ): FlatDocument {
+    ): ASTDocument {
         let currentPos = 0;
         const oldContent = document.getText();
         let result = '';
@@ -404,7 +301,7 @@ export class Regions {
             }
         }
         result = substituteWithWhitespace(result, currentPos, oldContent.length, oldContent, lastSuffix, '');
-        return new FlatDocument(document.uri, languageId, document.version, result);
+        return new ASTDocument(document.uri, languageId, document.version, result);
     }
 
     private getPrefix(c: EmbeddedLanguage) {

@@ -13,7 +13,7 @@ import {
     SignatureHelp,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { DocLang, FlatDocument } from '../support/document';
+import { DocLang, ASTDocument } from '../support/document';
 import { LanguageSettings as CssSetting } from 'vscode-css-languageservice';
 import {
     CompletionConfiguration,
@@ -59,21 +59,21 @@ export type Language = {
     id: DocLang;
     emmetSyntax?: 'html' | 'css';
     dispose: () => void;
-    onDocumentRemoved: (document: FlatDocument) => void;
+    onDocumentRemoved: (document: ASTDocument) => void;
     doComplete?: (
-        document: FlatDocument,
+        document: ASTDocument,
         position: Position,
         context: DocContext
     ) => CompletionList | Promise<CompletionList>;
-    doHover?: (document: FlatDocument, position: Position) => Hover | null;
-    doResolve?: (document: FlatDocument, item: CompletionItem) => CompletionItem;
-    doSignatureHelp?: (document: FlatDocument, position: Position) => SignatureHelp | null;
-    doValidation?: (document: FlatDocument) => Diagnostic[] | Promise<Diagnostic[]>;
-    findReferences?: (document: FlatDocument, position: Position) => Location[];
-    findDefinition?: (document: FlatDocument, position: Position) => Definition | null;
-    findDocumentHighlight?: (document: FlatDocument, position: Position) => DocumentHighlight[];
-    findDocumentLinks?: (document: FlatDocument, documentContext: DocContext) => DocumentLink[];
-    findDocumentSymbols?: (document: FlatDocument) => SymbolInformation[];
+    doHover?: (document: ASTDocument, position: Position) => Hover | null;
+    doResolve?: (document: ASTDocument, item: CompletionItem) => CompletionItem;
+    doSignatureHelp?: (document: ASTDocument, position: Position) => SignatureHelp | null;
+    doValidation?: (document: ASTDocument) => Diagnostic[] | Promise<Diagnostic[]>;
+    findReferences?: (document: ASTDocument, position: Position) => Location[];
+    findDefinition?: (document: ASTDocument, position: Position) => Definition | null;
+    findDocumentHighlight?: (document: ASTDocument, position: Position) => DocumentHighlight[];
+    findDocumentLinks?: (document: ASTDocument, documentContext: DocContext) => DocumentLink[];
+    findDocumentSymbols?: (document: ASTDocument) => SymbolInformation[];
 };
 
 type HtmlSetting = {

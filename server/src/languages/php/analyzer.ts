@@ -94,7 +94,7 @@ export class NamespaceVisitor implements NodeVisitor {
             return true;
         }
 
-        // todo: we need loc of namespace name instead of given loc
+        // fixme: we need loc of namespace name instead of given loc
         this.analyzer.setScope(createSymbol(node.name, PhpSymbolKind.Namespace, node.loc, ''));
         return true;
     }

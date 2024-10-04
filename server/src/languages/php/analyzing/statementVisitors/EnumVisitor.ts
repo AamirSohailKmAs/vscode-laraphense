@@ -19,6 +19,7 @@ export class EnumVisitor implements NodeVisitor {
         if (node.implements) {
             node.implements.forEach((interfaceNode) => {
                 this.analyzer.addReference(
+                    // fixme: name is string we need loc
                     createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );
             });

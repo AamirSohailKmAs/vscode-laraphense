@@ -18,6 +18,7 @@ export class TraitUseVisitor implements NodeVisitor {
     visitReference(node: TraitUse): boolean {
         node.traits.forEach((trait) => {
             // todo: alias, resolution
+            //fixme: name is string we need loc
             this.analyzer.addReference(createReference(trait.name, PhpSymbolKind.Trait, trait.loc));
         });
 

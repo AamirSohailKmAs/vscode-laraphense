@@ -37,6 +37,7 @@ export class ClassVisitor implements NodeVisitor {
         if (classNode.implements) {
             classNode.implements.forEach((interfaceNode) => {
                 this.analyzer.addReference(
+                    // fixme: name is string we need loc
                     createReference(interfaceNode.name, PhpSymbolKind.Interface, interfaceNode.loc)
                 );
             });

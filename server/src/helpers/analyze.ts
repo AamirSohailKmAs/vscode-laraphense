@@ -35,7 +35,7 @@ export function createSymbol(
     type?: Identifier | Identifier[] | null,
     value?: string | number | boolean | Node | null
 ): PhpSymbol {
-    name = normalizeName(name).name;
+    const normalized = normalizeName(name);
 
     if (loc === null || loc === undefined) {
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
@@ -43,13 +43,14 @@ export function createSymbol(
 
     const symbol: PhpSymbol = {
         id: 0,
-        name,
+        name: normalized.name,
         kind,
-        loc: normalizeLocation(loc),
+        loc: normalizeLocation(normalized.loc ?? loc),
         uri: '' as RelativeUri,
         modifiers,
         value: normalizeValue(value),
         scope,
+        doc: {},
         type: { declared: normalizeTypes(type) },
         throws: new Set(),
         referenceIds: new Set(),
@@ -66,7 +67,7 @@ export function createReference(
     fqn: string = '',
     alias?: string
 ): PhpReference {
-    name = normalizeName(name).name;
+    const normalized = normalizeName(name);
 
     if (loc === null || loc === undefined) {
         console.log(`symbol ${name} of kind ${kind} does not have a location`);
@@ -75,9 +76,9 @@ export function createReference(
     const reference: PhpReference = {
         id: 0,
         symbolId: 0,
-        name,
+        name: normalized.name,
         kind,
-        loc: normalizeLocation(loc),
+        loc: normalizeLocation(normalized.loc ?? loc),
         scope: fqn,
         alias,
         isGlobal: false,
@@ -106,13 +107,13 @@ export function normalizeLocation(loc: ParserLocation | null | undefined): Locat
     };
 }
 
-export function normalizeName(name: string | Identifier): { name: string; offset: number } {
-    let offset = 0;
+export function normalizeName(name: string | Identifier): { name: string; loc?: ParserLocation } {
+    let loc: ParserLocation | undefined = undefined;
     if (typeof name !== 'string') {
-        offset = name.loc?.start.offset ?? 0;
+        loc = name.loc || undefined;
         name = name.name;
     }
-    return { name, offset };
+    return { name, loc };
 }
 
 export function normalizeValue(value: string | number | boolean | Node | null | undefined): Value | undefined {
@@ -292,6 +293,7 @@ export function getResolution(name: string) {
 export function attrGroupsVisitor(attrGroups: AttrGroup[], analyzer: Analyzer) {
     attrGroups.forEach((group) => {
         group.attrs.forEach((attr) => {
+            // fixme: attribute name is string
             analyzer.addReference(createReference(attr.name, PhpSymbolKind.Attribute, attr.loc));
         });
     });

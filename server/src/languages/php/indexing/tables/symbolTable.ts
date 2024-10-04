@@ -55,19 +55,28 @@ export const enum PhpSymbolKind {
     Constant,
 }
 
+export type Template = {
+    name: string;
+    type?: PhpType;
+};
+
 export type PhpSymbolType = {
     declared?: PhpType;
     documented?: PhpType;
     inferred?: PhpType;
+
+    templates?: Template[];
 };
 
-
 export type PhpSymbol = Definition<PhpSymbolKind> & {
-    // namePosition: number;
     value?: Value;
     modifiers: SymbolModifier[];
 
     type: PhpSymbolType;
+    doc: {
+        summary?: string;
+        description?: string;
+    };
 
     throws: Set<string>;
     relatedIds: Set<number>;
@@ -86,7 +95,7 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         return this.index++;
     }
 
-    public addSymbol(symbol: T) {
+    public add(symbol: T) {
         if (symbol.uri === '') {
             return;
         }

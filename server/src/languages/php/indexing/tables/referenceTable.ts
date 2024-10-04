@@ -34,12 +34,6 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         return this.index++;
     }
 
-    public addImports(uses: T[]) {
-        for (let i = 0; i < uses.length; i++) {
-            this.addImport(uses[i]);
-        }
-    }
-
     public addImport(use: T) {
         if (!this.isIdValidate(use)) return;
 
@@ -52,7 +46,7 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         this.mustAddToMap(this.importsByUri, use.uri, use.id);
     }
 
-    public addReference(reference: T) {
+    public add(reference: T) {
         if (!this.isIdValidate(reference)) return;
 
         this.references.set(reference.id, reference);

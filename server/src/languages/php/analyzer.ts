@@ -209,7 +209,7 @@ export class Analyzer {
         this._namespace = symbol.name;
         // this.namespace = this.isParent ? joinNamespace(this.namespace, symbol.name) : symbol.name;
         symbol.uri = this._uri;
-        this._symbolTable.addSymbol(symbol);
+        this._symbolTable.add(symbol);
         this.resetMember();
     }
 
@@ -258,7 +258,7 @@ export class Analyzer {
 
     public addSymbol(symbol: PhpSymbol) {
         symbol.uri = this._uri;
-        this._symbolTable.addSymbol(symbol);
+        this._symbolTable.add(symbol);
 
         this._symbolReferenceLinker.linkReferencesToSymbol(symbol);
 
@@ -277,7 +277,7 @@ export class Analyzer {
         reference.uri = this._uri;
         reference.scope = joinNamespace(this._namespace, reference.name);
         this._symbolReferenceLinker.linkReference(reference); // @note try to link so that it doesn't go to pending
-        this._referenceTable.addReference(reference);
+        this._referenceTable.add(reference);
     }
 
     private traverseAST(treeNode: TreeLike, steps: number) {

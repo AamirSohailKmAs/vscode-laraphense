@@ -1,6 +1,6 @@
 'use strict';
 
-export class Debounce<T, K> {
+export class Debounce<T, K = void> {
     private _eventParams: T[] = [];
     private _timer: undefined | NodeJS.Timeout;
     constructor(private _handler: (eventParams: T[]) => K, private waitInMilliseconds: number) {
@@ -21,7 +21,7 @@ export class Debounce<T, K> {
         this._timer = undefined;
         this._eventParams = [];
     }
-    flush(defaultValue: T): T | K {
+    flush(defaultValue: K): K {
         if (!this._timer) {
             return defaultValue;
         }

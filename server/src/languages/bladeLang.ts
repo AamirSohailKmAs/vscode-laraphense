@@ -61,8 +61,8 @@ export class Blade implements Language {
         return this.html.doLinkedEditing(document, position);
     }
 
-    public onDocumentRemoved(document: ASTDocument) {
-        this.html.onDocumentRemoved(document);
+    public onDocumentRemoved(uri: string) {
+        this.html.onDocumentRemoved(uri);
     }
 
     public dispose() {

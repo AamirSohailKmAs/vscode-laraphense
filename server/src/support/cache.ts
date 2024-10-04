@@ -39,14 +39,6 @@ export class MemoryCache<T> {
         return this.set(document);
     }
 
-    setOpenUris(openDoc: TextDocument[]) {
-        openDoc.forEach((doc) => {
-            if (!this._itemsMap.has(doc.uri)) {
-                this.set(ASTDocument.fromTextDocument(doc));
-            }
-        });
-    }
-
     set(document: ASTDocument) {
         const data = this.parse(document);
         this._itemsMap.set(document.uri, {

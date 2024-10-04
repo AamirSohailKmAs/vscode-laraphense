@@ -88,8 +88,8 @@ export class Html implements Language {
         const htmlDocument = this.htmlDocuments.get(document);
         return this.service.findLinkedEditingRanges(document.doc, position, htmlDocument);
     }
-    onDocumentRemoved(document: ASTDocument) {
-        this.htmlDocuments.delete(document.uri);
+    onDocumentRemoved(uri: string) {
+        this.htmlDocuments.delete(uri);
     }
     dispose() {
         this.htmlDocuments.clear();

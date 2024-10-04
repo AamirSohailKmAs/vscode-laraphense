@@ -23,13 +23,7 @@ export enum DocLang {
 }
 
 export class ASTDocument {
-    static fromTextDocument(doc: TextDocument): ASTDocument {
-        return new ASTDocument(doc.uri, toDocLang(doc.languageId), doc.version, doc.getText());
-    }
-
     public lastCompile: [number, number] = [0, 0];
-    public compileDebounce?: Debounce<unknown, unknown>;
-    public diagnoseDebounce?: Debounce<unknown, unknown>;
     private _lineLengths: Array<number> = [];
     private WORD_REGEX: string | RegExp = /[\w\d\-_\.\:\\\/@]+$/;
     private _search: BinarySearch;
@@ -43,7 +37,8 @@ export class ASTDocument {
         version: number,
         content: string,
         isOpened: boolean = false,
-        createdAt?: number
+        public compileDebounce?: Debounce<TextDocumentContentChangeEvent[], boolean>,
+        public diagnoseDebounce?: Debounce<unknown>
     ) {
         this.isOpened = isOpened;
         this.lastCompile = process.hrtime();
@@ -77,14 +72,39 @@ export class ASTDocument {
         return this._lineLengths.slice(0);
     }
 
+    /**
+     * Converts a zero-based offset to a position.
+     *
+     * @param offset A zero-based offset.
+     * @return A valid {@link Position position}.
+     * @example The text document "ab\ncd" produces:
+     * * position { line: 0, character: 0 } for `offset` 0.
+     * * position { line: 0, character: 1 } for `offset` 1.
+     * * position { line: 0, character: 2 } for `offset` 2.
+     * * position { line: 1, character: 0 } for `offset` 3.
+     * * position { line: 1, character: 1 } for `offset` 4.
+     */
     positionAt(offset: number) {
         return this._doc.positionAt(offset);
     }
 
+    /**
+     * The number of lines in this document.
+     *
+     * @readonly
+     */
     get lineCount() {
         return this._doc.lineCount;
     }
 
+    /**
+     * Converts the position to a zero-based offset.
+     * Invalid positions are adjusted as described in {@link Position.line}
+     * and {@link Position.character}.
+     *
+     * @param position A position.
+     * @return A valid zero-based offset.
+     */
     public offsetAt(position: Position): number {
         return this._doc.offsetAt(position);
     }

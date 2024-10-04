@@ -98,7 +98,7 @@ export class Php implements Language {
         return [];
     }
 
-    onDocumentRemoved(document: ASTDocument) {}
+    onDocumentRemoved(uri: string) {}
 
     dispose() {}
 }

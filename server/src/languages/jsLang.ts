@@ -370,8 +370,8 @@ export class Js implements Language {
         }
         return ranges;
     }
-    onDocumentRemoved(document: ASTDocument) {
-        this.jsDocuments.delete(document.uri);
+    onDocumentRemoved(uri: string) {
+        this.jsDocuments.delete(uri);
     }
     dispose() {
         this.host.dispose();

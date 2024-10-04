@@ -16,7 +16,7 @@ import { NamespaceResolver } from '../languages/php/namespaceResolver';
 import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
 import { BladeParser } from '@porifa/blade-parser';
-import { parseFlatDoc } from '../laraphense';
+import { parseDoc } from './Compiler';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -244,19 +244,15 @@ export class WorkspaceFolder {
         //     this.compiler.analyze(parsedData);
         // }
 
-        await this.indexFile(entry.uri);
-    }
-
-    private async indexFile(uri: string) {
-        const flatDoc = this.fetcher.loadUriIfLang(this.documentUri(uri), [DocLang.php, DocLang.blade]);
+        const flatDoc = this.fetcher.loadUriIfLang(this.documentUri(entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {
-            this.missingFiles.push({ uri, reason: 'not found' });
+            this.missingFiles.push({ uri: entry.uri, reason: 'not found' });
             return undefined;
         }
 
-        const astTree = parseFlatDoc(this.parser, flatDoc);
-        await this.analyzer.analyze(astTree, uri as RelativeUri, this.isStubs ? 1 : 2);
+        const astTree = parseDoc(this.parser, flatDoc);
+        this.analyzer.analyze(astTree, entry.uri as RelativeUri, this.isStubs ? 1 : 2);
         flatDoc.lastCompile = process.hrtime();
 
         this.count++;

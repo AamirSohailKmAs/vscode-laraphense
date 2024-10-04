@@ -12,21 +12,18 @@ import {
     LSPErrorCodes,
     NotificationType,
     ResponseError,
-    TextDocuments,
     TextDocumentSyncKind,
 } from 'vscode-languageserver';
 import { createConnection } from 'vscode-languageserver/node';
 
-import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Laraphense } from './laraphense';
 import { Workspace } from './support/workspace';
 import { FolderUri } from './support/workspaceFolder';
-import { CONFIG_SECTION, DEFAULT_LARAPHENSE_CONFIG, EMPTY_COMPLETION_LIST } from './support/defaults';
+import { CONFIG_SECTION, DEFAULT_LARAPHENSE_CONFIG } from './support/defaults';
 import { join } from 'path';
 import { getNestedValue, runSafe } from './helpers/general';
 import { homedir } from 'os';
 import { FileCache } from './support/cache';
-import { FlatDocument } from './support/document';
 import { laraphenseRc } from './languages/baseLang';
 import { pathToUri } from './helpers/uri';
 
@@ -37,7 +34,6 @@ let workspace: Workspace;
 let laraphense: Laraphense | undefined;
 let startTime: [number, number];
 let InitializeParams: InitializeParams;
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const emmetTriggerCharacters = ['!', '.', '}', ':', '*', '$', ']', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 const INDEXING_STARTED_NOTIFICATION = new NotificationType('indexingStarted');
@@ -177,49 +173,44 @@ connection.onShutdown(() => {
     laraphense.shutdown();
 });
 
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
-documents.onDidChangeContent((change) => {
+connection.onDidChangeTextDocument((param) => {
     if (!laraphense) {
         return;
     }
-    laraphense.documentChanged(FlatDocument.fromTextDocument(change.document));
+
+    laraphense.documentChanged(param.textDocument.uri, param.textDocument.version, param.contentChanges);
 });
 
-documents.onDidOpen((change) => {
+connection.onDidOpenTextDocument((param) => {
     if (!laraphense) {
         return;
     }
 
-    laraphense.documentOpened(documents.all());
+    laraphense.documentOpened(param.textDocument);
 });
 
-documents.onDidClose((change) => {
+connection.onDidCloseTextDocument((param) => {
     if (!laraphense) {
         return;
     }
 
-    connection.sendDiagnostics({ uri: change.document.uri, diagnostics: [] });
-    laraphense.documentClosed(FlatDocument.fromTextDocument(change.document));
+    connection.sendDiagnostics({ uri: param.textDocument.uri, diagnostics: [] });
+    laraphense.documentClosed(param.textDocument.uri);
 });
 
 // Handle watched files changes
 connection.onDidChangeWatchedFiles((params: DidChangeWatchedFilesParams) => {
-    console.log(params);
-
     for (const change of params.changes) {
         switch (change.type) {
             case FileChangeType.Created:
-                // Handle file creation
-                console.log(`watched File created: ${change.uri}`);
+                workspace.addFile(change.uri);
                 break;
             case FileChangeType.Changed:
                 // Handle file change
                 console.log(`watched File changed: ${change.uri}`);
                 break;
             case FileChangeType.Deleted:
-                // Handle file deletion
-                console.log(`watched File deleted: ${change.uri}`);
+                workspace.removeFile(change.uri);
                 break;
         }
     }
@@ -234,15 +225,7 @@ connection.onCompletion(async (textDocumentPosition, token) => {
             if (!laraphense) {
                 return;
             }
-            const document = documents.get(textDocumentPosition.textDocument.uri);
-            if (!document) {
-                return EMPTY_COMPLETION_LIST;
-            }
-            return laraphense.provideCompletion(
-                FlatDocument.fromTextDocument(document),
-                textDocumentPosition.position,
-                textDocumentPosition.context
-            );
+            return laraphense.provideCompletion(textDocumentPosition);
         },
         null,
         `Error while computing completions for ${textDocumentPosition.textDocument.uri}`
@@ -260,11 +243,7 @@ connection.onCompletionResolve((item, token) => {
                 return item;
             }
 
-            let document = documents.get(item.data.uri);
-            if (!document) {
-                return item;
-            }
-            return laraphense.provideCompletionResolve(FlatDocument.fromTextDocument(document), item);
+            return laraphense.provideCompletionResolve(item);
         },
         item,
         `Error while resolving completion proposal`
@@ -277,11 +256,10 @@ connection.onHover((textDocumentPosition, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(textDocumentPosition.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return null;
             }
-            return laraphense.provideHover(FlatDocument.fromTextDocument(document), textDocumentPosition.position);
+            return laraphense.provideHover(textDocumentPosition.textDocument.uri, textDocumentPosition.position);
         },
         null,
         `Error while computing hover for ${textDocumentPosition.textDocument.uri}`
@@ -294,12 +272,11 @@ connection.onDocumentHighlight((documentHighlightParams, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(documentHighlightParams.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return [];
             }
             return laraphense.provideDocumentHighlight(
-                FlatDocument.fromTextDocument(document),
+                documentHighlightParams.textDocument.uri,
                 documentHighlightParams.position
             );
         },
@@ -314,11 +291,10 @@ connection.onDefinition((definitionParams, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(definitionParams.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return [];
             }
-            return laraphense.provideDefinition(FlatDocument.fromTextDocument(document), definitionParams.position);
+            return laraphense.provideDefinition(definitionParams.textDocument.uri, definitionParams.position);
         },
         [],
         `Error while computing definitions for ${definitionParams.textDocument.uri}`
@@ -331,11 +307,10 @@ connection.onReferences((referenceParams, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(referenceParams.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return [];
             }
-            return laraphense.provideReferences(FlatDocument.fromTextDocument(document), referenceParams.position);
+            return laraphense.provideReferences(referenceParams.textDocument.uri, referenceParams.position);
         },
         [],
         `Error while computing references for ${referenceParams.textDocument.uri}`
@@ -348,14 +323,10 @@ connection.onSignatureHelp((signatureHelpParams, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(signatureHelpParams.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return null;
             }
-            return laraphense.provideSignatureHelp(
-                FlatDocument.fromTextDocument(document),
-                signatureHelpParams.position
-            );
+            return laraphense.provideSignatureHelp(signatureHelpParams.textDocument.uri, signatureHelpParams.position);
         },
         null,
         `Error while computing signature help for ${signatureHelpParams.textDocument.uri}`
@@ -368,11 +339,10 @@ connection.onDocumentLinks((documentLinkParam, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(documentLinkParam.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return [];
             }
-            return laraphense.provideDocumentLinks(FlatDocument.fromTextDocument(document));
+            return laraphense.provideDocumentLinks(documentLinkParam.textDocument.uri);
         },
         [],
         `Error while document links for ${documentLinkParam.textDocument.uri}`
@@ -385,18 +355,15 @@ connection.onDocumentSymbol((documentSymbolParams, token) => {
     }
     return runSafe(
         () => {
-            let document = documents.get(documentSymbolParams.textDocument.uri);
-            if (!document || !laraphense) {
+            if (!laraphense) {
                 return [];
             }
-            return laraphense.provideDocumentSymbol(FlatDocument.fromTextDocument(document));
+            return laraphense.provideDocumentSymbol(documentSymbolParams.textDocument.uri);
         },
         [],
         `Error while computing document symbols for ${documentSymbolParams.textDocument.uri}`
     );
 });
-
-documents.listen(connection);
 
 connection.listen();
 

@@ -59,7 +59,7 @@ export type Language = {
     id: DocLang;
     emmetSyntax?: 'html' | 'css';
     dispose: () => void;
-    onDocumentRemoved: (document: ASTDocument) => void;
+    onDocumentRemoved: (uri: string) => void;
     doComplete?: (
         document: ASTDocument,
         position: Position,

@@ -1,7 +1,7 @@
 'use strict';
 
 import { FolderKind, FolderUri, WorkspaceFolder, RelativeUri, Space } from './workspaceFolder';
-import { DocContext, laraphenseRc } from '../languages/baseLang';
+import { laraphenseRc } from '../languages/baseLang';
 import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE, DEFAULT_STUBS } from './defaults';
 import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
@@ -49,11 +49,21 @@ export class Workspace {
         return this._folders;
     }
 
+    public get folderIndexingStarted() {
+        return this._folderIndexingStarted;
+    }
+
+    public get folderIndexingEnded() {
+        return this._folderIndexingEnded;
+    }
+
     public addFile(uri: string) {
+        console.log(`watched File created: ${uri}`);
         // this._files.set(uri);
     }
 
     public removeFile(uri: string) {
+        console.log(`watched File deleted: ${uri}`);
         // this._files.delete(uri);
     }
 
@@ -108,18 +118,6 @@ export class Workspace {
         }
 
         return undefined;
-    }
-
-    public getDocumentContext(documentUri: string) {
-        return new DocContext(Array.from(this._folders.keys()), documentUri);
-    }
-
-    public get folderIndexingStarted() {
-        return this._folderIndexingStarted;
-    }
-
-    public get folderIndexingEnded() {
-        return this._folderIndexingEnded;
     }
 
     public getProjectSpace(uri: string): Space | undefined {

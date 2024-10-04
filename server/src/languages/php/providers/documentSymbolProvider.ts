@@ -3,27 +3,13 @@
 import { SymbolInformation, SymbolKind as LSPSymbolKind } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind } from '../indexing/tables/symbolTable';
 import { toLSPRange } from '../../../helpers/symbol';
-import { ASTDocument } from '../../../support/document';
-import { Workspace } from '../../../support/workspace';
+import { Space } from '../../../support/workspaceFolder';
 
 export class DocumentSymbolProvider {
-    constructor(private workspace: Workspace) {}
+    provide({ folder, fileUri, uri }: Space): SymbolInformation[] {
+        const symbols = folder.symbolTable.findSymbolsByUri(fileUri);
 
-    provide(doc: ASTDocument): SymbolInformation[] {
-        const symbolsInfo: SymbolInformation[] = [];
-
-        let space = this.workspace.getProjectSpace(doc.uri);
-        if (!space) return symbolsInfo;
-
-        const symbols = space.folder.symbolTable.findSymbolsByUri(space.fileUri);
-
-        for (let i = 0; i < symbols.length; i++) {
-            const symbol = symbols[i];
-
-            symbolsInfo.push(this.createSymbol(symbol, space.uri));
-        }
-
-        return symbolsInfo;
+        return symbols.map((symbol) => this.createSymbol(symbol, uri));
     }
 
     private createSymbol(symbol: PhpSymbol, uri: string) {

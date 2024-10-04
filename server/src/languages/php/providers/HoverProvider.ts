@@ -5,32 +5,24 @@ import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/sym
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
 import { ASTDocument } from '../../../support/document';
 import { Workspace } from '../../../support/workspace';
-import { WorkspaceFolder } from '../../../support/workspaceFolder';
+import { Space, WorkspaceFolder } from '../../../support/workspaceFolder';
 import { Location } from '../../../parsers/ast';
 
 export class HoverProvider {
     private folder: WorkspaceFolder | undefined;
-    constructor(private workspace: Workspace) {}
 
-    provide(doc: ASTDocument, pos: Position): Hover | null {
-        let space = this.workspace.getProjectSpace(doc.uri);
+    provide(doc: ASTDocument, pos: Position, { folder, fileUri }: Space): Hover | null {
+        this.folder = folder;
 
-        if (!space) return null;
-        this.folder = space.folder;
-
-        const ref = space.folder.referenceTable.findReferenceByOffsetInUri(space.fileUri, doc.offsetAt(pos));
+        const ref = folder.referenceTable.findReferenceByOffsetInUri(fileUri, doc.offsetAt(pos));
 
         if (!ref) {
-            const symbol = space.folder.symbolTable.findSymbolByPositionOffsetInUri(
-                space.fileUri,
-                pos,
-                doc.offsetAt(pos)
-            );
+            const symbol = folder.symbolTable.findSymbolByPositionOffsetInUri(fileUri, pos, doc.offsetAt(pos));
             if (!symbol) return null;
             return this.createHover(symbol, symbol.loc);
         }
 
-        const symbol = space.folder.symbolTable.getSymbolById(ref.symbolId);
+        const symbol = folder.symbolTable.getSymbolById(ref.symbolId);
 
         if (!symbol) return null;
 

@@ -31,15 +31,19 @@ export class Php implements Language {
 
     constructor(private _workspace: Workspace) {
         this._providers = {
-            documentSymbol: new DocumentSymbolProvider(this._workspace),
-            hover: new HoverProvider(this._workspace),
-            definition: new DefinitionProvider(this._workspace),
-            reference: new ReferenceProvider(this._workspace),
+            documentSymbol: new DocumentSymbolProvider(),
+            hover: new HoverProvider(),
+            definition: new DefinitionProvider(),
+            reference: new ReferenceProvider(),
         };
     }
 
     public findDocumentSymbols(document: ASTDocument): SymbolInformation[] {
-        return this._providers.documentSymbol.provide(document);
+        let space = this._workspace.getProjectSpace(document.uri);
+        if (!space) {
+            return [];
+        }
+        return this._providers.documentSymbol.provide(space);
     }
 
     doComplete(
@@ -55,7 +59,11 @@ export class Php implements Language {
     }
 
     public doHover(document: ASTDocument, position: Position): Hover | null {
-        return this._providers.hover.provide(document, position);
+        let space = this._workspace.getProjectSpace(document.uri);
+        if (!space) {
+            return null;
+        }
+        return this._providers.hover.provide(document, position, space);
     }
 
     doSignatureHelp(document: ASTDocument, position: Position): SignatureHelp | null {
@@ -67,11 +75,19 @@ export class Php implements Language {
     }
 
     public findReferences(document: ASTDocument, position: Position): Location[] {
-        return this._providers.reference.provide(document, position);
+        let space = this._workspace.getProjectSpace(document.uri);
+        if (!space) {
+            return [];
+        }
+        return this._providers.reference.provide(document, position, space);
     }
 
     public findDefinition(document: ASTDocument, position: Position): Definition | null {
-        return this._providers.definition.provide(document, position);
+        let space = this._workspace.getProjectSpace(document.uri);
+        if (!space) {
+            return null;
+        }
+        return this._providers.definition.provide(document, position, space);
     }
 
     findDocumentHighlight(document: ASTDocument, position: Position): DocumentHighlight[] {

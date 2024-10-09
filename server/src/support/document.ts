@@ -9,7 +9,7 @@ import { CSS_STYLE_RULE } from '../languages/cssLang';
 import { toLocation } from '../helpers/symbol';
 import { substituteWithWhitespace } from '../helpers/general';
 import { BinarySearch } from './searchTree';
-import { EmbeddedLanguage, Tree, newAstTree } from '@porifa/blade-parser';
+import { AstNode, EmbeddedLanguage, Tree, newAstTree } from '@porifa/blade-parser';
 
 export enum DocLang {
     html = 'html',
@@ -215,29 +215,11 @@ export class ASTDocument {
 }
 
 export class Regions {
-    private _regions: EmbeddedLanguage[] = [];
-    private _defaultLang: DocLang;
+    private _embeddedMap = new Map<string, EmbeddedLanguage[]>();
 
-    constructor(uri: DocumentUri) {
-        switch (guessLangFromUri(uri)) {
-            case DocLang.blade:
-                this._defaultLang = DocLang.blade;
-                break;
-            case DocLang.php:
-                this._defaultLang = DocLang.html;
-                break;
-            default:
-                this._defaultLang = DocLang.unknown;
-                break;
-        }
-    }
-
-    private dispatchMap: Record<string, (node: any) => void> = {
-        tree: (_node: Tree) => {
-            this._regions = [];
-        },
+    private dispatchMap: Record<string, (node: any) => EmbeddedLanguage | undefined> = {
         program: (node: Program) => {
-            this._regions.push({
+            return {
                 name: DocLang.php,
                 kind: 'language',
                 loc: toLocation(
@@ -248,27 +230,45 @@ export class Regions {
                     }
                 ),
                 attributeValue: false,
-            });
+            };
         },
         language: (node: EmbeddedLanguage) => {
             if (node.name === DocLang.unknown) {
-                return;
+                return undefined;
             }
-            this._regions.push(node);
+            return node;
         },
     };
 
-    public parse(tree: Tree) {
-        this._regions = [];
-        tree.children.forEach((child) => {
-            this.dispatchMap[child.kind]?.(child);
-        });
+    public set(uri: string, children: (AstNode | Program)[]) {
+        const items = [];
 
-        return this;
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            const docLang = this.dispatchMap[child.kind]?.(child);
+
+            if (docLang) {
+                items.push(docLang);
+            }
+        }
+
+        this._embeddedMap.set(uri, items);
     }
 
-    public docLangAtOffset(offset: number): DocLang {
-        for (const region of this._regions) {
+    public clear() {
+        this._embeddedMap.clear();
+    }
+    public delete(uri: string) {
+        return this._embeddedMap.delete(uri);
+    }
+
+    public docLangAtOffset(uri: string, offset: number): DocLang {
+        const regions = this._embeddedMap.get(uri);
+        if (!regions) {
+            return guessLangFromUri(uri);
+        }
+
+        for (const region of regions) {
             if (offset < region.loc.start.offset) {
                 continue;
             }
@@ -278,12 +278,16 @@ export class Regions {
             }
         }
 
-        return this._defaultLang;
+        return guessLangFromUri(uri);
     }
 
-    public docLangsInDocument(maxLanguages: number = 3): DocLang[] {
-        const result = [this._defaultLang];
-        for (const region of this._regions) {
+    public docLangsInDocument(uri: string, maxLanguages: number = 3): DocLang[] {
+        const result = [guessLangFromUri(uri)];
+        const regions = this._embeddedMap.get(uri);
+        if (!regions) {
+            return result;
+        }
+        for (const region of regions) {
             if (result.indexOf(toDocLang(region.name)) !== -1) {
                 continue;
             }
@@ -305,7 +309,16 @@ export class Regions {
         const oldContent = document.getText();
         let result = '';
         let lastSuffix = '';
-        for (const c of this._regions) {
+
+        const regions = this._embeddedMap.get(document.uri);
+
+        if (!regions) {
+            console.log(document.uri, Array.from(this._embeddedMap.keys()));
+
+            return document;
+        }
+
+        for (const c of regions) {
             if (c.name === languageId && (!ignoreAttributeValues || !c.attributeValue)) {
                 result = substituteWithWhitespace(
                     result,

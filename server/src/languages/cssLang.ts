@@ -16,13 +16,9 @@ export class Css implements Language {
     emmetSyntax?: 'html' | 'css' = 'css';
     cssStylesheets: MemoryCache<Stylesheet>;
     embeddedCSSDocuments: MemoryCache<ASTDocument>;
-    constructor(
-        private service: LanguageService,
-        private documentRegions: MemoryCache<Regions>,
-        private settings: Settings
-    ) {
+    constructor(private service: LanguageService, private documentRegions: Regions, private settings: Settings) {
         this.embeddedCSSDocuments = new MemoryCache((document) =>
-            this.documentRegions.get(document).getEmbeddedDocument(document, this.id)
+            this.documentRegions.getEmbeddedDocument(document, this.id)
         );
         this.cssStylesheets = new MemoryCache((document) => service.parseStylesheet(document.doc));
     }

@@ -47,15 +47,9 @@ export class Js implements Language {
         getCompilationSettings(): ts.CompilerOptions;
         dispose(): void;
     };
-    constructor(
-        private regions: MemoryCache<Regions>,
-        private languageId: DocLang.js | DocLang.ts,
-        private settings: Settings
-    ) {
+    constructor(private regions: Regions, private languageId: DocLang.js | DocLang.ts, private settings: Settings) {
         this.id = languageId;
-        this.jsDocuments = new MemoryCache((document) =>
-            regions.get(document).getEmbeddedDocument(document, languageId)
-        );
+        this.jsDocuments = new MemoryCache((document) => regions.getEmbeddedDocument(document, languageId));
         this.host = getLanguageServiceHost(languageId === DocLang.js ? ts.ScriptKind.JS : ts.ScriptKind.TS);
     }
 
@@ -311,7 +305,7 @@ export class Js implements Language {
         return convertSelectionRange(range);
     }
     format(document: ASTDocument, range: Range, formatParams: FormattingOptions): TextEdit[] {
-        const jsDocument = this.regions.get(document).getEmbeddedDocument(document, DocLang.js, true);
+        const jsDocument = this.regions.getEmbeddedDocument(document, DocLang.js, true);
         const jsLanguageService = this.host.getLanguageService(jsDocument.doc);
 
         const formatterSettings = this.settings && this.settings.javascript && this.settings.javascript.format;

@@ -44,8 +44,8 @@ export class Laraphense {
         this._languages.set(DocLang.html, htmlLang);
         this._languages.set(DocLang.php, phpLang);
         this._languages.set(DocLang.blade, bladeLang);
-        this._languages.set(DocLang.js, new Js(this._compiler.regionsMap, DocLang.js, this._settings));
-        this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._compiler.regionsMap, this._settings));
+        this._languages.set(DocLang.js, new Js(this._compiler.regions, DocLang.js, this._settings));
+        this._languages.set(DocLang.css, new Css(getCSSLanguageService(), this._compiler.regions, this._settings));
     }
 
     public setSettings(items: ConfigurationItem[], settings: Settings) {
@@ -80,15 +80,22 @@ export class Laraphense {
 
         const { document, lang } = kmas;
 
-        const space = this._workspace.getProjectSpace(textDocument.uri);
-        if (space) {
-            for (let i = 0; i < space.folder.libraries.length; i++) {
-                const library = space.folder.libraries[i];
-                if (library.doComplete) {
-                    result = mergeCompletionItems(result, library.doComplete(lang.id, document, position));
-                }
+        if (lang.emmetSyntax) {
+            const emmetResult = doComplete(document.doc, position, lang.emmetSyntax, {});
+            if (emmetResult) {
+                result = mergeCompletionItems(result, emmetResult);
             }
         }
+
+        // const space = this._workspace.getProjectSpace(textDocument.uri);
+        // if (space) {
+        //     for (let i = 0; i < space.folder.libraries.length; i++) {
+        //         const library = space.folder.libraries[i];
+        //         if (library.doComplete) {
+        //             result = mergeCompletionItems(result, library.doComplete(lang.id, document, position));
+        //         }
+        //     }
+        // }
 
         if (!lang.doComplete) {
             return result;
@@ -96,16 +103,6 @@ export class Laraphense {
 
         const items = await lang.doComplete(document, position, this.getDocumentContext(textDocument.uri));
         result = mergeCompletionItems(result, items);
-        if (result.items.length > 0) {
-            return result;
-        }
-
-        if (lang.emmetSyntax) {
-            const emmetResult = doComplete(document.doc, position, lang.emmetSyntax, {});
-            if (emmetResult) {
-                result = mergeCompletionItems(result, emmetResult);
-            }
-        }
 
         return result;
     }
@@ -129,7 +126,7 @@ export class Laraphense {
             return symbols;
         }
 
-        this.getAllLanguagesInDocument(document).forEach((m) => {
+        this.getAllLanguagesInDocument(uri).forEach((m) => {
             if (m.findDocumentSymbols) {
                 const newSymbols: SymbolInformation[] = [];
                 let result = m.findDocumentSymbols(document);
@@ -157,7 +154,7 @@ export class Laraphense {
         }
 
         let documentContext = this.getDocumentContext(uri);
-        this.getAllLanguagesInDocument(document).forEach((m) => {
+        this.getAllLanguagesInDocument(uri).forEach((m) => {
             if (m.findDocumentLinks) {
                 pushAll(links, m.findDocumentLinks(document, documentContext));
             }
@@ -251,7 +248,7 @@ export class Laraphense {
             return undefined;
         }
 
-        const docLang = this._compiler.regionsMap.get(document).docLangAtOffset(document.offsetAt(position));
+        const docLang = this._compiler.regions.docLangAtOffset(uri, document.offsetAt(position));
         console.log('docLang', docLang);
         const lang = this.getLanguage(docLang);
         if (!lang) {
@@ -260,9 +257,9 @@ export class Laraphense {
         return { document, lang };
     }
 
-    public getAllLanguagesInDocument(document: ASTDocument): Language[] {
+    public getAllLanguagesInDocument(uri: string): Language[] {
         const result = [];
-        for (const languageId of this._compiler.regionsMap.get(document).docLangsInDocument(this._languages.size)) {
+        for (const languageId of this._compiler.regions.docLangsInDocument(uri, this._languages.size)) {
             const language = this._languages.get(languageId);
             if (language) {
                 result.push(language);

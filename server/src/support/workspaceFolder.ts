@@ -223,27 +223,6 @@ export class WorkspaceFolder {
             return;
         }
 
-        // const documentUri = this.documentUri(entry.uri);
-        // const flatDocument = await this.fetchDocument(documentUri);
-        // const cachedData = await this.fileCache.readJson<CacheItem<any>>(documentUri);
-
-        // if (
-        //     cachedData &&
-        //     cachedData.version === flatDocument.version &&
-        //     !(await this.hasFileChanged(documentUri, cachedData.createdAt))
-        // ) {
-        //     // Use cached data
-        //     this.compiler.analyze(cachedData.data);
-        // } else {
-        //     // Compile and cache data
-        //     const parsedData = this.compiler.compile(flatDocument);
-        //     await this.fileCache.writeJson(documentUri, {
-        //         version: flatDocument.version,
-        //         data: parsedData,
-        //     });
-        //     this.compiler.analyze(parsedData);
-        // }
-
         const flatDoc = this.fetcher.loadUriIfLang(this.documentUri(entry.uri), [DocLang.php, DocLang.blade]);
 
         if (flatDoc === undefined) {

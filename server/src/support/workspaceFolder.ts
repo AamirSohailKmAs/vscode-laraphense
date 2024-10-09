@@ -27,8 +27,7 @@ export const enum FolderKind {
 }
 
 export type FileEntry = {
-    uri: string;
-    modified: number;
+    uri: RelativeUri;
     size: number;
 };
 
@@ -41,10 +40,10 @@ export type Space = {
 
 export class WorkspaceFolder {
     private count = 0;
-    private missingFiles: Array<{ uri: string; reason: string }> = [];
+    private missingFiles: Array<{ uri: RelativeUri; reason: string }> = [];
     public fetcher: Fetcher;
     public analyzer: Analyzer;
-    private _files: Set<FileEntry> = new Set();
+    private _files: Set<RelativeUri> = new Set();
     public symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>;
     public referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>;
     public resolver: NamespaceResolver;
@@ -152,13 +151,12 @@ export class WorkspaceFolder {
         });
 
         return entries.map((entry) => ({
-            uri: entry.path,
-            modified: entry.stats ? entry.stats.mtime.getTime() : 0,
+            uri: entry.path as RelativeUri,
             size: entry.stats ? entry.stats.size : 0,
         }));
     }
 
-    public uriToGlobPattern(name: string) {
+    private uriToGlobPattern(name: string) {
         if (name.indexOf('/') === -1) {
             return '**/' + name + '/*';
         } else {
@@ -168,10 +166,6 @@ export class WorkspaceFolder {
 
     public async indexFiles(files: FileEntry[]) {
         this.count = 0;
-
-        if (await this.readFromCache(files)) {
-            return { count: files.length, missingFiles: [] };
-        }
 
         const fileBatches = createBatches(files, 10);
         for (const batch of fileBatches) {
@@ -188,13 +182,13 @@ export class WorkspaceFolder {
     public async readFromCache(files: FileEntry[]) {
         const symbols = await this.cache.readJson<string>(join(this.name, 'symbols'));
         const references = await this.cache.readJson<string>(join(this.name, 'references'));
-        const filesEntries = await this.cache.readJson<FileEntry[]>(join(this.name, 'filesEntries'));
+        const filesEntries = await this.cache.readJson<RelativeUri[]>(join(this.name, 'filesEntries'));
 
         if (!filesEntries || !symbols || !references || files.length !== filesEntries.length) {
             return false;
         }
 
-        // @todo check for files and their version
+        // @todo check for files
 
         if (!this.symbolTable.loadFromFile(symbols)) {
             return false;
@@ -213,8 +207,6 @@ export class WorkspaceFolder {
     }
 
     private async indexEntry(entry: FileEntry) {
-        this._files.add(entry);
-
         if (entry.size > this._config.maxFileSize) {
             console.warn(
                 `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
@@ -230,8 +222,10 @@ export class WorkspaceFolder {
             return undefined;
         }
 
+        this._files.add(entry.uri);
+
         const astTree = parseDoc(this.parser, flatDoc);
-        this.analyzer.analyze(astTree, entry.uri as RelativeUri, this.isStubs ? 1 : 2);
+        this.analyzer.analyze(astTree, entry.uri, this.isStubs ? 1 : 2);
         flatDoc.lastCompile = process.hrtime();
 
         this.count++;

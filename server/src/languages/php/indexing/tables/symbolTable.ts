@@ -91,16 +91,12 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
 
     constructor(private transformer: (symbol: any) => T) {}
 
-    public generateId(): number {
-        return this.index++;
-    }
-
     public add(symbol: T) {
-        if (symbol.uri === '') {
+        if (!symbol.uri || symbol.uri === '') {
             return;
         }
         if (symbol.id === 0) {
-            symbol.id = this.generateId();
+            symbol.id = this.index++;
         }
 
         if (this.symbols.has(symbol.id)) {

@@ -188,12 +188,12 @@ export class SymbolTable {
 export class Laravel implements Library {
     private analyzer: Analyzer;
     private symbolTable: SymbolTable = new SymbolTable();
-    private bladeFiles: Array<string> = [];
+    private bladeFiles: Array<RelativeUri> = [];
 
     private configMap: Map<string, string> = new Map();
-    private configFiles: Array<string> = [];
+    private configFiles: Array<RelativeUri> = [];
 
-    private publicFiles: Array<string> = [];
+    private publicFiles: Array<RelativeUri> = [];
 
     constructor(private _folder: WorkspaceFolder, private _version: string) {
         this.analyzer = new Analyzer(this._folder.fetcher, this.symbolTable);
@@ -227,7 +227,7 @@ export class Laravel implements Library {
 
     public index() {
         // get blade files without running the code
-        this.bladeFiles = this.setFiles((file) => file.uri.endsWith('.blade.php'));
+        this.bladeFiles = this.setFiles((file) => file.endsWith('.blade.php'));
         // this._folder.symbolTable.findSymbolByFqn({
         //     scope: 'Illuminate\\View\\Compilers\\BladeCompiler',
         //     name: 'directive',
@@ -238,20 +238,20 @@ export class Laravel implements Library {
         // });
 
         // get config path
-        this.configFiles = this.setFiles((file) => file.uri.startsWith('config'));
+        this.configFiles = this.setFiles((file) => file.startsWith('config'));
         this.analyzer.analyzeEnv(this._folder.documentUri('.env'));
         this.analyzer.analyzeEnv(this._folder.documentUri('.env.example'));
         // get middlewares without running the code
         // get controllers without running the code
         this.publicFiles = this.setFiles((file) => {
-            return file.uri.startsWith('public') && !file.uri.endsWith('.php');
+            return file.startsWith('public') && !file.endsWith('.php');
         });
         // get routes without running the code
         // get translations without running the code
         // get view files without running the code
     }
 
-    private setFiles(callable: (uri: FileEntry) => boolean) {
+    private setFiles(callable: (uri: RelativeUri) => boolean) {
         const files = this._folder.files.filter(callable);
         // for (let i = 0; i < files.length; i++) {
         //     const file = files[i];
@@ -263,7 +263,7 @@ export class Laravel implements Library {
         //     });
         // }
 
-        return files.map((file) => file.uri);
+        return files.map((file) => file);
     }
 
     private getSnippetsUpToVersion(allObjects: Snippet[], version: string): Snippet[] {

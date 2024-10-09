@@ -139,6 +139,10 @@ export class Workspace {
             return;
         }
 
+        if (await folder.readFromCache(files)) {
+            return;
+        }
+
         if (!folder.isStubs) {
             this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
         }

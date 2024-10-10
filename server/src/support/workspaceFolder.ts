@@ -179,23 +179,29 @@ export class WorkspaceFolder {
         return { count: this.count, missingFiles: this.missingFiles };
     }
 
-    public async readFromCache(files: FileEntry[]) {
+    public async readFromCache(fileEntries: FileEntry[]) {
         const symbols = await this.cache.readJson<string>(join(this.name, 'symbols'));
         const references = await this.cache.readJson<string>(join(this.name, 'references'));
-        const filesEntries = await this.cache.readJson<RelativeUri[]>(join(this.name, 'filesEntries'));
+        const filesUris = await this.cache.readJson<RelativeUri[]>(join(this.name, 'filesEntries'));
 
-        if (!filesEntries || !symbols || !references || files.length !== filesEntries.length) {
+        if (!filesUris || !symbols || !references || fileEntries.length !== filesUris.length) {
             return false;
         }
 
-        // @todo check for files
+        const uriSet = new Set(filesUris);
 
-        if (!this.symbolTable.loadFromFile(symbols)) {
+        if (fileEntries.some((entry) => !uriSet.has(entry.uri))) {
             return false;
         }
-        if (!this.referenceTable.loadFromFile(references)) {
+
+        if (!this.db.loadSymbolTableFromFile(symbols)) {
             return false;
         }
+        if (!this.db.loadReferenceTableFromFile(references)) {
+            return false;
+        }
+
+        this._files = uriSet;
 
         return true;
     }

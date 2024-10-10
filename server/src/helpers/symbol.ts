@@ -2,7 +2,7 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
 import { RelativeUri } from '../support/workspaceFolder';
 import { Location, Position } from '../parsers/ast';
@@ -48,15 +48,15 @@ export function toLSPPosition(position: Position) {
     return LSPPosition.create(position.line - 1, position.character);
 }
 
-export function toFqsen(kind: PhpSymbolKind, name: string, containerName: string | undefined = ''): Fqsen {
-    switch (kind) {
+export function toFqsen(symbol: PhpSymbol): Fqsen {
+    switch (symbol.kind) {
         case PhpSymbolKind.Class:
         case PhpSymbolKind.Interface:
         case PhpSymbolKind.Enum:
         case PhpSymbolKind.Trait:
-            return joinNamespace(containerName, name) as unknown as Fqsen;
+            return joinNamespace(symbol.scope, symbol.name) as unknown as Fqsen;
         default:
-            return `${containerName}${toSelector(kind, name)}` as Fqsen;
+            return `${symbol.scope}${toSelector(symbol.kind, symbol.name)}` as Fqsen;
     }
 }
 

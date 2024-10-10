@@ -31,7 +31,7 @@ export class HoverProvider {
 
     private createHover(symbol: PhpSymbol, loc: Location): Hover {
         let value = `**Laraphense** \n\n`;
-        value += `**${this.fqsen(symbol)}**\n`;
+        value += `**${toFqsen(symbol).toString()}**\n`;
         value += ` \`\`\`php \n <?php \n`;
 
         switch (symbol.kind) {
@@ -161,10 +161,6 @@ export class HoverProvider {
         });
 
         return value.trim();
-    }
-
-    private fqsen(symbol: PhpSymbol) {
-        return toFqsen(symbol.kind, symbol.name, symbol.scope).toString();
     }
 }
 

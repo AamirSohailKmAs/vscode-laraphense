@@ -19,15 +19,7 @@ export class Workspace {
     private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
 
     constructor(private _config: laraphenseRc, public cache: FileCache, stubsUri: FolderUri) {
-        this.stubsSpace = new WorkspaceFolder(
-            'stubs',
-            stubsUri,
-            new BladeParser(this._config.phpVersion),
-            cache,
-            undefined,
-            FolderKind.Stub,
-            DEFAULT_STUBS
-        );
+        this.stubsSpace = new WorkspaceFolder('stubs', stubsUri, cache, undefined, FolderKind.Stub, DEFAULT_STUBS);
         this.indexFolder(this.stubsSpace);
 
         this._folderIndexingStarted = new EventEmitter();
@@ -83,7 +75,6 @@ export class Workspace {
         const folder = new WorkspaceFolder(
             name,
             folderUri,
-            new BladeParser(this._config.phpVersion),
             this.cache,
             this.stubsSpace,
             _kind,

@@ -17,6 +17,7 @@ import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
 import { BladeParser } from '@porifa/blade-parser';
 import { parseDoc } from './Compiler';
+import { Indexer } from './Indexer';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -42,7 +43,7 @@ export class WorkspaceFolder {
     private count = 0;
     private missingFiles: Array<{ uri: RelativeUri; reason: string }> = [];
     public fetcher: Fetcher;
-    public analyzer: Analyzer;
+    public indexer: Indexer;
     private _files: Set<RelativeUri> = new Set();
     public symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>;
     public referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>;
@@ -54,7 +55,6 @@ export class WorkspaceFolder {
     constructor(
         private _name: string,
         private _uri: string,
-        private parser: BladeParser,
         private cache: FileCache,
         private stubsFolder?: WorkspaceFolder,
         private _kind: FolderKind = FolderKind.User,
@@ -75,7 +75,7 @@ export class WorkspaceFolder {
             this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
         );
 
-        this.analyzer = new Analyzer(this.symbolTable, this.referenceTable, this.resolver, stubsFolder);
+        this.indexer = new Indexer(this.symbolTable, this.referenceTable, this.resolver, stubsFolder);
 
         this._includeGlobs = _includeGlobs.map(this.uriToGlobPattern);
         this._excludeGlobs = this._excludeGlobs.map(this.uriToGlobPattern);
@@ -215,18 +215,16 @@ export class WorkspaceFolder {
             return;
         }
 
-        const flatDoc = this.fetcher.loadUriIfLang(this.documentUri(entry.uri), [DocLang.php, DocLang.blade]);
+        const doc = this.fetcher.loadUriIfLang(this.documentUri(entry.uri), [DocLang.php, DocLang.blade]);
 
-        if (flatDoc === undefined) {
+        if (doc === undefined) {
             this.missingFiles.push({ uri: entry.uri, reason: 'not found' });
             return undefined;
         }
 
         this._files.add(entry.uri);
 
-        const astTree = parseDoc(this.parser, flatDoc);
-        this.analyzer.analyze(astTree, entry.uri, this.isStubs ? 1 : 2);
-        flatDoc.lastCompile = process.hrtime();
+        this.indexer.compile(doc, entry.uri, this.isStubs ? 1 : 2);
 
         this.count++;
     }

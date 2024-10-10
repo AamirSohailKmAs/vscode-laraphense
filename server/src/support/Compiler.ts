@@ -2,10 +2,10 @@
 
 import { BladeParser, Tree, newAstTree } from '@porifa/blade-parser';
 import { DocLang, ASTDocument, Regions } from './document';
-import { laraphenseRc } from '../languages/baseLang';
 import { DocumentUri, TextDocumentContentChangeEvent } from 'vscode-languageserver';
 import { guessLangFromUri } from '../helpers/uri';
 import { Debounce } from './debounce';
+import { Workspace } from './workspace';
 
 export class Compiler {
     private _regions = new Regions();
@@ -13,8 +13,8 @@ export class Compiler {
     private _parser: BladeParser;
     private _docMap = new Map<DocumentUri, ASTDocument>();
 
-    constructor(config: laraphenseRc) {
-        this._parser = new BladeParser(config.phpVersion);
+    constructor(private workspace: Workspace) {
+        this._parser = new BladeParser(workspace.config.phpVersion);
     }
 
     public get regions(): Regions {

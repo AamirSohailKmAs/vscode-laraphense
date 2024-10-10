@@ -35,7 +35,7 @@ export class Laraphense {
     private _languages: Map<DocLang, Language> = new Map();
 
     constructor(private _workspace: Workspace) {
-        this._compiler = new Compiler(this._workspace.config);
+        this._compiler = new Compiler(this._workspace);
 
         const htmlLang = new Html(getHTMLLanguageService(), this._settings);
         const phpLang = new Php(_workspace);

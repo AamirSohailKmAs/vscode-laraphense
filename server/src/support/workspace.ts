@@ -7,31 +7,22 @@ import { EventEmitter } from './eventEmitter';
 import { URI } from 'vscode-uri';
 import { folderContainsUri } from '../helpers/uri';
 import { FileCache } from './cache';
-import { BladeParser } from '@porifa/blade-parser';
 
 export class Workspace {
     private _folderNames: string[] = [];
 
-    private stubsSpace: WorkspaceFolder;
+    private _stubsFolder: WorkspaceFolder;
     private _folders: Map<FolderUri, WorkspaceFolder> = new Map();
 
     private _folderIndexingStarted: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
     private _folderIndexingEnded: EventEmitter<{ uri: FolderUri; name: string; withFiles: number }>;
 
-    constructor(private _config: laraphenseRc, public cache: FileCache, stubsUri: FolderUri) {
-        this.stubsSpace = new WorkspaceFolder('stubs', stubsUri, cache, undefined, FolderKind.Stub, DEFAULT_STUBS);
-        this.indexFolder(this.stubsSpace);
+    constructor(public config: laraphenseRc, private cache: FileCache, stubsUri: FolderUri) {
+        this._stubsFolder = new WorkspaceFolder('stubs', stubsUri, cache, undefined, FolderKind.Stub, DEFAULT_STUBS);
+        this.indexFolder(this._stubsFolder);
 
         this._folderIndexingStarted = new EventEmitter();
         this._folderIndexingEnded = new EventEmitter();
-    }
-
-    public get config() {
-        return this._config;
-    }
-
-    public set config(config: laraphenseRc) {
-        this._config = config;
     }
 
     /**
@@ -76,7 +67,7 @@ export class Workspace {
             name,
             folderUri,
             this.cache,
-            this.stubsSpace,
+            this._stubsFolder.db,
             _kind,
             _includeGlobs,
             _excludeGlobs
@@ -101,27 +92,17 @@ export class Workspace {
         return false;
     }
 
-    public findFolderUriContainingUri(uri: string): FolderUri | undefined {
-        for (const folderUri of this._folders.keys()) {
-            if (folderContainsUri(folderUri, uri)) {
-                return folderUri;
-            }
-        }
-
-        return undefined;
-    }
-
     public getProjectSpace(uri: string): Space | undefined {
-        const folderUri = this.findFolderUriContainingUri(uri);
+        const result = this.findFolderContainingUri(uri);
 
-        if (!folderUri) {
+        if (!result) {
             console.warn(`project folder not found for ${uri}`, Array.from(this._folders.keys()));
             return undefined;
         }
 
-        let fileUri = uri.substring(folderUri.length + 1) as RelativeUri;
+        let fileUri = uri.substring(result.folderUri.length + 1) as RelativeUri;
 
-        return { folder: this._folders.get(folderUri)!, folderUri, fileUri, uri };
+        return { ...result, fileUri, uri };
     }
 
     public async indexFolder(folder: WorkspaceFolder) {
@@ -138,15 +119,21 @@ export class Workspace {
             this._folderIndexingStarted.emit({ uri: folder.uri, name: folder.name, withFiles: files.length });
         }
 
-        const { count, missingFiles } = await folder.indexFiles(files);
+        const { count } = await folder.index(files);
 
         if (!folder.isStubs) {
             this._folderIndexingEnded.emit({ uri: folder.uri, name: folder.name, withFiles: count });
         }
+    }
 
-        if (missingFiles.length > 0) {
-            // console.log('missingFiles', missingFiles);
+    private findFolderContainingUri(uri: string): { folderUri: FolderUri; folder: WorkspaceFolder } | undefined {
+        for (const [folderUri, folder] of this._folders) {
+            if (folderContainsUri(folderUri, uri)) {
+                return { folder, folderUri };
+            }
         }
+
+        return undefined;
     }
 }
 

@@ -7,7 +7,8 @@ import { PhpSymbolKind, PhpSymbol, SymbolTable } from '../languages/php/indexing
 import { NamespaceResolver } from '../languages/php/namespaceResolver';
 import { parseDoc } from './Compiler';
 import { ASTDocument } from './document';
-import { RelativeUri, WorkspaceFolder } from './workspaceFolder';
+import { RelativeUri } from './workspaceFolder';
+import { Database } from '../languages/php/indexing/Database';
 
 export class Indexer {
     private analyzer: Analyzer;
@@ -17,13 +18,28 @@ export class Indexer {
         private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
         private namespaceResolver: NamespaceResolver,
-        private stubsFolder?: WorkspaceFolder
+        private stubsDb?: Database
     ) {
         this.parser = new BladeParser();
-        this.analyzer = new Analyzer(this._symbolTable, this._referenceTable, this.namespaceResolver, stubsFolder);
+        this.analyzer = new Analyzer(this._symbolTable, this._referenceTable, this.namespaceResolver, stubsDb);
     }
 
     compile(doc: ASTDocument, uri: RelativeUri, steps: number = 3) {
+        // if (!oldSymbol) {
+        //     return newSymbol;
+        // }
+
+        // if (newSymbol.kind !== oldSymbol.kind) {
+        //     return newSymbol;
+        // }
+
+        // if (newSymbol.name === oldSymbol.name) {
+        //     return;
+        // }
+
+        // if (newSymbol.name.startsWith(oldSymbol.name)) {
+        //     this.rename(oldSymbol, newSymbol.name);
+        // }
         const astTree = parseDoc(this.parser, doc);
         this.analyzer.analyze(astTree, uri, steps);
         doc.lastCompile = process.hrtime();

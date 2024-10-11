@@ -9,11 +9,11 @@ export class DefinitionProvider {
     provide(doc: ASTDocument, pos: Position, { folder, fileUri }: Space): Definition | null {
         // @todo we can have multiple symbols for a reference but we are only have one symbolId
 
-        const ref = folder.referenceTable.findReferenceByOffsetInUri(fileUri, doc.offsetAt(pos));
+        const ref = folder.db.referenceTable.findReferenceByOffsetInUri(fileUri, doc.offsetAt(pos));
 
         if (!ref) return null;
 
-        const symbol = folder.symbolTable.getSymbolById(ref.symbolId);
+        const symbol = folder.db.symbolTable.getSymbolById(ref.symbolId);
 
         if (!symbol) return null;
 

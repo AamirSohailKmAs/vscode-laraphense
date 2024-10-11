@@ -9,11 +9,11 @@ export class ReferenceProvider {
     provide(doc: ASTDocument, pos: Position, { folder, fileUri }: Space): Location[] {
         const items: Location[] = [];
 
-        const symbol = folder.symbolTable.findSymbolByPositionOffsetInUri(fileUri, pos, doc.offsetAt(pos));
+        const symbol = folder.db.symbolTable.findSymbolByPositionOffsetInUri(fileUri, pos, doc.offsetAt(pos));
 
         if (!symbol) return items;
 
-        const references = folder.referenceTable.getReferenceByIds(Array.from(symbol.referenceIds));
+        const references = folder.db.referenceTable.getReferenceByIds(Array.from(symbol.referenceIds));
 
         return references.map((ref) => Location.create(folder.documentUri(ref.uri), toLSPRange(ref.loc)));
     }

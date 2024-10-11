@@ -7,7 +7,7 @@ import { Space } from '../../../support/workspaceFolder';
 
 export class DocumentSymbolProvider {
     provide({ folder, fileUri, uri }: Space): SymbolInformation[] {
-        const symbols = folder.symbolTable.findSymbolsByUri(fileUri);
+        const symbols = folder.db.symbolTable.findSymbolsByUri(fileUri);
 
         return symbols.map((symbol) => this.createSymbol(symbol, uri));
     }

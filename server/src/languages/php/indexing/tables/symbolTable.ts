@@ -92,18 +92,7 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
     constructor(private transformer: (symbol: any) => T) {}
 
     public add(symbol: T) {
-        if (!symbol.uri || symbol.uri === '') {
-            return;
-        }
-        if (symbol.id === 0) {
-            symbol.id = this.index++;
-        }
-
-        if (this.symbols.has(symbol.id)) {
-            console.log(symbol, ' already exists');
-
-            return;
-        }
+        if (!this.isIdValidate(symbol)) return;
 
         const index = symbol.id;
         this.symbols.set(index, symbol);
@@ -280,6 +269,18 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
 
     public getAllSymbols(): T[] {
         return Array.from(this.symbols.values());
+    }
+
+    private isIdValidate(symbol: T): boolean {
+        if (!symbol.uri || symbol.uri === '') {
+            return false;
+        }
+
+        if (symbol.id === 0) {
+            symbol.id = this.index++;
+        }
+
+        return true;
     }
 
     private validateCacheData(data: CacheData<Kind, T>): boolean {

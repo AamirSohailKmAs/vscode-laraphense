@@ -252,7 +252,7 @@ export class Laravel implements Library {
     }
 
     private setFiles(callable: (uri: RelativeUri) => boolean) {
-        const files = this._folder.files.filter(callable);
+        const files = this._folder.filesArray.filter(callable);
         // for (let i = 0; i < files.length; i++) {
         //     const file = files[i];
         //     this.symbolTable.addSymbol({
@@ -273,7 +273,7 @@ export class Laravel implements Library {
     }
 
     public static make(folder: WorkspaceFolder) {
-        const version = folder.symbolTable.getSymbolNested(
+        const version = folder.db.symbolTable.getSymbolNested(
             'VERSION',
             'Illuminate\\Foundation\\Application',
             PhpSymbolKind.ClassConstant

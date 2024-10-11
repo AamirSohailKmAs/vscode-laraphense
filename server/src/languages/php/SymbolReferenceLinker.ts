@@ -2,6 +2,7 @@
 
 import { joinNamespace, splitNamespace } from '../../helpers/symbol';
 import { WorkspaceFolder } from '../../support/workspaceFolder';
+import { Database } from './indexing/Database';
 import { ReferenceTable, PhpReference } from './indexing/tables/referenceTable';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { NamespaceResolver } from './namespaceResolver';
@@ -11,7 +12,7 @@ export class SymbolReferenceLinker {
         private symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
         private resolver: NamespaceResolver,
-        private stubsFolder?: WorkspaceFolder
+        private stubsDb?: Database
     ) {
         this.resolver.clearImports();
     }
@@ -53,8 +54,8 @@ export class SymbolReferenceLinker {
 
         const fqn = splitNamespace(reference.scope);
 
-        if (this.stubsFolder) {
-            let symbol = this.stubsFolder.symbolTable.findSymbolByFqn(fqn);
+        if (this.stubsDb) {
+            let symbol = this.stubsDb.symbolTable.findSymbolByFqn(fqn);
             if (symbol) return { symbol, isGlobal: true };
         }
 

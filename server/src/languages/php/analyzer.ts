@@ -3,7 +3,7 @@
 import { Block, Namespace, Program } from 'php-parser';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
 import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
-import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
+import { RelativeUri } from '../../support/workspaceFolder';
 import { joinNamespace } from '../../helpers/symbol';
 import { FunctionVisitor } from './analyzing/statementVisitors/FunctionVisitor';
 import { InterfaceVisitor } from './analyzing/statementVisitors/InterfaceVisitor';
@@ -34,6 +34,7 @@ import { ExpressionVisitor } from './analyzing/expressionVisitors/ExpressionVisi
 import { TryVisitor } from './analyzing/statementVisitors/TryVisitor';
 import { DoVisitor } from './analyzing/statementVisitors/DoVisitor';
 import { Tree } from '@porifa/blade-parser';
+import { Database } from './indexing/Database';
 
 export type TreeLike = {
     kind: string;
@@ -135,13 +136,13 @@ export class Analyzer {
         private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
         private namespaceResolver: NamespaceResolver,
-        stubsFolder?: WorkspaceFolder
+        stubsDb?: Database
     ) {
         this._symbolReferenceLinker = new SymbolReferenceLinker(
             _symbolTable,
             _referenceTable,
             namespaceResolver,
-            stubsFolder
+            stubsDb
         );
 
         this.expressionVisitor = new ExpressionVisitor(this);

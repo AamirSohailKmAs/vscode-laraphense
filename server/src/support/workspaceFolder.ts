@@ -5,19 +5,14 @@ import { DEFAULT_INCLUDE, DEFAULT_EXCLUDE, DEFAULT_MAX_FILE_SIZE, DEFAULT_PHP_VE
 import { join, sep } from 'path';
 import { DocumentUri } from 'vscode-languageserver';
 import { createBatches } from '../helpers/general';
-import { Analyzer } from '../languages/php/analyzer';
-import { PhpReference, ReferenceTable } from '../languages/php/indexing/tables/referenceTable';
-import { PhpSymbol, PhpSymbolKind, SymbolTable } from '../languages/php/indexing/tables/symbolTable';
 import { DocLang } from './document';
 import { Fetcher } from './fetcher';
 import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
-import { NamespaceResolver } from '../languages/php/namespaceResolver';
 import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
-import { BladeParser } from '@porifa/blade-parser';
-import { parseDoc } from './Compiler';
 import { Indexer } from './Indexer';
+import { Database } from '../languages/php/indexing/Database';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -44,10 +39,8 @@ export class WorkspaceFolder {
     private missingFiles: Array<{ uri: RelativeUri; reason: string }> = [];
     public fetcher: Fetcher;
     public indexer: Indexer;
+    public db: Database;
     private _files: Set<RelativeUri> = new Set();
-    public symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>;
-    public referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>;
-    public resolver: NamespaceResolver;
 
     private _libraries: Library[] = [];
     private _config: laraphenseSetting = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
@@ -56,26 +49,17 @@ export class WorkspaceFolder {
         private _name: string,
         private _uri: string,
         private cache: FileCache,
-        private stubsFolder?: WorkspaceFolder,
+        stubsDb?: Database,
         private _kind: FolderKind = FolderKind.User,
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
         private _excludeGlobs: string[] = DEFAULT_EXCLUDE
     ) {
         this.fetcher = new Fetcher();
-        this.symbolTable = new SymbolTable((symbol: any) => {
-            return {
-                ...symbol,
-                throws: new Set(Object.entries(symbol.throws)),
-                relatedIds: new Set(Object.entries(symbol.relatedIds)),
-                referenceIds: new Set(Object.entries(symbol.referenceIds)),
-            };
-        });
-        this.referenceTable = new ReferenceTable();
-        this.resolver = new NamespaceResolver(
+        this.db = new Database(
             this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
         );
 
-        this.indexer = new Indexer(this.symbolTable, this.referenceTable, this.resolver, stubsFolder);
+        this.indexer = new Indexer(this.db.symbolTable, this.db.referenceTable, this.db.resolver, stubsDb);
 
         this._includeGlobs = _includeGlobs.map(this.uriToGlobPattern);
         this._excludeGlobs = this._excludeGlobs.map(this.uriToGlobPattern);
@@ -89,7 +73,7 @@ export class WorkspaceFolder {
         this._config = config;
     }
 
-    public get files() {
+    public get filesArray() {
         return Array.from(this._files.values());
     }
 
@@ -99,18 +83,6 @@ export class WorkspaceFolder {
 
     public get uri(): FolderUri {
         return this._uri as FolderUri;
-    }
-
-    public get kind(): FolderKind {
-        return this._kind;
-    }
-
-    public get includeGlobs(): string[] {
-        return this._includeGlobs;
-    }
-
-    public get excludeGlobs(): string[] {
-        return this._excludeGlobs;
     }
 
     public get isStubs() {
@@ -129,16 +101,8 @@ export class WorkspaceFolder {
         return uri.indexOf('/vendor/') !== -1;
     }
 
-    public relativePath(uri: DocumentUri): RelativeUri {
-        return uri.replace(this._uri + sep, '') as RelativeUri;
-    }
-
     public documentUri(uri: string): DocumentUri {
         return join(this._uri, uri);
-    }
-
-    public documentPath(uri: string): string {
-        return uriToPath(join(this._uri, uri));
     }
 
     public async findFiles(): Promise<FileEntry[]> {
@@ -156,15 +120,8 @@ export class WorkspaceFolder {
         }));
     }
 
-    private uriToGlobPattern(name: string) {
-        if (name.indexOf('/') === -1) {
-            return '**/' + name + '/*';
-        } else {
-            return name;
-        }
-    }
-
-    public async indexFiles(files: FileEntry[]) {
+    public async index(files: FileEntry[]) {
+        // todo: refactor
         this.count = 0;
 
         const fileBatches = createBatches(files, 10);
@@ -176,10 +133,11 @@ export class WorkspaceFolder {
 
         this.writeToCache();
 
-        return { count: this.count, missingFiles: this.missingFiles };
+        return { count: this.count };
     }
 
     public async readFromCache(fileEntries: FileEntry[]) {
+        // todo: refactor
         const symbols = await this.cache.readJson<string>(join(this.name, 'symbols'));
         const references = await this.cache.readJson<string>(join(this.name, 'references'));
         const filesUris = await this.cache.readJson<RelativeUri[]>(join(this.name, 'filesEntries'));
@@ -194,10 +152,10 @@ export class WorkspaceFolder {
             return false;
         }
 
-        if (!this.db.loadSymbolTableFromFile(symbols)) {
+        if (!this.db.symbolTable.loadFromFile(symbols)) {
             return false;
         }
-        if (!this.db.loadReferenceTableFromFile(references)) {
+        if (!this.db.referenceTable.loadFromFile(references)) {
             return false;
         }
 
@@ -207,12 +165,14 @@ export class WorkspaceFolder {
     }
 
     public writeToCache() {
-        this.cache.writeJson(join(this.name, 'symbols'), this.symbolTable.saveForFile());
-        this.cache.writeJson(join(this.name, 'references'), this.referenceTable.saveForFile());
-        this.cache.writeJson(join(this.name, 'filesEntries'), this.files);
+        // todo: refactor
+        this.cache.writeJson(join(this.name, 'symbols'), this.db.symbolTable.saveForFile());
+        this.cache.writeJson(join(this.name, 'references'), this.db.referenceTable.saveForFile());
+        this.cache.writeJson(join(this.name, 'filesEntries'), this.filesArray);
     }
 
     private async indexEntry(entry: FileEntry) {
+        // todo: refactor
         if (entry.size > this._config.maxFileSize) {
             console.warn(
                 `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
@@ -233,6 +193,14 @@ export class WorkspaceFolder {
         this.indexer.compile(doc, entry.uri, this.isStubs ? 1 : 2);
 
         this.count++;
+    }
+
+    private uriToGlobPattern(name: string) {
+        if (name.indexOf('/') === -1) {
+            return '**/' + name + '/*';
+        } else {
+            return name;
+        }
     }
 
     private initLibraries() {

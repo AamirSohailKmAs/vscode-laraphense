@@ -4,7 +4,6 @@ import { Position, Hover } from 'vscode-languageserver';
 import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
 import { ASTDocument } from '../../../support/document';
-import { Workspace } from '../../../support/workspace';
 import { Space, WorkspaceFolder } from '../../../support/workspaceFolder';
 import { Location } from '../../../parsers/ast';
 
@@ -14,15 +13,15 @@ export class HoverProvider {
     provide(doc: ASTDocument, pos: Position, { folder, fileUri }: Space): Hover | null {
         this.folder = folder;
 
-        const ref = folder.referenceTable.findReferenceByOffsetInUri(fileUri, doc.offsetAt(pos));
+        const ref = folder.db.referenceTable.findReferenceByOffsetInUri(fileUri, doc.offsetAt(pos));
 
         if (!ref) {
-            const symbol = folder.symbolTable.findSymbolByPositionOffsetInUri(fileUri, pos, doc.offsetAt(pos));
+            const symbol = folder.db.symbolTable.findSymbolByPositionOffsetInUri(fileUri, pos, doc.offsetAt(pos));
             if (!symbol) return null;
             return this.createHover(symbol, symbol.loc);
         }
 
-        const symbol = folder.symbolTable.getSymbolById(ref.symbolId);
+        const symbol = folder.db.symbolTable.getSymbolById(ref.symbolId);
 
         if (!symbol) return null;
 
@@ -95,7 +94,7 @@ export class HoverProvider {
         //todo: docblock, type, return type
         let parameters = '';
         if (this.folder) {
-            const relatedSymbols = this.folder.symbolTable.getSymbolsById(Array.from(symbol.relatedIds.values()));
+            const relatedSymbols = this.folder.db.symbolTable.getSymbolsById(Array.from(symbol.relatedIds.values()));
             parameters = relatedSymbols
                 .map((symbol: PhpSymbol) => {
                     let property = `${this.getModifier(symbol.modifiers)}`;

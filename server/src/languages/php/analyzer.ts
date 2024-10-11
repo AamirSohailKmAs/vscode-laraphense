@@ -128,23 +128,11 @@ export class Analyzer {
     ];
 
     private _stateStack: string[] = [];
-    private _symbolReferenceLinker: SymbolReferenceLinker;
+
     public debug: Map<string, TreeLike> = new Map();
     private expressionVisitor: ExpressionVisitor;
 
-    constructor(
-        private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
-        private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
-        private namespaceResolver: NamespaceResolver,
-        stubsDb?: Database
-    ) {
-        this._symbolReferenceLinker = new SymbolReferenceLinker(
-            _symbolTable,
-            _referenceTable,
-            namespaceResolver,
-            stubsDb
-        );
-
+    constructor(private _linker: SymbolReferenceLinker) {
         this.expressionVisitor = new ExpressionVisitor(this);
 
         this._visitorMap = {
@@ -187,7 +175,7 @@ export class Analyzer {
         this._uri = uri;
 
         this.debug = new Map();
-        this.namespaceResolver.clearImports();
+
         this.resetState();
         this.traverseAST(tree, steps);
         if (this.debug.size > 0) {
@@ -209,8 +197,7 @@ export class Analyzer {
         // join if parent child, else set
         this._namespace = symbol.name;
         // this.namespace = this.isParent ? joinNamespace(this.namespace, symbol.name) : symbol.name;
-        symbol.uri = this._uri;
-        this._symbolTable.add(symbol);
+        this.addSymbol(symbol, false);
         this.resetMember();
     }
 
@@ -257,28 +244,23 @@ export class Analyzer {
         this._member = undefined;
     }
 
-    public addSymbol(symbol: PhpSymbol) {
+    public addSymbol(symbol: PhpSymbol, linkReference: boolean = true) {
         symbol.uri = this._uri;
-        this._symbolTable.add(symbol);
-
-        this._symbolReferenceLinker.linkReferencesToSymbol(symbol);
+        this._linker.addSymbol(symbol, linkReference);
 
         return symbol;
     }
 
     public addImportStatement(importStatement: PhpReference) {
-        importStatement.id = this._referenceTable.generateId();
         importStatement.uri = this._uri;
-        this._symbolReferenceLinker.addImport(importStatement); // @note try to link so that it doesn't go to pending
-        this._referenceTable.addImport(importStatement);
+
+        this._linker.addImport(importStatement);
     }
 
     public addReference(reference: PhpReference) {
-        reference.id = this._referenceTable.generateId();
         reference.uri = this._uri;
         reference.scope = joinNamespace(this._namespace, reference.name);
-        this._symbolReferenceLinker.linkReference(reference); // @note try to link so that it doesn't go to pending
-        this._referenceTable.add(reference);
+        this._linker.linkReference(reference);
     }
 
     private traverseAST(treeNode: TreeLike, steps: number) {

@@ -9,19 +9,24 @@ import { parseDoc } from './Compiler';
 import { ASTDocument } from './document';
 import { RelativeUri } from './workspaceFolder';
 import { Database } from '../languages/php/indexing/Database';
+import { SymbolReferenceLinker } from '../languages/php/SymbolReferenceLinker';
 
 export class Indexer {
-    private analyzer: Analyzer;
-    private parser: BladeParser;
+    private _analyzer: Analyzer;
+    private _parser: BladeParser;
+    private _linker: SymbolReferenceLinker;
 
     constructor(
         private _symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
         private _referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
-        private namespaceResolver: NamespaceResolver,
-        private stubsDb?: Database
+        private _namespaceResolver: NamespaceResolver,
+        stubsDb?: Database
     ) {
-        this.parser = new BladeParser();
-        this.analyzer = new Analyzer(this._symbolTable, this._referenceTable, this.namespaceResolver, stubsDb);
+        this._parser = new BladeParser();
+
+        this._linker = new SymbolReferenceLinker(_symbolTable, _referenceTable, _namespaceResolver, stubsDb);
+
+        this._analyzer = new Analyzer(this._linker);
     }
 
     compile(doc: ASTDocument, uri: RelativeUri, steps: number = 3) {
@@ -40,8 +45,9 @@ export class Indexer {
         // if (newSymbol.name.startsWith(oldSymbol.name)) {
         //     this.rename(oldSymbol, newSymbol.name);
         // }
-        const astTree = parseDoc(this.parser, doc);
-        this.analyzer.analyze(astTree, uri, steps);
+        const astTree = parseDoc(this._parser, doc);
+        this._namespaceResolver.clearImports();
+        this._analyzer.analyze(astTree, uri, steps);
         doc.lastCompile = process.hrtime();
     }
 }

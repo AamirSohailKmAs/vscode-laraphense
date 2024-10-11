@@ -1,7 +1,6 @@
 'use strict';
 
 import { joinNamespace, splitNamespace } from '../../helpers/symbol';
-import { WorkspaceFolder } from '../../support/workspaceFolder';
 import { Database } from './indexing/Database';
 import { ReferenceTable, PhpReference } from './indexing/tables/referenceTable';
 import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
@@ -18,11 +17,15 @@ export class SymbolReferenceLinker {
     }
 
     public addImport(importStatement: PhpReference) {
+        importStatement.id = this.referenceTable.generateId();
         this.resolver.addImport(importStatement);
-        this.linkReference(importStatement, true);
+        this.link(importStatement, true);
+        // @note try to link so that it doesn't go to pending
+        this.referenceTable.addImport(importStatement);
     }
 
-    public linkReferencesToSymbol(symbol: PhpSymbol) {
+    public addSymbol(symbol: PhpSymbol, linkReference: boolean) {
+        this.symbolTable.add(symbol);
         const references = this.referenceTable.findPendingByFqn(joinNamespace(symbol.scope, symbol.name));
 
         if (references) {
@@ -34,6 +37,13 @@ export class SymbolReferenceLinker {
     }
 
     public linkReference(reference: PhpReference, isImport: boolean = false) {
+        this.link(reference, isImport);
+        // @note try to link so that it doesn't go to pending
+        this.referenceTable.add(reference);
+    }
+
+    public link(reference: PhpReference, isImport: boolean = false) {
+        reference.id = this.referenceTable.generateId();
         const result = this.findSymbolForReference(reference, isImport);
 
         if (!result) return false;

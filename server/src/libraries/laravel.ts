@@ -204,9 +204,12 @@ export class Laravel implements Library {
         const items: CompletionItem[] = [];
         let isIncomplete = false;
 
-        if (![DocLang.php, DocLang.blade].includes(languageId)) {
+        if (![DocLang.blade].includes(languageId)) {
             return CompletionList.create(items, isIncomplete);
         }
+        // if (![DocLang.php, DocLang.blade].includes(languageId)) {
+        //     return CompletionList.create(items, isIncomplete);
+        // }
 
         const snippets = this.getSnippetsUpToVersion(directives, this._version);
 

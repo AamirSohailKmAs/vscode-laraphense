@@ -1,7 +1,6 @@
 'use strict';
 
 import { Workspace } from './support/workspace';
-import { EMPTY_COMPLETION_LIST } from './support/defaults';
 import { doComplete } from '@vscode/emmet-helper';
 import {
     CompletionItem,
@@ -9,13 +8,14 @@ import {
     CompletionParams,
     ConfigurationItem,
     DocumentLink,
+    DocumentUri,
     Position,
     SymbolInformation,
     TextDocumentContentChangeEvent,
     TextDocumentItem,
 } from 'vscode-languageserver';
 import { pushAll } from './helpers/general';
-import { DocLang, ASTDocument } from './support/document';
+import { ASTDocument, DocLang } from './support/document';
 
 import { getCSSLanguageService } from 'vscode-css-languageservice';
 import { getLanguageService as getHTMLLanguageService } from 'vscode-html-languageservice';
@@ -70,41 +70,20 @@ export class Laraphense {
     }
 
     public async provideCompletion({ position, textDocument, context }: CompletionParams) {
-        let result: CompletionList = EMPTY_COMPLETION_LIST;
+        let list: CompletionList = { items: [], isIncomplete: false };
 
-        const kmas = this.getLangAtPosition(textDocument.uri, position);
-
-        if (!kmas) {
-            return result;
+        const result = this.getLangAtPosition(textDocument.uri, position);
+        if (!result) {
+            return list;
         }
 
-        const { document, lang } = kmas;
+        const { document, lang } = result;
 
-        if (lang.emmetSyntax) {
-            const emmetResult = doComplete(document.doc, position, lang.emmetSyntax, {});
-            if (emmetResult) {
-                result = mergeCompletionItems(result, emmetResult);
-            }
-        }
+        list = this.addEmmetCompletions(list, document, lang, position);
+        list = this.addWorkspaceCompletions(list, textDocument.uri, lang.id, document, position);
+        list = await this.addLanguageCompletions(list, lang, document, position, textDocument.uri);
 
-        // const space = this._workspace.getProjectSpace(textDocument.uri);
-        // if (space) {
-        //     for (let i = 0; i < space.folder.libraries.length; i++) {
-        //         const library = space.folder.libraries[i];
-        //         if (library.doComplete) {
-        //             result = mergeCompletionItems(result, library.doComplete(lang.id, document, position));
-        //         }
-        //     }
-        // }
-
-        if (!lang.doComplete) {
-            return result;
-        }
-
-        const items = await lang.doComplete(document, position, this.getDocumentContext(textDocument.uri));
-        result = mergeCompletionItems(result, items);
-
-        return result;
+        return list;
     }
 
     public provideCompletionResolve(item: CompletionItem) {
@@ -300,12 +279,71 @@ export class Laraphense {
     private getDocumentContext(documentUri: string) {
         return new DocContext(Array.from(this._workspace.folders.keys()), documentUri);
     }
+
+    private addWorkspaceCompletions(
+        list: CompletionList,
+        uri: DocumentUri,
+        langId: DocLang,
+        document: ASTDocument,
+        position: Position
+    ): CompletionList {
+        const space = this._workspace.getProjectSpace(uri);
+        if (space) {
+            for (const library of space.folder.libraries) {
+                if (library.doComplete) {
+                    const libraryCompletions = library.doComplete(langId, document, position);
+                    list = mergeCompletionItems(list, libraryCompletions);
+                }
+            }
+        }
+        return list;
+    }
+    private addEmmetCompletions(
+        list: CompletionList,
+        document: ASTDocument,
+        lang: Language,
+        position: Position
+    ): CompletionList {
+        if (lang.emmetSyntax) {
+            const emmetResult = doComplete(document.doc, position, lang.emmetSyntax, {});
+            if (emmetResult) {
+                list = mergeCompletionItems(list, emmetResult);
+            }
+        }
+        return list;
+    }
+
+    private async addLanguageCompletions(
+        list: CompletionList,
+        lang: Language,
+        document: ASTDocument,
+        position: Position,
+        uri: DocumentUri
+    ): Promise<CompletionList> {
+        if (lang.doComplete) {
+            const items = await lang.doComplete(document, position, this.getDocumentContext(uri));
+            list = mergeCompletionItems(list, items);
+        }
+        return list;
+    }
 }
 
-function mergeCompletionItems(list1: CompletionList, list2: CompletionList) {
-    const items = list1.items;
-    pushAll(items, list2.items);
-    list1.items = items;
+function mergeCompletionItems(list1: CompletionList, list2: CompletionList): CompletionList {
+    if (!list1 || !list2) return list1 || list2;
+
+    const combinedItems = [...list1.items, ...list2.items];
+
+    // De-duplicate based on `label`
+    const uniqueItems = combinedItems.reduce((acc, item) => {
+        if (!acc.some((existingItem) => existingItem.label === item.label)) {
+            acc.push(item);
+        }
+        return acc;
+    }, [] as CompletionItem[]);
+
+    list1.items = uniqueItems;
+    list1.isIncomplete = list1.isIncomplete || list2.isIncomplete;
+
     return list1;
 }
 

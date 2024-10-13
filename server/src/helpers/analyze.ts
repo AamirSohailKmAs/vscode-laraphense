@@ -18,7 +18,8 @@ import {
     UnionType,
     AttrGroup,
 } from 'php-parser';
-import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
+import { PhpSymbol, SymbolModifier } from '../languages/php/indexing/tables/symbolTable';
+import { DefinitionKind } from './symbol';
 import { RelativeUri } from '../support/workspaceFolder';
 import { PhpReference } from '../languages/php/indexing/tables/referenceTable';
 import { Value, ValueKind } from './symbol';
@@ -28,7 +29,7 @@ import { Analyzer } from '../languages/php/analyzer';
 
 export function createSymbol(
     name: string | Identifier,
-    kind: PhpSymbolKind,
+    kind: DefinitionKind,
     loc: ParserLocation | null | undefined,
     scope: string,
     modifiers: SymbolModifier[] = [],
@@ -62,7 +63,7 @@ export function createSymbol(
 
 export function createReference(
     name: string | Identifier,
-    kind: PhpSymbolKind,
+    kind: DefinitionKind,
     loc: ParserLocation | null | undefined,
     fqn: string = '',
     alias?: string
@@ -294,7 +295,7 @@ export function attrGroupsVisitor(attrGroups: AttrGroup[], analyzer: Analyzer) {
     attrGroups.forEach((group) => {
         group.attrs.forEach((attr) => {
             // fixme: attribute name is string
-            analyzer.addReference(createReference(attr.name, PhpSymbolKind.Attribute, attr.loc));
+            analyzer.addReference(createReference(attr.name, DefinitionKind.Attribute, attr.loc));
         });
     });
 }

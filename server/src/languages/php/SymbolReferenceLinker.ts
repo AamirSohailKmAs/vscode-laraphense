@@ -1,50 +1,138 @@
 'use strict';
 
-import { joinNamespace, splitNamespace } from '../../helpers/symbol';
+import { Definition, FQN, joinNamespace, splitNamespace } from '../../helpers/symbol';
+import { RelativeUri } from '../../support/workspaceFolder';
 import { Database } from './indexing/Database';
 import { ReferenceTable, PhpReference } from './indexing/tables/referenceTable';
-import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
+import { PhpSymbol, SymbolTable } from './indexing/tables/symbolTable';
 import { NamespaceResolver } from './namespaceResolver';
 
+function generateDefinitionKey(definition: Definition) {
+    return `${definition.kind}-${definition.scope}-${definition.name}`;
+}
 export class SymbolReferenceLinker {
+    private _uri: RelativeUri = '' as RelativeUri;
+    private symbolMap: Map<string, PhpSymbol> = new Map();
+    private importMap: Map<string, PhpReference> = new Map();
+    private referenceMap: Map<string, PhpReference> = new Map();
+
     constructor(
-        private symbolTable: SymbolTable<PhpSymbolKind, PhpSymbol>,
-        private referenceTable: ReferenceTable<PhpSymbolKind, PhpReference>,
+        private symbolTable: SymbolTable<PhpSymbol>,
+        private referenceTable: ReferenceTable<PhpReference>,
         private resolver: NamespaceResolver,
         private stubsDb?: Database
-    ) {
+    ) {}
+
+    public setUri(uri: RelativeUri) {
+        this._uri = uri;
         this.resolver.clearImports();
+
+        this.symbolTable.findSymbolsByUri(uri).forEach((symbol) => {
+            this.symbolMap.set(generateDefinitionKey(symbol), symbol);
+        });
+        this.referenceTable.findImportsByUri(uri).forEach((ref) => {
+            this.resolver.addImport(ref);
+            this.importMap.set(generateDefinitionKey(ref), ref);
+        });
+        this.referenceTable.findNonImportsByUri(uri).forEach((ref) => {
+            this.referenceMap.set(generateDefinitionKey(ref), ref);
+        });
     }
 
-    public addImport(importStatement: PhpReference) {
-        importStatement.id = this.referenceTable.generateId();
-        this.resolver.addImport(importStatement);
-        this.link(importStatement, true);
-        // @note try to link so that it doesn't go to pending
-        this.referenceTable.addImport(importStatement);
+    public finalize() {
+        this.symbolMap.forEach((symbol) => {
+            this.symbolTable.delete(symbol.id);
+        });
+        this.symbolMap.clear();
+
+        this.importMap.forEach((imp) => {
+            this.referenceTable.delete(imp.id);
+        });
+        this.importMap.clear();
+
+        this.referenceMap.forEach((ref) => {
+            this.referenceTable.delete(ref.id);
+        });
+        this.referenceMap.clear();
     }
 
-    public addSymbol(symbol: PhpSymbol, linkReference: boolean) {
-        this.symbolTable.add(symbol);
-        const references = this.referenceTable.findPendingByFqn(joinNamespace(symbol.scope, symbol.name));
+    public addSymbol(newSymbol: PhpSymbol, linkToReference: boolean) {
+        newSymbol.uri = this._uri;
+        let key = generateDefinitionKey(newSymbol);
 
-        if (references) {
-            references.forEach((reference) => {
-                reference.symbolId = symbol.id;
-                symbol.referenceIds.add(reference.id);
-            });
+        const symbol = this.symbolMap.get(key);
+        this.symbolMap.delete(key);
+
+        if (!symbol) {
+            this.symbolTable.add(newSymbol);
+        } else {
+            symbol.loc = newSymbol.loc;
+
+            symbol.doc = newSymbol.doc;
+            symbol.throws = newSymbol.throws;
+
+            symbol.modifiers = newSymbol.modifiers;
+            symbol.relatedIds = newSymbol.relatedIds; // @review is it good
+            symbol.type = newSymbol.type;
+            symbol.value = newSymbol.value;
         }
+
+        if (!linkToReference) {
+            return;
+        }
+
+        this.linkSymbol(symbol || newSymbol);
     }
 
-    public linkReference(reference: PhpReference, isImport: boolean = false) {
-        this.link(reference, isImport);
-        // @note try to link so that it doesn't go to pending
-        this.referenceTable.add(reference);
+    public addReference(newReference: PhpReference, isImport: boolean = false) {
+        newReference.uri = this._uri;
+
+        if (isImport) {
+            return this.handleImport(newReference);
+        }
+
+        newReference.scope = this.resolver.resolveFromImport(newReference);
+
+        let key = generateDefinitionKey(newReference);
+        const reference = this.referenceMap.get(key);
+        this.referenceMap.delete(key);
+
+        if (reference) {
+            reference.loc = newReference.loc;
+            reference.type = newReference.type;
+            reference.alias = newReference.alias;
+            return;
+        }
+
+        newReference.id = this.referenceTable.generateId();
+        // @note try to link first so that it doesn't go to pending
+        this.linkReference(newReference);
+
+        this.referenceTable.add(newReference);
     }
 
-    public link(reference: PhpReference, isImport: boolean = false) {
-        reference.id = this.referenceTable.generateId();
-        const result = this.findSymbolForReference(reference, isImport);
+    private handleImport(newImport: PhpReference) {
+        let key = generateDefinitionKey(newImport);
+        const oldImport = this.importMap.get(key);
+        this.importMap.delete(key);
+
+        if (oldImport) {
+            oldImport.loc = newImport.loc;
+            oldImport.type = newImport.type;
+            oldImport.alias = newImport.alias;
+            return;
+        }
+
+        newImport.id = this.referenceTable.generateId();
+        // @note try to link first so that it doesn't go to pending
+        this.linkReference(newImport);
+
+        this.resolver.addImport(newImport);
+        this.referenceTable.addImport(newImport);
+    }
+
+    private linkReference(reference: PhpReference) {
+        const result = this.findSymbolByFqn(splitNamespace(reference.scope));
 
         if (!result) return false;
 
@@ -54,16 +142,7 @@ export class SymbolReferenceLinker {
         return true;
     }
 
-    private findSymbolForReference(
-        reference: PhpReference,
-        isImport: boolean = true
-    ): { symbol: PhpSymbol; isGlobal: boolean } | undefined {
-        if (!isImport) {
-            reference.scope = this.resolver.resolveFromImport(reference);
-        }
-
-        const fqn = splitNamespace(reference.scope);
-
+    private findSymbolByFqn(fqn: FQN): { symbol: PhpSymbol; isGlobal: boolean } | undefined {
         if (this.stubsDb) {
             let symbol = this.stubsDb.symbolTable.findSymbolByFqn(fqn);
             if (symbol) return { symbol, isGlobal: true };
@@ -73,6 +152,15 @@ export class SymbolReferenceLinker {
         if (symbol) return { symbol, isGlobal: false };
 
         return undefined;
+    }
+
+    private linkSymbol(symbol: PhpSymbol) {
+        const references = this.referenceTable.findPendingByFqn(joinNamespace(symbol.scope, symbol.name));
+
+        references.forEach((reference) => {
+            reference.symbolId = symbol.id;
+            symbol.referenceIds.add(reference.id);
+        });
     }
 }
 

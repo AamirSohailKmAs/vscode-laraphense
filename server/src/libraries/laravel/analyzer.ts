@@ -5,7 +5,7 @@ import { ValueKind } from '../../helpers/symbol';
 import { Fetcher } from '../../support/fetcher';
 import { RelativeUri } from '../../support/workspaceFolder';
 import { SymbolTable } from '../laravel';
-import { PhpSymbolKind } from '../../languages/php/indexing/tables/symbolTable';
+import { DefinitionKind } from '../../helpers/symbol';
 import { EnvParser, determineValueType } from '@porifa/env-parser';
 
 export class Analyzer {
@@ -27,7 +27,7 @@ export class Analyzer {
                 loc: node.key.loc,
                 value: { kind: toValueKind(node.value.text), raw: node.key.text },
                 scope: '',
-                kind: PhpSymbolKind.File,
+                kind: DefinitionKind.File,
             });
         });
     }

@@ -3,19 +3,18 @@
 import { RelativeUri } from '../../../../support/workspaceFolder';
 import { Definition } from '../../../../helpers/symbol';
 import { PhpType } from '../../../../helpers/type';
-import { PhpSymbolKind } from './symbolTable';
 
-export type Reference<T> = Definition<T> & {
+export type Reference = Definition & {
     symbolId: number;
 };
 
-export type PhpReference = Reference<PhpSymbolKind> & {
+export type PhpReference = Reference & {
     isGlobal: boolean;
     type?: PhpType;
-    alias?: string;
+    alias?: string; // fixme: can be replace with scope
 };
 
-interface CacheData<Kind, T extends Definition<Kind>> {
+interface CacheData<T extends Definition> {
     index: number;
     references: [number, T][];
     referencesByUri: { [uri: RelativeUri]: number[] };
@@ -23,7 +22,7 @@ interface CacheData<Kind, T extends Definition<Kind>> {
     pendingByFqn: { [fqn: string]: number[] };
 }
 
-export class ReferenceTable<Kind, T extends Reference<Kind>> {
+export class ReferenceTable<T extends Reference> {
     private index: number = 0;
     private references: Map<number, T> = new Map();
     private referencesByUri: Map<RelativeUri, number[]> = new Map();
@@ -87,6 +86,11 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         return this.getReferenceByIds(refs);
     }
 
+    public findNonImportsByUri(uri: RelativeUri) {
+        const indices = this.referencesByUri.get(uri) || [];
+        return this.getReferenceByIds(indices);
+    }
+
     public findImportsByUri(uri: RelativeUri) {
         const indices = this.importsByUri.get(uri) || [];
         return this.getReferenceByIds(indices);
@@ -99,16 +103,7 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         return imports.concat(refs);
     }
 
-    public updateReference(index: number, newReference: T) {
-        const oldReference = this.getReferenceById(index);
-        if (!oldReference) {
-            return;
-        }
-
-        this.references.set(index, newReference);
-    }
-
-    public deleteReference(index: number) {
+    public delete(index: number) {
         const reference = this.getReferenceById(index);
         if (!reference) {
             return;
@@ -135,7 +130,7 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         this.referencesByUri.delete(uri);
     }
 
-    public saveForFile(): CacheData<Kind, T> {
+    public saveForFile(): CacheData<T> {
         return {
             index: this.index,
             references: Array.from(this.references.entries()),
@@ -185,7 +180,7 @@ export class ReferenceTable<Kind, T extends Reference<Kind>> {
         map.get(key)!.push(index);
     }
 
-    private validateCacheData(data: CacheData<Kind, T>): boolean {
+    private validateCacheData(data: CacheData<T>): boolean {
         // Validate the structure and types of CacheData
         if (
             typeof data.index !== 'number' ||

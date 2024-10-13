@@ -3,7 +3,8 @@
 import { Method, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { attrGroupsVisitor, createSymbol, modifier, parseFlag } from '../../../../helpers/analyze';
-import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbol } from '../../indexing/tables/symbolTable';
+import { DefinitionKind } from '../../../../helpers/symbol';
 
 export class MethodVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
@@ -15,7 +16,7 @@ export class MethodVisitor implements NodeVisitor {
         const scope = this.analyzer.resetSubMember();
         const method = createSymbol(
             methodNode.name,
-            PhpSymbolKind.Method,
+            DefinitionKind.Method,
             methodNode.loc,
             scope,
             modifier({
@@ -45,13 +46,13 @@ export class MethodVisitor implements NodeVisitor {
     private visitParameter(param: Parameter, method: PhpSymbol): void {
         attrGroupsVisitor(param.attrGroups, this.analyzer);
         const kind =
-            method.name === '__construct' && param.flags > 0 ? PhpSymbolKind.Property : PhpSymbolKind.Parameter;
+            method.name === '__construct' && param.flags > 0 ? DefinitionKind.Property : DefinitionKind.Parameter;
 
         const modifiers = modifier({
             isReadonly: param.readonly,
             isNullable: param.nullable,
             isVariadic: param.variadic,
-            visibility: kind === PhpSymbolKind.Property ? parseFlag(param.flags) : undefined,
+            visibility: kind === DefinitionKind.Property ? parseFlag(param.flags) : undefined,
         });
 
         const arg = this.analyzer.addSymbol(

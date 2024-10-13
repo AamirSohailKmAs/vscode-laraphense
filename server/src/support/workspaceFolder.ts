@@ -11,7 +11,7 @@ import { Library } from '../libraries/baseLibrary';
 import { Laravel } from '../libraries/laravel';
 import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
-import { Indexer } from './Indexer';
+import { Indexer, Steps } from './Indexer';
 import { Database } from '../languages/php/indexing/Database';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
@@ -35,15 +35,15 @@ export type Space = {
 };
 
 export class WorkspaceFolder {
-    private count = 0;
-    private missingFiles: Array<{ uri: RelativeUri; reason: string }> = [];
-    public fetcher: Fetcher;
-    public indexer: Indexer;
+    public fetcher: Fetcher; // todo: move into indexer
     public db: Database;
-    private _files: Set<RelativeUri> = new Set();
 
+    private count = 0;
+
+    public indexer: Indexer;
+    private _files: Set<RelativeUri> = new Set();
     private _libraries: Library[] = [];
-    private _config: laraphenseSetting = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
+    public config: laraphenseSetting = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
 
     constructor(
         private _name: string,
@@ -54,23 +54,18 @@ export class WorkspaceFolder {
         private _includeGlobs: string[] = DEFAULT_INCLUDE,
         private _excludeGlobs: string[] = DEFAULT_EXCLUDE
     ) {
-        this.fetcher = new Fetcher();
-        this.db = new Database(
-            this.fetcher.loadUriIfLang(this.documentUri('composer.json'), [DocLang.json])?.getText() ?? '{}'
-        );
-
-        this.indexer = new Indexer(this.db.symbolTable, this.db.referenceTable, this.db.resolver, stubsDb);
-
         this._includeGlobs = _includeGlobs.map(this.uriToGlobPattern);
         this._excludeGlobs = this._excludeGlobs.map(this.uriToGlobPattern);
 
         if (this._uri.slice(-1) === '/') {
             this._uri = this._uri.slice(0, -1);
         }
-    }
 
-    public set config(config: laraphenseSetting) {
-        this._config = config;
+        this.fetcher = new Fetcher(this._uri);
+
+        this.indexer = new Indexer(this.fetcher, this.config, this.documentUri('composer.json'), stubsDb);
+
+        this.db = new Database(this.indexer.symbolTable, this.indexer.referenceTable);
     }
 
     public get filesArray() {
@@ -172,25 +167,9 @@ export class WorkspaceFolder {
     }
 
     private async indexEntry(entry: FileEntry) {
-        // todo: refactor
-        if (entry.size > this._config.maxFileSize) {
-            console.warn(
-                `${entry.uri} has ${entry.size} bytes which is over the maximum file size of ${this._config.maxFileSize} bytes.`
-            );
-            this.missingFiles.push({ uri: entry.uri, reason: 'large file size' });
-            return;
-        }
-
-        const doc = this.fetcher.loadUriIfLang(this.documentUri(entry.uri), [DocLang.php, DocLang.blade]);
-
-        if (doc === undefined) {
-            this.missingFiles.push({ uri: entry.uri, reason: 'not found' });
-            return undefined;
-        }
-
         this._files.add(entry.uri);
 
-        this.indexer.compile(doc, entry.uri, this.isStubs ? 1 : 2);
+        this.indexer.indexEntry(entry, this.isStubs ? Steps.Symbols : Steps.References);
 
         this.count++;
     }

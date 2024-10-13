@@ -2,18 +2,43 @@
 
 import { Location as ParserLocation, Position as ParserPosition } from 'php-parser';
 import { Position as LSPPosition, Range } from 'vscode-languageserver';
-import { PhpSymbol, PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
 import { Fqcn, Fqsen, Selector } from '../languages/php/analyzer';
 import { RelativeUri } from '../support/workspaceFolder';
 import { Location, Position } from '../parsers/ast';
 
-export type Definition<T> = {
+export const enum DefinitionKind {
+    File,
+    Namespace,
+    Enum,
+    Trait,
+    Class,
+    Interface,
+    Attribute,
+
+    Method,
+    Property,
+    PromotedProperty,
+    EnumMember,
+    Constructor,
+    ClassConstant,
+    Function,
+    Variable,
+    Parameter,
+    Array,
+    Null,
+    String,
+    Number,
+    Boolean,
+    Constant,
+}
+
+export type Definition = {
     id: number;
     name: string;
     scope: string;
     loc: Location;
     uri: RelativeUri;
-    kind: T;
+    kind: DefinitionKind;
 };
 
 export type Value = {
@@ -48,12 +73,12 @@ export function toLSPPosition(position: Position) {
     return LSPPosition.create(position.line - 1, position.character);
 }
 
-export function toFqsen(symbol: PhpSymbol): Fqsen {
+export function toFqsen(symbol: Definition): Fqsen {
     switch (symbol.kind) {
-        case PhpSymbolKind.Class:
-        case PhpSymbolKind.Interface:
-        case PhpSymbolKind.Enum:
-        case PhpSymbolKind.Trait:
+        case DefinitionKind.Class:
+        case DefinitionKind.Interface:
+        case DefinitionKind.Enum:
+        case DefinitionKind.Trait:
             return joinNamespace(symbol.scope, symbol.name) as unknown as Fqsen;
         default:
             return `${symbol.scope}${toSelector(symbol.kind, symbol.name)}` as Fqsen;
@@ -66,17 +91,17 @@ export function splitFqsen(fqsen: Fqsen): { fqcn: Fqcn; selector: Selector } {
     return { fqcn: keys[0] as Fqcn, selector: keys[1] as Selector };
 }
 
-export function toSelector(kind: PhpSymbolKind, name: string): Selector {
+export function toSelector(kind: DefinitionKind, name: string): Selector {
     switch (kind) {
-        case PhpSymbolKind.Function:
-        case PhpSymbolKind.Method:
+        case DefinitionKind.Function:
+        case DefinitionKind.Method:
             return `:${name}()` as Selector;
-        case PhpSymbolKind.Property:
-        case PhpSymbolKind.Parameter:
+        case DefinitionKind.Property:
+        case DefinitionKind.Parameter:
             return `:$${name}` as Selector;
-        case PhpSymbolKind.Constant:
-        case PhpSymbolKind.ClassConstant:
-        case PhpSymbolKind.EnumMember:
+        case DefinitionKind.Constant:
+        case DefinitionKind.ClassConstant:
+        case DefinitionKind.EnumMember:
             return `::${name}` as Selector;
         default:
             console.log(`default selector kind:${kind}, name:${name}`);

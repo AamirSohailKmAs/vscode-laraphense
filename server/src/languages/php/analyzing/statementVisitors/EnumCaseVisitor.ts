@@ -3,14 +3,14 @@
 import { EnumCase } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
 import { createSymbol } from '../../../../helpers/analyze';
-import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
+import { DefinitionKind } from '../../../../helpers/symbol';
 
 export class EnumCaseVisitor implements NodeVisitor {
     constructor(private analyzer: Analyzer) {}
 
     visitSymbol(node: EnumCase): boolean {
         this.analyzer.addSymbol(
-            createSymbol(node.name, PhpSymbolKind.EnumMember, node.loc, this.analyzer.scope, [], undefined, node.value)
+            createSymbol(node.name, DefinitionKind.EnumMember, node.loc, this.analyzer.scope, [], undefined, node.value)
         );
 
         return false;

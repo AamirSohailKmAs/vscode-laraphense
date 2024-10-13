@@ -2,7 +2,7 @@
 
 import { UseGroup } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { PhpSymbolKind } from '../../indexing/tables/symbolTable';
+import { DefinitionKind } from '../../../../helpers/symbol';
 import { createReference, normalizeName } from '../../../../helpers/analyze';
 
 export class UseGroupVisitor implements NodeVisitor {
@@ -14,17 +14,18 @@ export class UseGroupVisitor implements NodeVisitor {
 
     visitReference(node: UseGroup): boolean {
         node.items.forEach((use) => {
-            let type = PhpSymbolKind.Namespace;
+            let type = DefinitionKind.Namespace;
 
             if (use.type === 'function') {
-                type = PhpSymbolKind.Function;
+                type = DefinitionKind.Function;
             } else if (use.type === 'const') {
-                type = PhpSymbolKind.Constant;
+                type = DefinitionKind.Constant;
             }
 
             // fixme: name is a string we need loc
-            this.analyzer.addImportStatement(
-                createReference(use.name, type, use.loc, use.name, normalizeName(use.alias || '').name)
+            this.analyzer.addReference(
+                createReference(use.name, type, use.loc, use.name, normalizeName(use.alias || '').name),
+                true // isImportStatement
             );
         });
         return false;

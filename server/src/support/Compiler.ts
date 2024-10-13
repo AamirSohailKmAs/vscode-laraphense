@@ -6,6 +6,8 @@ import { DocumentUri, TextDocumentContentChangeEvent } from 'vscode-languageserv
 import { guessLangFromUri } from '../helpers/uri';
 import { Debounce } from './debounce';
 import { Workspace } from './workspace';
+import { Steps } from './Indexer';
+import { Space } from './workspaceFolder';
 
 export class Compiler {
     private _regions = new Regions();
@@ -26,20 +28,32 @@ export class Compiler {
     }
 
     public OpenDoc(uri: string, version: number, text: string) {
-        let compileDebounce = new Debounce<TextDocumentContentChangeEvent[], boolean>((t) => {
-            return this.compileDebounce(t, doc);
+        const space = this.workspace.getProjectSpace(uri);
+
+        let compileDebounce = new Debounce<TextDocumentContentChangeEvent[]>((changes) => {
+            if (changes.length === 0) {
+                return;
+            }
+            this.compile(doc, Steps.Errors, space);
+
+            if (doc.diagnoseDebounce) {
+                doc.diagnoseDebounce.handle();
+            }
         }, 250);
 
         const doc: ASTDocument = new ASTDocument(uri, guessLangFromUri(uri), version, text, true, compileDebounce);
-
         this._docMap.set(uri, doc);
-        this.regions.set(uri, parseDoc(this._parser, doc).children);
+
+        let ast = this.compile(doc, Steps.Errors, space);
+
+        this.regions.set(uri, ast.children);
     }
 
     public closeDoc(uri: string) {
         this._docMap.delete(uri);
         this.regions.delete(uri);
     }
+
     updateDoc(uri: string, version: number, changes: TextDocumentContentChangeEvent[]) {
         const doc = this._docMap.get(uri);
 
@@ -66,26 +80,20 @@ export class Compiler {
         this.regions.clear();
     }
 
-    private compile(doc: ASTDocument, steps: number): boolean {
-        return false;
-    }
+    private compile(doc: ASTDocument, steps: Steps, space?: Space): Tree {
+        if (space) {
+            return space.folder.indexer.compile(doc, space.fileUri, steps);
+        }
 
-    private compileDebounce(t: TextDocumentContentChangeEvent[][], doc: ASTDocument) {
-        if (!t) {
-            return false;
-        }
-        let isCompiled = this.compile(doc, 3);
+        let ast = parseDoc(this._parser, doc);
         doc.lastCompile = process.hrtime();
-        if (doc.diagnoseDebounce) {
-            doc.diagnoseDebounce.handle();
-        }
-        return isCompiled;
+        return ast;
     }
 
     public isReady(uri: string) {
         const doc = this._docMap.get(uri);
         if (doc && doc.compileDebounce) {
-            return doc.compileDebounce.flush(true);
+            return true;
         }
         return false;
     }

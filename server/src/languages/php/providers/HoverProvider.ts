@@ -1,7 +1,8 @@
 'use strict';
 
 import { Position, Hover } from 'vscode-languageserver';
-import { PhpSymbol, PhpSymbolKind, SymbolModifier } from '../indexing/tables/symbolTable';
+import { PhpSymbol, SymbolModifier } from '../indexing/tables/symbolTable';
+import { DefinitionKind } from '../../../helpers/symbol';
 import { toFqsen, toLSPRange } from '../../../helpers/symbol';
 import { ASTDocument } from '../../../support/document';
 import { Space, WorkspaceFolder } from '../../../support/workspaceFolder';
@@ -29,33 +30,34 @@ export class HoverProvider {
     }
 
     private createHover(symbol: PhpSymbol, loc: Location): Hover {
+        // todo: change the design of hover
         let value = `**Laraphense** \n\n`;
         value += `**${toFqsen(symbol).toString()}**\n`;
         value += ` \`\`\`php \n <?php \n`;
 
         switch (symbol.kind) {
-            case PhpSymbolKind.Namespace:
+            case DefinitionKind.Namespace:
                 value += this.getMemberHover(symbol, 'namespace');
                 break;
-            case PhpSymbolKind.Class:
+            case DefinitionKind.Class:
                 value += this.getMemberHover(symbol, 'class');
                 break;
-            case PhpSymbolKind.Enum:
+            case DefinitionKind.Enum:
                 value += this.getMemberHover(symbol, 'enum');
                 break;
-            case PhpSymbolKind.Interface:
+            case DefinitionKind.Interface:
                 value += this.getMemberHover(symbol, 'interface');
                 break;
-            case PhpSymbolKind.Trait:
+            case DefinitionKind.Trait:
                 value += this.getMemberHover(symbol, 'trait');
                 break;
-            case PhpSymbolKind.Method:
+            case DefinitionKind.Method:
                 value += this.getMethodHover(symbol);
                 break;
-            case PhpSymbolKind.Property:
+            case DefinitionKind.Property:
                 value += this.getPropertyHover(symbol);
                 break;
-            case PhpSymbolKind.ClassConstant:
+            case DefinitionKind.ClassConstant:
                 value += this.getClassConstantHover(symbol);
                 break;
             default:

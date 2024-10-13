@@ -1,9 +1,9 @@
 'use strict';
 
 import { Block, Namespace, Program } from 'php-parser';
-import { PhpSymbol, PhpSymbolKind, SymbolTable } from './indexing/tables/symbolTable';
-import { PhpReference, ReferenceTable } from './indexing/tables/referenceTable';
-import { RelativeUri } from '../../support/workspaceFolder';
+import { PhpSymbol } from './indexing/tables/symbolTable';
+import { DefinitionKind } from '../../helpers/symbol';
+import { PhpReference } from './indexing/tables/referenceTable';
 import { joinNamespace } from '../../helpers/symbol';
 import { FunctionVisitor } from './analyzing/statementVisitors/FunctionVisitor';
 import { InterfaceVisitor } from './analyzing/statementVisitors/InterfaceVisitor';
@@ -26,7 +26,6 @@ import { UnsetVisitor } from './analyzing/statementVisitors/UnsetVisitor';
 import { EchoVisitor } from './analyzing/statementVisitors/EchoVisitor';
 import { ConstantStatementVisitor } from './analyzing/statementVisitors/ConstantStatementVisitor';
 import { createSymbol } from '../../helpers/analyze';
-import { NamespaceResolver } from './namespaceResolver';
 import { ExpressionStatementVisitor } from './analyzing/statementVisitors/ExpressionStatementVisitor';
 import { ThrowVisitor } from './analyzing/statementVisitors/ThrowVisitor';
 import { SymbolReferenceLinker } from './SymbolReferenceLinker';
@@ -34,7 +33,7 @@ import { ExpressionVisitor } from './analyzing/expressionVisitors/ExpressionVisi
 import { TryVisitor } from './analyzing/statementVisitors/TryVisitor';
 import { DoVisitor } from './analyzing/statementVisitors/DoVisitor';
 import { Tree } from '@porifa/blade-parser';
-import { Database } from './indexing/Database';
+import { Steps } from '../../support/Indexer';
 
 export type TreeLike = {
     kind: string;
@@ -48,14 +47,6 @@ export type Selector = string & { readonly Selector: unique symbol };
 
 export interface NodeVisitor {
     /**
-     * Hook that runs before the AST traversal starts.
-     * Can be used to initialize data or perform setup tasks.
-     *
-     * @param rootNode The root node of the AST.
-     */
-    beforeTraversal?: (rootNode: TreeLike) => Promise<void>;
-
-    /**
      * Method that runs on each node during AST traversal.
      * Used to perform the main processing logic for each stage.
      *
@@ -63,14 +54,6 @@ export interface NodeVisitor {
      */
     visitSymbol(node: TreeLike): boolean;
     visitReference(node: TreeLike): boolean;
-
-    /**
-     * Hook that runs after the AST traversal is complete.
-     * Can be used for cleanup or final processing.
-     *
-     * @param rootNode The root node of the AST.
-     */
-    afterTraversal?: (rootNode: TreeLike) => Promise<void>;
 }
 
 export class ProgramVisitor implements NodeVisitor {
@@ -96,7 +79,7 @@ export class NamespaceVisitor implements NodeVisitor {
         }
 
         // fixme: we need loc of namespace name instead of given loc
-        this.analyzer.setScope(createSymbol(node.name, PhpSymbolKind.Namespace, node.loc, ''));
+        this.analyzer.setScope(createSymbol(node.name, DefinitionKind.Namespace, node.loc, ''));
         return true;
     }
 
@@ -110,7 +93,6 @@ export class Analyzer {
     private _member?: PhpSymbol = undefined;
     private _subMember?: PhpSymbol = undefined;
 
-    private _uri: RelativeUri = '' as RelativeUri;
     private _visitorMap: Record<string, NodeVisitor>;
     private ignoreNodes = [
         'noop',
@@ -129,7 +111,6 @@ export class Analyzer {
 
     private _stateStack: string[] = [];
 
-    public debug: Map<string, TreeLike> = new Map();
     private expressionVisitor: ExpressionVisitor;
 
     constructor(private _linker: SymbolReferenceLinker) {
@@ -171,16 +152,9 @@ export class Analyzer {
         };
     }
 
-    public analyze(tree: Tree, uri: RelativeUri, steps: number) {
-        this._uri = uri;
-
-        this.debug = new Map();
-
+    public analyze(tree: Tree, steps: Steps) {
         this.resetState();
         this.traverseAST(tree, steps);
-        if (this.debug.size > 0) {
-            console.log(this.debug, uri);
-        }
     }
 
     public get scope(): string {
@@ -205,11 +179,11 @@ export class Analyzer {
         this.addSymbol(symbol);
         if (
             [
-                PhpSymbolKind.Class,
-                PhpSymbolKind.Interface,
-                PhpSymbolKind.Trait,
-                PhpSymbolKind.Enum,
-                PhpSymbolKind.Function,
+                DefinitionKind.Class,
+                DefinitionKind.Interface,
+                DefinitionKind.Trait,
+                DefinitionKind.Enum,
+                DefinitionKind.Function,
             ].includes(symbol.kind)
         ) {
             this._member = symbol;
@@ -218,7 +192,7 @@ export class Analyzer {
 
     public setSubMember(symbol: PhpSymbol) {
         this.addSymbol(symbol);
-        if ([PhpSymbolKind.Method].includes(symbol.kind)) {
+        if ([DefinitionKind.Method].includes(symbol.kind)) {
             this._subMember = symbol;
         }
     }
@@ -245,25 +219,19 @@ export class Analyzer {
     }
 
     public addSymbol(symbol: PhpSymbol, linkReference: boolean = true) {
-        symbol.uri = this._uri;
         this._linker.addSymbol(symbol, linkReference);
 
         return symbol;
     }
 
-    public addImportStatement(importStatement: PhpReference) {
-        importStatement.uri = this._uri;
-
-        this._linker.addImport(importStatement);
+    public addReference(reference: PhpReference, isImportStatement: boolean = false) {
+        if (!isImportStatement) {
+            reference.scope = joinNamespace(this._namespace, reference.name);
+        }
+        this._linker.addReference(reference, isImportStatement);
     }
 
-    public addReference(reference: PhpReference) {
-        reference.uri = this._uri;
-        reference.scope = joinNamespace(this._namespace, reference.name);
-        this._linker.linkReference(reference);
-    }
-
-    private traverseAST(treeNode: TreeLike, steps: number) {
+    private traverseAST(treeNode: TreeLike, steps: Steps) {
         let shouldDescend = this.visitor(treeNode, steps);
 
         if (!shouldDescend) {
@@ -294,21 +262,20 @@ export class Analyzer {
         // console.log('exit state', treeNode.kind);
     }
 
-    private visitor(node: TreeLike, steps: number): boolean {
+    private visitor(node: TreeLike, steps: Steps): boolean {
         if (['tree', 'block'].includes(node.kind)) {
             return true;
         }
         const visitor = this._visitorMap[node.kind];
         if (!visitor) {
             if (!this.ignoreNodes.includes(node.kind)) {
-                this.debug.set(node.kind, node);
                 // console.log(node);
             }
             return false;
         }
 
         let results = [visitor.visitSymbol(node)];
-        if (steps > 1) {
+        if (steps > Steps.Symbols) {
             results = results.concat(visitor.visitReference(node));
         }
         return results.some((result) => result);

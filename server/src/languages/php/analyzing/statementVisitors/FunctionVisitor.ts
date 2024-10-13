@@ -2,7 +2,8 @@
 
 import { Function, Parameter } from 'php-parser';
 import { Analyzer, NodeVisitor } from '../../analyzer';
-import { PhpSymbol, PhpSymbolKind } from '../../indexing/tables/symbolTable';
+import { PhpSymbol } from '../../indexing/tables/symbolTable';
+import { DefinitionKind } from '../../../../helpers/symbol';
 import { attrGroupsVisitor, createSymbol, modifier } from '../../../../helpers/analyze';
 import { ExpressionVisitor } from '../expressionVisitors/ExpressionVisitor';
 
@@ -13,7 +14,7 @@ export class FunctionVisitor implements NodeVisitor {
         const node = fnNode as Function;
 
         const scope = this.analyzer.resetMember();
-        const func = createSymbol(node.name, PhpSymbolKind.Function, node.loc, scope, modifier(), node.type);
+        const func = createSymbol(node.name, DefinitionKind.Function, node.loc, scope, modifier(), node.type);
         this.analyzer.setMember(func);
 
         if (node.arguments) {
@@ -42,7 +43,7 @@ export class FunctionVisitor implements NodeVisitor {
         const arg = this.analyzer.addSymbol(
             createSymbol(
                 param.name,
-                PhpSymbolKind.Parameter,
+                DefinitionKind.Parameter,
                 param.loc,
                 this.analyzer.scope,
                 modifiers,

@@ -5,8 +5,9 @@ import { Trie } from '../../../../support/searchTree';
 import { FQN, Definition, Value } from '../../../../helpers/symbol';
 import { Position } from 'vscode-languageserver-textdocument';
 import { PhpType } from '../../../../helpers/type';
+import { DefinitionKind } from '../../../../helpers/symbol';
 
-interface CacheData<Kind, T extends Definition<Kind>> {
+interface CacheData<T extends Definition> {
     index: number;
     symbols: [number, T][];
     uriIndex: { [uri: string]: number[] };
@@ -29,32 +30,6 @@ export const enum SymbolModifier {
     Variadic,
 }
 
-export const enum PhpSymbolKind {
-    File,
-    Namespace,
-    Enum,
-    Trait,
-    Class,
-    Interface,
-    Attribute,
-
-    Method,
-    Property,
-    PromotedProperty,
-    EnumMember,
-    Constructor,
-    ClassConstant,
-    Function,
-    Variable,
-    Parameter,
-    Array,
-    Null,
-    String,
-    Number,
-    Boolean,
-    Constant,
-}
-
 export type Template = {
     name: string;
     type?: PhpType;
@@ -68,7 +43,7 @@ export type PhpSymbolType = {
     templates?: Template[];
 };
 
-export type PhpSymbol = Definition<PhpSymbolKind> & {
+export type PhpSymbol = Definition & {
     value?: Value;
     modifiers: SymbolModifier[];
 
@@ -82,7 +57,7 @@ export type PhpSymbol = Definition<PhpSymbolKind> & {
     relatedIds: Set<number>;
     referenceIds: Set<number>;
 };
-export class SymbolTable<Kind, T extends Definition<Kind>> {
+export class SymbolTable<T extends Definition> {
     private index: number = 0;
     private trie: Trie = new Trie();
     private symbols: Map<number, T> = new Map();
@@ -108,6 +83,30 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         this.symbolsByScope.get(symbol.scope)!.push(index); // todo: validate uniqueness
 
         this.trie.insert(symbol.name, index);
+    }
+
+    public delete(index: number) {
+        const symbol = this.symbols.get(index);
+        if (symbol) {
+            this.symbols.delete(index);
+
+            // Update Trie
+            this.trie.remove(symbol.name, index);
+
+            // Update URI index
+            const uriIndices = this.symbolsByUri.get(symbol.uri)!;
+            const uriIndexPos = uriIndices.indexOf(index);
+            if (uriIndexPos > -1) {
+                uriIndices.splice(uriIndexPos, 1);
+            }
+
+            // Update scope index
+            const scopeIndices = this.symbolsByScope.get(symbol.scope)!;
+            const scopeIndexPos = scopeIndices.indexOf(index);
+            if (scopeIndexPos > -1) {
+                scopeIndices.splice(scopeIndexPos, 1);
+            }
+        }
     }
 
     public getSymbolById(symbolId: number) {
@@ -165,55 +164,6 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         return indices.map((index) => this.symbols.get(index)!).filter((symbol) => symbol);
     }
 
-    public updateSymbol(index: number, newSymbol: T) {
-        const oldSymbol = this.symbols.get(index);
-        if (oldSymbol) {
-            this.symbols.set(index, newSymbol);
-
-            // Update Trie
-            this.trie.remove(oldSymbol.name, index);
-            this.trie.insert(newSymbol.name, index);
-
-            // Update URI index
-            const uriIndices = this.symbolsByUri.get(oldSymbol.uri)!;
-            const uriIndexPos = uriIndices.indexOf(index);
-            if (uriIndexPos > -1) {
-                uriIndices[uriIndexPos] = index;
-            }
-
-            // Update scope index
-            const scopeIndices = this.symbolsByScope.get(oldSymbol.scope)!;
-            const scopeIndexPos = scopeIndices.indexOf(index);
-            if (scopeIndexPos > -1) {
-                scopeIndices[scopeIndexPos] = index;
-            }
-        }
-    }
-
-    public deleteSymbol(index: number) {
-        const symbol = this.symbols.get(index);
-        if (symbol) {
-            this.symbols.delete(index);
-
-            // Update Trie
-            this.trie.remove(symbol.name, index);
-
-            // Update URI index
-            const uriIndices = this.symbolsByUri.get(symbol.uri)!;
-            const uriIndexPos = uriIndices.indexOf(index);
-            if (uriIndexPos > -1) {
-                uriIndices.splice(uriIndexPos, 1);
-            }
-
-            // Update scope index
-            const scopeIndices = this.symbolsByScope.get(symbol.scope)!;
-            const scopeIndexPos = scopeIndices.indexOf(index);
-            if (scopeIndexPos > -1) {
-                scopeIndices.splice(scopeIndexPos, 1);
-            }
-        }
-    }
-
     public deleteSymbolsByUri(uri: string) {
         const indices = this.symbolsByUri.get(uri) || [];
         for (const index of indices) {
@@ -236,7 +186,7 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         this.symbolsByUri.delete(uri);
     }
 
-    public saveForFile(): CacheData<Kind, T> {
+    public saveForFile(): CacheData<T> {
         return {
             index: this.index,
             symbols: Array.from(this.symbols.entries()),
@@ -263,7 +213,7 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         return true;
     }
 
-    public getSymbolNested(name: string, scope: string, kind: PhpSymbolKind): T | undefined {
+    public getSymbolNested(name: string, scope: string, kind: DefinitionKind): T | undefined {
         return this.findSymbolsByScope(scope).find((symbol) => symbol.kind === kind && symbol.name === name);
     }
 
@@ -283,7 +233,7 @@ export class SymbolTable<Kind, T extends Definition<Kind>> {
         return true;
     }
 
-    private validateCacheData(data: CacheData<Kind, T>): boolean {
+    private validateCacheData(data: CacheData<T>): boolean {
         // Validate the structure and types of CacheData
         if (
             typeof data.index !== 'number' ||

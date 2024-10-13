@@ -100,7 +100,7 @@ export type Settings = {
     html?: HtmlSetting;
     css?: CssSetting;
     javascript?: { format?: unknown };
-    laraphense?: laraphenseRc;
+    laraphense?: laraphenseRc; // fixme: it must be laraphenseSetting as cachePath is self generated
     'js/ts'?: {
         implicitProjectConfig?: { experimentalDecorators?: boolean; strictNullChecks: boolean };
     };

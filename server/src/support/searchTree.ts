@@ -63,55 +63,90 @@ export class BinarySearch {
 
 export class TrieNode {
     children: Map<string, TrieNode> = new Map();
-    indices: number[] = [];
+    indices: Set<number> = new Set();
 }
 
 export class Trie {
     root: TrieNode = new TrieNode();
 
     insert(name: string, index: number) {
-        let node = this.root;
-        for (const char of name) {
-            if (!node.children.has(char)) {
-                node.children.set(char, new TrieNode());
+        const words = splitWordByCasing(name);
+        for (const word of words) {
+            let node = this.root;
+            for (const char of word.toLowerCase()) {
+                if (!node.children.has(char)) {
+                    node.children.set(char, new TrieNode());
+                }
+                node = node.children.get(char)!;
             }
-            node = node.children.get(char)!;
+            node.indices.add(index);
         }
-        node.indices.push(index);
     }
 
     remove(name: string, index: number) {
-        let node = this.root;
-        for (const char of name) {
-            if (!node.children.has(char)) {
-                return;
-            }
-            node = node.children.get(char)!;
-        }
-        const pos = node.indices.indexOf(index);
-        if (pos > -1) {
-            node.indices.splice(pos, 1);
+        const words = splitWordByCasing(name);
+        for (const word of words) {
+            const removeRecursive = (node: TrieNode, words: string, depth: number): boolean => {
+                if (depth === words.length) {
+                    node.indices.delete(index);
+                    return node.indices.size === 0 && node.children.size === 0;
+                }
+
+                const char = words[depth].toLowerCase();
+                if (!node.children.has(char)) {
+                    return false;
+                }
+
+                const childNode = node.children.get(char)!;
+                const shouldDeleteChild = removeRecursive(childNode, words, depth + 1);
+
+                if (shouldDeleteChild) {
+                    node.children.delete(char);
+                }
+
+                return node.indices.size === 0 && node.children.size === 0;
+            };
+
+            removeRecursive(this.root, word, 0);
         }
     }
 
     search(prefix: string): number[] {
-        let node = this.root;
-        for (const char of prefix) {
-            if (!node.children.has(char)) {
-                return [];
+        const words = splitWordByCasing(prefix);
+        let resultIndices: number[] = [];
+
+        for (const word of words) {
+            let node = this.root;
+            for (const char of word.toLowerCase()) {
+                if (!node.children.has(char)) {
+                    return [];
+                }
+                node = node.children.get(char)!;
             }
-            node = node.children.get(char)!;
+
+            const indicesForThisWord = this.collectAllIndices(node);
+
+            if (resultIndices.length === 0) {
+                resultIndices = indicesForThisWord;
+            } else {
+                resultIndices = resultIndices.filter((idx) => indicesForThisWord.includes(idx));
+            }
         }
-        return this.collectAllIndices(node);
+
+        return resultIndices;
     }
 
     private collectAllIndices(node: TrieNode): number[] {
-        let result: number[] = [...node.indices];
+        let result: number[] = Array.from(node.indices);
         for (const child of node.children.values()) {
             result = result.concat(this.collectAllIndices(child));
         }
         return result;
     }
+}
+
+function splitWordByCasing(word: string): string[] {
+    return word.split(/(?=[A-Z])|[_-]/).filter(Boolean);
 }
 
 export class BinarySearchTreeNode<T> {

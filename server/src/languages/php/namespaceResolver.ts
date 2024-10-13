@@ -4,7 +4,7 @@ import { Resolution, getResolution } from '../../helpers/analyze';
 import { runSafe } from '../../helpers/general';
 import { joinNamespace } from '../../helpers/symbol';
 import { PhpReference } from './indexing/tables/referenceTable';
-import { PhpSymbolKind } from './indexing/tables/symbolTable';
+import { DefinitionKind } from '../../helpers/symbol';
 
 export class NamespaceResolver {
     private _psr4: Map<string, string> = new Map(); // namespace, path
@@ -24,9 +24,9 @@ export class NamespaceResolver {
     }
 
     public addImport(use: PhpReference) {
-        if (use.kind === PhpSymbolKind.Function) {
+        if (use.kind === DefinitionKind.Function) {
             this._funcImports.push(use);
-        } else if (use.kind === PhpSymbolKind.Constant) {
+        } else if (use.kind === DefinitionKind.Constant) {
             this._constImports.push(use);
         } else {
             this._imports.push(use);
@@ -52,11 +52,11 @@ export class NamespaceResolver {
         }
     }
 
-    private getImports(kind: PhpSymbolKind): PhpReference[] {
-        if (kind === PhpSymbolKind.Function) {
+    private getImports(kind: DefinitionKind): PhpReference[] {
+        if (kind === DefinitionKind.Function) {
             return this._funcImports;
         }
-        if (kind === PhpSymbolKind.Constant) {
+        if (kind === DefinitionKind.Constant) {
             return this._constImports;
         }
         return this._imports;
@@ -110,6 +110,5 @@ export class NamespaceResolver {
         }
         return false;
     }
-
 }
 

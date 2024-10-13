@@ -9,7 +9,7 @@ import { FileEntry, RelativeUri, WorkspaceFolder } from '../support/workspaceFol
 import { directives } from './laravel/directives';
 import { Definition, Value } from '../helpers/symbol';
 import { Trie } from '../support/searchTree';
-import { PhpSymbolKind } from '../languages/php/indexing/tables/symbolTable';
+import { DefinitionKind } from '../helpers/symbol';
 import { Analyzer } from './laravel/analyzer';
 
 export type Snippet = {
@@ -20,7 +20,7 @@ export type Snippet = {
     snippet: string;
 };
 
-type LaravelSymbol = Definition<PhpSymbolKind> & {
+type LaravelSymbol = Definition & {
     value?: Value;
 };
 
@@ -276,7 +276,7 @@ export class Laravel implements Library {
         const version = folder.db.symbolTable.getSymbolNested(
             'VERSION',
             'Illuminate\\Foundation\\Application',
-            PhpSymbolKind.ClassConstant
+            DefinitionKind.ClassConstant
         )?.value;
         if (!version) {
             return undefined;

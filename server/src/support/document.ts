@@ -37,7 +37,7 @@ export class ASTDocument {
         version: number,
         content: string,
         isOpened: boolean = false,
-        public compileDebounce?: Debounce<TextDocumentContentChangeEvent[], boolean>,
+        public compileDebounce?: Debounce<TextDocumentContentChangeEvent[]>,
         public diagnoseDebounce?: Debounce<unknown>
     ) {
         this.isOpened = isOpened;

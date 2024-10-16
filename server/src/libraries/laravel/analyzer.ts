@@ -1,29 +1,24 @@
 'use strict';
 
-import { DocumentUri } from 'vscode-languageserver';
 import { ValueKind } from '../../helpers/symbol';
-import { Fetcher } from '../../support/fetcher';
 import { RelativeUri } from '../../support/workspaceFolder';
-import { SymbolTable } from '../laravel';
 import { DefinitionKind } from '../../helpers/symbol';
 import { EnvParser, determineValueType } from '@porifa/env-parser';
+import { SymbolTable } from './Indexer';
 
 export class Analyzer {
     private envParser: EnvParser = new EnvParser();
 
-    constructor(private fetcher: Fetcher, private symbolTable: SymbolTable) {}
+    constructor(private symbolTable: SymbolTable) {}
 
-    analyzeEnv(fileUri: DocumentUri) {
-        const envFile = this.fetcher.getFileContent(fileUri);
-        if (!envFile) return;
-
+    analyzeEnv(envFile: string, uri: RelativeUri) {
         const ast = this.envParser.parse(envFile);
 
         ast.children.forEach((node) => {
             this.symbolTable.addSymbol({
                 id: this.symbolTable.generateId(),
                 name: node.key.text,
-                uri: fileUri as RelativeUri,
+                uri,
                 loc: node.key.loc,
                 value: { kind: toValueKind(node.value.text), raw: node.key.text },
                 scope: '',

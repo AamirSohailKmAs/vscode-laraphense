@@ -7,18 +7,22 @@ export class PhpRunner {
     constructor(private _phpCommand: string = 'php -r "{code}"') {}
 
     public command(code: string): string {
-        code = code.replace(/\"/g, '\\"');
+        code = code.replace(/"/g, '\\"');
 
-        return this._phpCommand.substring(0).replace('{code}', code);
+        if (['darwin', 'linux', 'openbsd', 'sunos'].some((unixPlatform) => platform().includes(unixPlatform))) {
+            code = code.replace(/\$/g, '\\$').replace(/\\\\'/g, "\\\\\\\\'").replace(/\\"/g, '\\\\\\\\"');
+        }
+
+        return this._phpCommand.replace('{code}', code);
     }
 
     public async run(code: string): Promise<string> {
-        return new Promise<string>((resolve, error) => {
-            exec(this.command(code), function (_err, stdout, stderr) {
-                if (stdout.length > 0) {
+        return new Promise<string>((resolve, reject) => {
+            exec(this.command(code), (err, stdout, stderr) => {
+                if (stdout) {
                     resolve(stdout);
                 } else {
-                    error(stderr);
+                    reject(stderr || err?.message);
                 }
             });
         });

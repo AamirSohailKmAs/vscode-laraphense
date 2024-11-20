@@ -1,12 +1,15 @@
 'use strict';
 
 import { exec } from 'child_process';
+import { platform } from 'os';
 
 export class PhpRunner {
     constructor(private _phpCommand: string = 'php -r "{code}"') {}
 
     public command(code: string): string {
-        return this._phpCommand.substring(0).replace(/\"/g, '\\"').replace('{code}', code);
+        code = code.replace(/\"/g, '\\"');
+
+        return this._phpCommand.substring(0).replace('{code}', code);
     }
 
     public async run(code: string): Promise<string> {

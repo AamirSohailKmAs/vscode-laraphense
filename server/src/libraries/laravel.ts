@@ -9,7 +9,6 @@ import { WorkspaceFolder } from '../support/workspaceFolder';
 import { directives } from './laravel/directives';
 import { DefinitionKind } from '../helpers/symbol';
 import { Indexer } from './laravel/Indexer';
-import { LaravelRunner } from './laravel/LaravelRunner';
 
 export type Snippet = {
     label: string;
@@ -21,14 +20,8 @@ export type Snippet = {
 
 export class Laravel implements Library {
     private indexer: Indexer;
-    private runner: LaravelRunner;
 
     constructor(private _version: string, private _folder: WorkspaceFolder) {
-        this.runner = new LaravelRunner(
-            _folder.runner,
-            this._folder.documentUri('vendor/autoload.php'), // @todo: allow different path
-            this._folder.documentUri('bootstrap/app.php') // @todo: allow different path
-        );
         this.indexer = new Indexer(_folder);
         this.index();
     }

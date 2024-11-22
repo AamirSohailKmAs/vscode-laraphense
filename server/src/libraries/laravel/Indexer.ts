@@ -5,8 +5,10 @@ import { Definition, Value } from '../../helpers/symbol';
 import { Trie } from '../../support/searchTree';
 import { RelativeUri, WorkspaceFolder } from '../../support/workspaceFolder';
 import { Analyzer } from './analyzer';
+import { LaravelRunner } from './LaravelRunner';
 
 export class Indexer {
+    private runner: LaravelRunner;
     private analyzer: Analyzer;
     private bladeFiles: Array<RelativeUri> = [];
 
@@ -18,6 +20,11 @@ export class Indexer {
 
     constructor(private _folder: WorkspaceFolder) {
         this.analyzer = new Analyzer(this.symbolTable);
+        this.runner = new LaravelRunner(
+            _folder.runner,
+            this._folder.documentUri('vendor/autoload.php'), // @todo: allow different path
+            this._folder.documentUri('bootstrap/app.php') // @todo: allow different path
+        );
     }
 
     public index() {

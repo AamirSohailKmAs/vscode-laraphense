@@ -1,6 +1,6 @@
 'use strict';
 
-import { PhpRunner } from '../../support/CodeRunner';
+import { PhpRunner } from '../../languages/php/PhpRunner';
 import { existsSync } from 'fs-extra';
 
 export class LaravelRunner {

@@ -13,6 +13,7 @@ import { laraphenseSetting } from '../languages/baseLang';
 import { FileCache } from './cache';
 import { Indexer, Steps } from './Indexer';
 import { Database } from '../languages/php/indexing/Database';
+import { PhpRunner } from '../languages/php/PhpRunner';
 
 export type FolderUri = string & { readonly FolderId: unique symbol };
 export type RelativeUri = string & { readonly PathId: unique symbol };
@@ -44,6 +45,7 @@ export class WorkspaceFolder {
     private _files: Set<RelativeUri> = new Set();
     private _libraries: Library[] = [];
     public config: laraphenseSetting = { maxFileSize: DEFAULT_MAX_FILE_SIZE, phpVersion: DEFAULT_PHP_VERSION };
+    public runner: PhpRunner;
 
     constructor(
         private _name: string,
@@ -64,6 +66,7 @@ export class WorkspaceFolder {
         this.fetcher = new Fetcher(this._uri);
 
         this.indexer = new Indexer(this.fetcher, this.config, this.documentUri('composer.json'), stubsDb);
+        this.runner = new PhpRunner();
 
         this.db = new Database(this.indexer.symbolTable, this.indexer.referenceTable);
     }
